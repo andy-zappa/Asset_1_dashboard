@@ -39,7 +39,7 @@ with st.sidebar:
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = st.text_area("AI에게 수정 요청")
             if st.button("코드 수정 제안받기"):
                 res = model.generate_content(f"Streamlit 수정 제안: {prompt}")
@@ -116,3 +116,4 @@ for key in ['DC', 'PENSION', 'ISA', 'IRP']:
                 row_class = " class='sum-row'" if i['종목명'] == "[ 합계 ]" else ""; c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
                 html3 += f"<tr{row_class}><td>{i['종목명']}</td><td>{i['코드']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
             st.markdown(html3 + "</table>", unsafe_allow_html=True)
+
