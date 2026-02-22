@@ -12,12 +12,11 @@ st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
     <style>
-    /* 상단 여백: 제목 잘림 방지 (3rem) / 하단 여백: 기분 좋은 2칸 여유 (5rem) */
+    /* 상단/하단 여백 최적화 */
     .block-container {
         padding-top: 3rem !important;
         padding-bottom: 5rem !important;
     }
-    /* 메인 제목 스타일 */
     h3 { 
         font-size: 26px !important; 
         font-weight: bold; 
@@ -25,21 +24,26 @@ st.markdown("""
         margin-bottom: 10px; 
     } 
     .sub-title { font-size: 22px !important; font-weight: bold; margin-top: 25px; margin-bottom: 10px; }
-    
-    /* 박스 전용 서브타이틀 */
     .box-title { font-size: 22px !important; font-weight: bold; margin-bottom: 15px; display: block; color: #333; }
     
+    /* 테이블 디자인 및 Bold 정밀 제어 */
     .main-table { width: 100%; border-collapse: collapse; font-size: 15px; text-align: center; } 
-    .main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #ddd; }
-    .main-table td { padding: 8px; border: 1px solid #ddd; }
-    .sum-row { background-color: #fff9e6; font-weight: bold; }
-    .red { color: #FF2323 !important; font-weight: bold; }
-    .blue { color: #0047EB !important; font-weight: bold; }
+    /* 헤더(Index) 행: Bold 유지 */
+    .main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #ddd; font-weight: bold !important; }
+    /* 일반 데이터 셀: Bold 제거 */
+    .main-table td { padding: 8px; border: 1px solid #ddd; font-weight: normal !important; }
     
-    /* 인사이트 박스 디자인 */
+    /* [합계] 행: Bold 유지 및 배경색 강조 */
+    .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
+    
+    /* 수익률/손익 색상: 일반 행에서는 Bold 제거, 합계 행에서만 Bold 적용 */
+    .red { color: #FF2323 !important; font-weight: normal !important; }
+    .blue { color: #0047EB !important; font-weight: normal !important; }
+    .sum-row .red, .sum-row .blue { font-weight: bold !important; }
+    
     .insight-box { background-color: #f0f4f8; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 25px; }
     
-    /* 사이드바 아이콘 유채색 강제 적용 */
+    /* 사이드바 유채색 아이콘 설정 */
     [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] span {
         filter: none !important;
     }
@@ -120,7 +124,8 @@ p_color = "red" if total.get('총손익', 0) > 0 else "blue"
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(total.get('총자산', 0))} (원) / 총수익 : <span class='{p_color}'>{format_comma(total.get('총손익', 0), True)} ({total.get('수익률(%)', 0):+.2f}%)</span>**", unsafe_allow_html=True)
 
-html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액(전일比)</th><th>최초원금</th></tr>"
+# [수정] 평가금액 (전일比) 간격 조정
+html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액 (전일比)</th><th>최초원금</th></tr>"
 t_prin = total.get('원금합', 0); t_asset = total.get('총자산', 0); t_gain = total.get('총손익', 0); t_yield = total.get('수익률(%)', 0); t_diff = total.get('평가손익(전일비)', 0)
 c_tot1 = "red" if t_gain > 0 else "blue"
 html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(t_asset)}</td><td class='{c_tot1}'>{t_yield:+.2f}%</td><td class='{c_tot1}'>{format_comma(t_gain, True)} ({format_comma(t_diff, True)})</td><td>{format_comma(t_prin)}</td></tr>"
@@ -153,11 +158,15 @@ for key in ['DC', 'PENSION', 'ISA', 'IRP']:
         with st.expander(f"📂 [ {acc.get('label')} ] 종목별 현황"):
             c_sum = "red" if acc.get('총손익', 0) > 0 else "blue"
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산', 0))} (원) / 총수익 : <span class='{c_sum}'>{format_comma(acc.get('총손익', 0), True)} ({acc.get('수익률(%)', 0):+.2f}%)</span>**", unsafe_allow_html=True)
+            
             html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             for i in acc.get('상세', []):
-                if i['종목명'] == "[ 합계 ]": continue
+                # [수정] 상세 내역의 [ 합계 ] 행 감지하여 스타일 적용
+                is_sum = i['종목명'] == "[ 합계 ]"
+                row_cls = "class='sum-row'" if is_sum else ""
                 c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
-                html3 += f"<tr><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
+                
+                html3 += f"<tr {row_cls}><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
             st.markdown(html3 + "</table>", unsafe_allow_html=True)
 
 # [최종] 하단 2칸 여백 (요청사항 반영)
