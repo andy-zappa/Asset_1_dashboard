@@ -7,14 +7,14 @@ import google.generativeai as genai
 # 경고 무시
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# 1. 페이지 설정 및 디자인
+# 1. 페이지 설정 및 디자인 고도화
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
     <style>
-    /* 상단 여백: 제목이 가려지지 않도록 적절히 유지 */
+    /* 상단 여백: 제목이 가려지지 않도록 최적화 */
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 0rem !important;
     }
     h3 { 
@@ -24,8 +24,9 @@ st.markdown("""
         margin-bottom: 10px; 
     } 
     .sub-title { font-size: 22px !important; font-weight: bold; margin-top: 25px; margin-bottom: 10px; }
-    /* 박스 전용 서브타이틀 (마진 조정) */
-    .box-title { font-size: 22px !important; font-weight: bold; margin-bottom: 15px; display: block; }
+    
+    /* 박스 전용 서브타이틀 */
+    .box-title { font-size: 22px !important; font-weight: bold; margin-bottom: 15px; display: block; color: #333; }
     
     .main-table { width: 100%; border-collapse: collapse; font-size: 15px; text-align: center; } 
     .main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #ddd; }
@@ -33,16 +34,36 @@ st.markdown("""
     .sum-row { background-color: #fff9e6; font-weight: bold; }
     .red { color: #FF2323 !important; font-weight: bold; }
     .blue { color: #0047EB !important; font-weight: bold; }
+    
+    /* 인사이트 박스 디자인 */
     .insight-box { background-color: #f0f4f8; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 25px; }
+    
+    /* 사이드바 제목 스타일: 아이콘 색상 보존 */
+    .sidebar-header { 
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        margin-bottom: 20px;
+    }
+    .sidebar-icon { font-size: 32px; filter: none !important; }
+    .sidebar-text { font-size: 22px; font-weight: bold; color: #1f1f1f; }
+    
     div[data-testid="stExpander"] summary p { font-size: 16px !important; font-weight: 600 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. 사이드바 설정 (Secrets 연동)
+# 2. 사이드바 설정 (아이콘 색상 강화)
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
 with st.sidebar:
-    st.title("🤖 ZAPPA AI 코딩 모드")
+    # HTML을 사용하여 유채색 아이콘 강제 적용
+    st.markdown("""
+        <div class="sidebar-header">
+            <span class="sidebar-icon">🤖</span>
+            <span class="sidebar-text">ZAPPA AI 코딩 모드</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
     if api_key:
         st.success("API Key 자동 연결됨")
         try:
@@ -81,9 +102,9 @@ fetch_time = total.get('조회시간', '조회 중...')
 st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 st.markdown(f"<div style='text-align: right; font-size: 15px; margin-bottom: 10px;'>[{fetch_time}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
-# [수정] 회색 인사이트 박스
+# [수정] 회색 인사이트 박스: 시간 중복 제거 및 제목 추가
 if "_insight" in data:
-    # '조회 기준 시간'이 포함된 기존 줄은 제외하고 필터링
+    # '조회 기준 시간'이 포함된 기존 줄 제거
     filtered_lines = [line for line in data["_insight"] if "조회 기준 시간" not in line]
     content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in filtered_lines])
     
