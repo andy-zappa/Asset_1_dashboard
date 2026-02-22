@@ -2,11 +2,11 @@ import streamlit as st
 import json
 import pandas as pd
 import warnings
-
-warnings.filterwarnings("ignore", category=FutureWarning)
 import google.generativeai as genai
 
-# 1. 페이지 설정 및 디자인 
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+# 1. 페이지 설정 및 디자인
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
@@ -24,9 +24,18 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# [수정] Secrets에서 키를 먼저 찾고, 없으면 사이드바에서 입력받음
+api_key = st.secrets.get("GOOGLE_API_KEY")
+
 with st.sidebar:
     st.title("🤖 ZAPPA AI 코딩 모드")
-    api_key = st.text_input("Google API Key 입력", type="password")
+    if not api_key:
+        api_key = st.text_input("Google API Key 입력", type="password")
+    else:
+        st.success("API Key가 자동으로 연결되었습니다.")
+        if st.button("다른 키 사용하기"):
+            api_key = st.text_input("새로운 API Key 입력", type="password")
+
     if api_key:
         try:
             genai.configure(api_key=api_key)
@@ -50,30 +59,28 @@ def load_data():
     try:
         with open('assets.json', 'r', encoding='utf-8') as f:
             return json.load(f)
-    except Exception as e: 
-        return None
+    except Exception as e: return None
 
 data = load_data()
 if not data:
-    st.warning("데이터를 불러오는 중입니다. 잠시만 기다려주시거나 v2.py를 실행해 주세요.")
+    st.warning("데이터를 불러오는 중입니다.")
     st.stop()
 
 total = data.get("_total", {})
 fetch_time = total.get('조회시간', '조회 중...')
 
-# 타이틀 및 날짜 표시 (디자인 보존) 
 st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 st.markdown(f"<div style='text-align: right; font-size: 15px; margin-bottom: 10px;'>[{fetch_time}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
-    insight_lines = data["_insight"]
-    content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in insight_lines])
+    content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in data["_insight"]])
     st.markdown(f"<div class='insight-box'>{content}</div>", unsafe_allow_html=True)
 
 p_color = "red" if total.get('총손익', 0) > 0 else "blue"
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(total.get('총자산', 0))} (원) / 총수익 : <span class='{p_color}'>{format_comma(total.get('총손익', 0), True)} ({total.get('수익률(%)', 0):+.2f}%)</span>**", unsafe_allow_html=True)
 
+# 이하 테이블 렌더링 로직 동일...
 html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액(전일比)</th><th>최초(투자)금액</th></tr>"
 t_prin = total.get('원금합', 0); t_asset = total.get('총자산', 0); t_gain = total.get('총손익', 0); t_yield = total.get('수익률(%)', 0); t_diff = total.get('평가손익(전일비)', 0)
 c_tot1 = "red" if t_gain > 0 else "blue"
