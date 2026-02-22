@@ -12,12 +12,12 @@ st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
     <style>
-    /* 상단 여백: 제목이 절대 잘리지 않도록 3rem으로 충분히 확보 */
+    /* 상단 여백: 제목 잘림 방지 (3rem) / 하단 여백: 엔터 4칸 정도의 여유 (10rem) */
     .block-container {
         padding-top: 3rem !important;
-        padding-bottom: 0rem !important;
+        padding-bottom: 10rem !important;
     }
-    /* 메인 제목: 마진을 0으로 설정하여 잘림 방지 */
+    /* 메인 제목 스타일 */
     h3 { 
         font-size: 26px !important; 
         font-weight: bold; 
@@ -60,7 +60,6 @@ st.markdown("""
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
 with st.sidebar:
-    # HTML을 사용하여 유채색 🤖 아이콘 강제 적용
     st.markdown("""
         <div class="sidebar-header">
             <span class="sidebar-icon">🤖</span>
@@ -72,7 +71,6 @@ with st.sidebar:
         st.success("API Key 자동 연결됨")
         try:
             genai.configure(api_key=api_key)
-            # 모델 명칭은 호환성을 위해 flash로 유지
             model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = st.text_area("AI에게 수정 요청")
             if st.button("코드 수정 제안받기"):
@@ -107,12 +105,9 @@ fetch_time = total.get('조회시간', '조회 중...')
 st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 st.markdown(f"<div style='text-align: right; font-size: 15px; margin-bottom: 10px;'>[{fetch_time}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
-# 회색 인사이트 박스: 시간 중복 제거 및 제목 추가
 if "_insight" in data:
-    # '조회 기준 시간'이 포함된 기존 줄 제거 (중복 방지)
     filtered_lines = [line for line in data["_insight"] if "조회 기준 시간" not in line]
     content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in filtered_lines])
-    
     st.markdown(f"""
         <div class='insight-box'>
             <span class='box-title'>금융 자산 보고 요약</span>
@@ -164,3 +159,6 @@ for key in ['DC', 'PENSION', 'ISA', 'IRP']:
                 c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
                 html3 += f"<tr><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
             st.markdown(html3 + "</table>", unsafe_allow_html=True)
+
+# [최종 수정] 하단 4칸 여백 추가 (Markdown 사용)
+st.markdown("<br><br><br><br>", unsafe_allow_html=True)
