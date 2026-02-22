@@ -12,10 +12,10 @@ st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
     <style>
-    /* 상단 여백: 제목 잘림 방지 (3rem) / 하단 여백: 엔터 4칸 정도의 여유 (10rem) */
+    /* 상단 여백: 제목 잘림 방지 (3rem) / 하단 여백: 기분 좋은 2칸 여유 (5rem) */
     .block-container {
         padding-top: 3rem !important;
-        padding-bottom: 10rem !important;
+        padding-bottom: 5rem !important;
     }
     /* 메인 제목 스타일 */
     h3 { 
@@ -56,7 +56,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. 사이드바 설정
+# 2. 사이드바 설정 (Secrets 연동)
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
 with st.sidebar:
@@ -160,5 +160,5 @@ for key in ['DC', 'PENSION', 'ISA', 'IRP']:
                 html3 += f"<tr><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
             st.markdown(html3 + "</table>", unsafe_allow_html=True)
 
-# [최종 수정] 하단 4칸 여백 추가 (Markdown 사용)
-st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+# [최종] 하단 2칸 여백 (요청사항 반영)
+st.markdown("<br><br>", unsafe_allow_html=True)
