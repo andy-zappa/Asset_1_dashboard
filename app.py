@@ -12,11 +12,12 @@ st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
     <style>
-    /* 상단 여백: 제목이 가려지지 않도록 최적화 */
+    /* 상단 여백: 제목이 절대 잘리지 않도록 3rem으로 충분히 확보 */
     .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 3rem !important;
         padding-bottom: 0rem !important;
     }
+    /* 메인 제목: 마진을 0으로 설정하여 잘림 방지 */
     h3 { 
         font-size: 26px !important; 
         font-weight: bold; 
@@ -38,25 +39,28 @@ st.markdown("""
     /* 인사이트 박스 디자인 */
     .insight-box { background-color: #f0f4f8; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 25px; }
     
-    /* 사이드바 제목 스타일: 아이콘 색상 보존 */
+    /* 사이드바 아이콘 유채색 강제 적용 */
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] span {
+        filter: none !important;
+    }
     .sidebar-header { 
         display: flex; 
         align-items: center; 
-        gap: 10px; 
+        gap: 12px; 
         margin-bottom: 20px;
     }
-    .sidebar-icon { font-size: 32px; filter: none !important; }
+    .sidebar-icon { font-size: 32px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"; }
     .sidebar-text { font-size: 22px; font-weight: bold; color: #1f1f1f; }
     
     div[data-testid="stExpander"] summary p { font-size: 16px !important; font-weight: 600 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. 사이드바 설정 (아이콘 색상 강화)
+# 2. 사이드바 설정
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
 with st.sidebar:
-    # HTML을 사용하여 유채색 아이콘 강제 적용
+    # HTML을 사용하여 유채색 🤖 아이콘 강제 적용
     st.markdown("""
         <div class="sidebar-header">
             <span class="sidebar-icon">🤖</span>
@@ -68,6 +72,7 @@ with st.sidebar:
         st.success("API Key 자동 연결됨")
         try:
             genai.configure(api_key=api_key)
+            # 모델 명칭은 호환성을 위해 flash로 유지
             model = genai.GenerativeModel('gemini-1.5-flash')
             prompt = st.text_area("AI에게 수정 요청")
             if st.button("코드 수정 제안받기"):
@@ -102,9 +107,9 @@ fetch_time = total.get('조회시간', '조회 중...')
 st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 st.markdown(f"<div style='text-align: right; font-size: 15px; margin-bottom: 10px;'>[{fetch_time}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
-# [수정] 회색 인사이트 박스: 시간 중복 제거 및 제목 추가
+# 회색 인사이트 박스: 시간 중복 제거 및 제목 추가
 if "_insight" in data:
-    # '조회 기준 시간'이 포함된 기존 줄 제거
+    # '조회 기준 시간'이 포함된 기존 줄 제거 (중복 방지)
     filtered_lines = [line for line in data["_insight"] if "조회 기준 시간" not in line]
     content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in filtered_lines])
     
