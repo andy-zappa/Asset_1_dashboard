@@ -109,7 +109,6 @@ def get_current_price(code, token, avg_p):
         return {"c": int(avg_p), "d": 0}
 
 def generate_asset_data():
-    # [수정] 요일 포함 날짜 포맷 (예: 2026/02/22(일) / 업데이트 : 22:37:20) 
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     days_kr = ['월', '화', '수', '목', '금', '토', '일']
@@ -123,7 +122,6 @@ def generate_asset_data():
 
     t_asset, t_p_effective, t_diff, assets_json = 0, 0, 0, {}
     
-    # 계좌별 데이터 수집
     for acc_label, p_val in ORIGINAL_CAPITAL.items():
         acc_key = ACC_MAP[acc_label]
         a_asset, a_diff, sub_info = 0, 0, []
@@ -143,11 +141,10 @@ def generate_asset_data():
                 "수량": qty, "평단가": avg_p, "가격": curr
             })
         
-        # 개별 종목 비중 계산
         for item in sub_info:
             item["비중"] = (item["평가금액"] / a_asset * 100) if a_asset > 0 else 0
         
-        # [수정] 명칭 변경 [ 합계 ] 반영 
+        # [수정] 상세 내역용 [ 합계 ] 행 생성
         sum_row = {
             "종목명": "[ 합계 ]", "코드": "-", "비중": 100.0, "평가금액": a_asset, 
             "평가손익": (a_asset-p_val) if acc_key!='DC' else DC_FIXED_GAIN, 
@@ -167,7 +164,6 @@ def generate_asset_data():
             "평가손익(전일비)": a_diff, "상세": sub_info
         }
     
-    # [수정] 매수금액 총합 계산 로직 (v2.py에서 처리하여 전달) 
     t_avg_buy = 0
     for acc_key in ['DC', 'PENSION', 'ISA', 'IRP']:
         if acc_key in assets_json:
@@ -177,14 +173,12 @@ def generate_asset_data():
 
     t_yield = (t_asset - t_p_effective) / t_p_effective * 100
     
-    # 전체 요약 데이터 저장
     assets_json["_total"] = {
         "총자산": t_asset, "원금합": t_p_effective, "총손익": t_asset-t_p_effective, 
         "수익률(%)": t_yield, "평가손익(전일비)": t_diff, "매수금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
-    # [수정] 자파 인사이트 a~e 템플릿 복구
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}",
         f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.",
@@ -194,7 +188,6 @@ def generate_asset_data():
         f"e) 향후 전망: 현재 원금 대비 {t_yield:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
     ]
     
-    # JSON 파일 저장
     with open("assets.json", "w", encoding="utf-8") as f:
         json.dump(assets_json, f, ensure_ascii=False, indent=2)
     
