@@ -10,20 +10,21 @@ APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
 URL_BASE = "https://openapi.koreainvestment.com:9443"
 
+# [수정] 1번 테이블 요청 라벨로 수정
 ORIGINAL_CAPITAL = {
-    '퇴직연금(DC) / 25.8월 ~': 254782039, 
-    '연금저축(CMA) / 25.11월 ~': 78787722, 
-    'ISA계좌(중개형) / 25.8월 ~': 33000000, 
-    '퇴직연금(IRP) / 25.8월 ~': 3000000
+    '퇴직연금(DC)계좌 (25.8월~)': 254782039, 
+    '연금저축(CMA)계좌 (25.11월~)': 78787722, 
+    'ISA(중개형)계좌 (25.8월~)': 33000000, 
+    '퇴직연금(IRP)계좌 (25.8월~)': 3000000
 }
 DC_FIXED_GAIN = 47989921
 DC_FIXED_RATE = 18.82
 
 ACC_MAP = {
-    '퇴직연금(DC) / 25.8월 ~': 'DC', 
-    '연금저축(CMA) / 25.11월 ~': 'PENSION', 
-    'ISA계좌(중개형) / 25.8월 ~': 'ISA', 
-    '퇴직연금(IRP) / 25.8월 ~': 'IRP'
+    '퇴직연금(DC)계좌 (25.8월~)': 'DC', 
+    '연금저축(CMA)계좌 (25.11월~)': 'PENSION', 
+    'ISA(중개형)계좌 (25.8월~)': 'ISA', 
+    '퇴직연금(IRP)계좌 (25.8월~)': 'IRP'
 }
 
 def calc_samsungfire_principal():
@@ -73,7 +74,11 @@ def get_current_price(code, token, avg_p):
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9)); now_kst = datetime.now(kst)
-    fetch_time = now_kst.strftime(f"%Y/%m/%d({['월','화','수','목','금','토','일'][now_kst.weekday()]}) / 업데이트 : %H:%M:%S")
+    days_kr = ['월', '화', '수', '목', '금', '토', '일']
+    day_name = days_kr[now_kst.weekday()]
+    
+    fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
+    
     token = get_access_token()
     if not token: return None
 
@@ -88,7 +93,6 @@ def generate_asset_data():
             sub_info.append({"종목명": title, "평가금액": asset, "평가손익": gain, "전일비": diff_val, "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, "수량": qty, "평단가": avg_p, "가격": curr})
         for item in sub_info: item["비중"] = (item["평가금액"] / a_asset * 100) if a_asset > 0 else 0
         
-        # [정합성 수정] 상세 내역용 [ 합계 ] 행: '매수금액' 대비 수익으로 계산
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sum_row = {"종목명": "[ 합계 ]", "비중": 100.0, "평가금액": a_asset, "평가손익": a_val_gain, "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, "수량": "-", "평단가": "-", "가격": "-"}
         sub_info.insert(0, sum_row)
