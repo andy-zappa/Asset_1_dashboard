@@ -34,8 +34,7 @@ st.markdown("""
 if 'initialized' not in st.session_state:
     with st.spinner("초기 실시간 데이터를 불러오는 중입니다..."):
         Andy_pension_v2.generate_asset_data()
-    st.session_state['initialized'] = True
-    st.cache_data.clear()
+    st.session_state['initialized'] = True; st.cache_data.clear()
 
 api_key = st.secrets.get("GOOGLE_API_KEY")
 with st.sidebar:
@@ -73,7 +72,7 @@ st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margi
 
 if "_insight" in data:
     filtered = [l for l in data["_insight"] if "조회 기준 시간" not in l]
-    content = "".join([f"<p style='margin-bottom:5px;'>• {l}</p>" for l in filtered])
+    content = "".join([f"<p style='margin-bottom:5px;'>• {l}</p>" for line in filtered])
     st.markdown(f"<div class='insight-box'><span class='box-title'>금융 자산 보고 요약</span>{content}</div>", unsafe_allow_html=True)
 
 # --- [1] 투자금 대비 자산 현황 ---
@@ -109,10 +108,11 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]
         with st.expander(f"📂 [ {acc.get('label')} ] 종목별 현황"):
-            # [수정] 상세 내역 제목 줄: [2]번 매수금액 대비 수치(acc_g)를 가져와서 표시
-            acc_val_gain = sum(i['평가손익'] for i in acc['상세'] if i['종목명'] != '[ 합계 ]')
-            acc_buy_amt = acc.get('총자산', 0) - acc_val_gain
-            acc_val_yield = (acc_val_gain / acc_buy_amt * 100) if acc_buy_amt > 0 else 0
+            # [수정] 제목 줄 수치: [2]번 테이블용 매수금액 대비 수익 수치와 1원 단위 정합성 통일
+            # JSON의 상세 내역 내 [ 합계 ] 행 데이터를 직접 사용
+            sum_row_data = next(i for i in acc['상세'] if i['종목명'] == "[ 합계 ]")
+            acc_val_gain = sum_row_data['평가손익']
+            acc_val_yield = sum_row_data['수익률(%)']
             c_s = "red" if acc_val_gain > 0 else "blue"
             
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc_val_gain, True)} ({acc_val_yield:+.2f}%)</span>**", unsafe_allow_html=True)
