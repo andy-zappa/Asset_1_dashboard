@@ -18,17 +18,25 @@ st.markdown("""
     .box-title { font-size: 22px !important; font-weight: bold; margin-bottom: 15px; display: block; color: #333; }
     .main-table { width: 100%; border-collapse: collapse; font-size: 15px; text-align: center; } 
     .main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #ddd; font-weight: bold !important; }
-    .main-table td { padding: 8px; border: 1px solid #ddd; font-weight: normal !important; }
+    .main-table td { padding: 8px; border: 1px solid #ddd; font-weight: normal !important; vertical-align: middle; }
     .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
+    
+    /* 색상 클래스 */
     .red { color: #FF2323 !important; }
     .blue { color: #0047EB !important; }
     .sum-row .red, .sum-row .blue { font-weight: bold !important; }
+    
     .insight-box { background-color: #f0f4f8; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 25px; }
     [data-testid="stSidebar"] span { filter: none !important; }
     .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .sidebar-icon { font-size: 32px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"; }
     .sidebar-text { font-size: 22px; font-weight: bold; }
     div.stButton > button:first-child { font-weight: bold; border-radius: 8px; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    
+    /* 종목코드 숨기기/펼치기 디테일 태그 스타일 */
+    details { margin: 0; padding: 0; display: inline-block; }
+    summary { cursor: pointer; font-size: 11px; color: #888; list-style: none; }
+    summary:hover { color: #333; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -59,6 +67,16 @@ def format_comma(val, force_sign=False):
         v = int(val); return f"{'+' if force_sign and v > 0 else ''}{v:,}"
     except: return val
 
+# [추가] 각 셀의 값에 따라 독립적으로 색상을 판별하는 함수
+def get_color(val):
+    try:
+        v = float(val)
+        if v > 0: return "red"
+        elif v < 0: return "blue"
+        else: return ""
+    except:
+        return ""
+
 @st.cache_data(ttl=60)
 def load_data():
     try:
@@ -85,7 +103,7 @@ if "_insight" in data:
 # ----------------------------------------------------
 # --- [1] 투자금 대비 자산 현황 ---
 # ----------------------------------------------------
-p_color = "red" if total.get('총손익', 0) > 0 else "blue"
+p_color = get_color(total.get('총손익', 0))
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
 
 title1 = (
@@ -96,22 +114,28 @@ title1 = (
 )
 st.markdown(title1, unsafe_allow_html=True)
 
-# [수정] 열 분할 (평가금액 / 전일비) 및 순서 재배치
 html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>최초원금</th><th>수익률</th><th>평가금액</th><th>전일비</th></tr>"
-c_t = "red" if total.get('총손익', 0) > 0 else "blue"
 
-html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td>{format_comma(total.get('원금합'))}</td><td class='{c_t}'>{total.get('수익률(%)'):+.2f}%</td><td class='{c_t}'>{format_comma(total.get('총손익'), True)}</td><td class='{c_t}'>{format_comma(total.get('평가손익(전일비)'), True)}</td></tr>"
+# [수정] 합계 행: 평가금액, 수익률, 전일비 각각 개별 색상 적용
+t_y = total.get('수익률(%)', 0)
+t_g = total.get('총손익', 0)
+t_d = total.get('평가손익(전일비)', 0)
+
+html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td>{format_comma(total.get('원금합'))}</td><td class='{get_color(t_y)}'>{t_y:+.2f}%</td><td class='{get_color(t_g)}'>{format_comma(t_g, True)}</td><td class='{get_color(t_d)}'>{format_comma(t_d, True)}</td></tr>"
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
-        acc = data[k]; c = "red" if acc.get('총손익', 0) > 0 else "blue"
-        html1 += f"<tr><td>{acc.get('label')}</td><td>{format_comma(acc.get('총자산'))}</td><td>{format_comma(acc.get('원금'))}</td><td class='{c}'>{acc.get('수익률(%)'):+.2f}%</td><td class='{c}'>{format_comma(acc.get('총손익'), True)}</td><td class='{c}'>{format_comma(acc.get('평가손익(전일비)'), True)}</td></tr>"
+        acc = data[k]
+        a_y = acc.get('수익률(%)', 0)
+        a_g = acc.get('총손익', 0)
+        a_d = acc.get('평가손익(전일비)', 0)
+        # [수정] 개별 행: 평가금액, 수익률, 전일비 각각 개별 색상 적용
+        html1 += f"<tr><td>{acc.get('label')}</td><td>{format_comma(acc.get('총자산'))}</td><td>{format_comma(acc.get('원금'))}</td><td class='{get_color(a_y)}'>{a_y:+.2f}%</td><td class='{get_color(a_g)}'>{format_comma(a_g, True)}</td><td class='{get_color(a_d)}'>{format_comma(a_d, True)}</td></tr>"
 st.markdown(html1 + "</table>", unsafe_allow_html=True)
 
 # ----------------------------------------------------
 # --- [2] 매수금액 대비 자산 현황 ---
 # ----------------------------------------------------
-# [수정] 2번 테이블용 계좌명 매핑
 t2_labels = {
     'DC': '퇴직연금(DC)계좌',
     'PENSION': '연금저축(CMA)계좌',
@@ -119,7 +143,7 @@ t2_labels = {
     'IRP': '퇴직연금(IRP)계좌'
 }
 
-t_acc_g = total.get('총자산', 0) - total.get('매수금액합', 0); t_acc_y = (t_acc_g / total.get('매수금액합', 1) * 100); pg_c = "red" if t_acc_g > 0 else "blue"
+t_acc_g = total.get('총자산', 0) - total.get('매수금액합', 0); t_acc_y = (t_acc_g / total.get('매수금액합', 1) * 100); pg_c = get_color(t_acc_g)
 st.markdown("<div class='sub-title'>📈 [2] 매수금액 대비 자산 현황</div>", unsafe_allow_html=True)
 
 title2 = (
@@ -131,18 +155,18 @@ title2 = (
 st.markdown(title2, unsafe_allow_html=True)
 
 html2 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액</th><th>매수금액</th></tr>"
-html2 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td class='{pg_c}'>{t_acc_y:+.2f}%</td><td class='{pg_c}'>{format_comma(t_acc_g, True)}</td><td>{format_comma(total.get('매수금액합'))}</td></tr>"
+html2 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td class='{get_color(t_acc_y)}'>{t_acc_y:+.2f}%</td><td class='{get_color(t_acc_g)}'>{format_comma(t_acc_g, True)}</td><td>{format_comma(total.get('매수금액합'))}</td></tr>"
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
-        acc = data[k]; acc_g = sum(i['평가손익'] for i in acc['상세'] if i['종목명'] != '[ 합계 ]'); acc_p = acc.get('총자산', 0) - acc_g; c = "red" if acc_g > 0 else "blue"
-        html2 += f"<tr><td>{t2_labels.get(k, acc.get('label'))}</td><td>{format_comma(acc.get('총자산'))}</td><td class='{c}'>{(acc_g/acc_p*100 if acc_p>0 else 0):+.2f}%</td><td class='{c}'>{format_comma(acc_g, True)}</td><td>{format_comma(acc_p)}</td></tr>"
+        acc = data[k]; acc_g = sum(i['평가손익'] for i in acc['상세'] if i['종목명'] != '[ 합계 ]'); acc_p = acc.get('총자산', 0) - acc_g
+        acc_y = (acc_g/acc_p*100) if acc_p > 0 else 0
+        html2 += f"<tr><td>{t2_labels.get(k, acc.get('label'))}</td><td>{format_comma(acc.get('총자산'))}</td><td class='{get_color(acc_y)}'>{acc_y:+.2f}%</td><td class='{get_color(acc_g)}'>{format_comma(acc_g, True)}</td><td>{format_comma(acc_p)}</td></tr>"
 st.markdown(html2 + "</table>", unsafe_allow_html=True)
 
 # ----------------------------------------------------
 # --- [3] 계좌별 상세 내역 ---
 # ----------------------------------------------------
-# [수정] 3번 테이블 상세내역용 계좌명 매핑 (증권사 및 계좌번호 추가)
 t3_labels = {
     'DC': '퇴직연금(DC)계좌 / (삼성증권 7165962472-28)',
     'PENSION': '연금저축(CMA)계좌 / (삼성증권 7169434836-15)',
@@ -154,12 +178,11 @@ st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", uns
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]
-        # [수정] expander 타이틀 업데이트
         with st.expander(f"📂 [ {t3_labels.get(k, acc.get('label'))} ] 종목별 현황"):
             sum_row_data = next(i for i in acc['상세'] if i['종목명'] == "[ 합계 ]")
             acc_val_gain = sum_row_data['평가손익']
             acc_val_yield = sum_row_data['수익률(%)']
-            c_s = "red" if acc_val_gain > 0 else "blue"
+            c_s = get_color(acc_val_gain)
             
             title3 = (
                 f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
@@ -169,11 +192,24 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             )
             st.markdown(title3, unsafe_allow_html=True)
             
-            html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
+            # [수정] 종목코드 열 추가
+            html3 = "<table class='main-table'><tr><th>종목명</th><th>종목코드</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
+            
             for i in acc.get('상세', []):
                 is_sum = i['종목명'] == "[ 합계 ]"; row_cls = "class='sum-row'" if is_sum else ""
-                c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
-                html3 += f"<tr {row_cls}><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
+                
+                # [수정] 평가손익과 수익률 각각 개별 색상 적용
+                c_g = get_color(i['평가손익'])
+                c_y = get_color(i['수익률(%)'])
+                
+                # [추가] 종목코드 숨기기/펼치기 HTML 구현
+                code_val = i.get('코드', '-')
+                if code_val == "-":
+                    code_html = "-"
+                else:
+                    code_html = f"<details><summary>▶ 보기</summary><span style='font-size:13px; font-weight:bold; color:#333;'>{code_val}</span></details>"
+                
+                html3 += f"<tr {row_cls}><td>{i['종목명']}</td><td>{code_html}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c_g}'>{format_comma(i['평가손익'], True)}</td><td class='{c_y}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
             st.markdown(html3 + "</table>", unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
