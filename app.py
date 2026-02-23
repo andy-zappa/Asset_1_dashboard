@@ -3,11 +3,8 @@ import json
 import pandas as pd
 import warnings
 import google.generativeai as genai
-
-# [중요 추가] 백엔드 엔진 파일을 불러옵니다.
 import Andy_pension_v2
 
-# 경고 무시
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
@@ -18,41 +15,28 @@ st.markdown("""
     h3 { font-size: 26px !important; font-weight: bold; margin-top: 0px !important; margin-bottom: 10px; } 
     .sub-title { font-size: 22px !important; font-weight: bold; margin-top: 25px; margin-bottom: 10px; }
     .box-title { font-size: 22px !important; font-weight: bold; margin-bottom: 15px; display: block; color: #333; }
-    
-    /* 테이블 디자인 및 Bold 정밀 제어 */
     .main-table { width: 100%; border-collapse: collapse; font-size: 15px; text-align: center; } 
     .main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #ddd; font-weight: bold !important; }
-    .main-table td { padding: 8px; border: 1px solid #ddd; font-weight: normal !important; } /* 일반 셀 Bold 제거 */
-    
-    /* [합계] 행 강조: Bold 유지 */
+    .main-table td { padding: 8px; border: 1px solid #ddd; font-weight: normal !important; }
     .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
-    
-    /* 수익률/손익 색상 및 Bold 제어 */
     .red { color: #FF2323 !important; }
     .blue { color: #0047EB !important; }
-    .sum-row .red, .sum-row .blue { font-weight: bold !important; } /* 합계행만 색상 Bold */
-    
+    .sum-row .red, .sum-row .blue { font-weight: bold !important; }
     .insight-box { background-color: #f0f4f8; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 25px; }
     [data-testid="stSidebar"] span { filter: none !important; }
     .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .sidebar-icon { font-size: 32px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"; }
     .sidebar-text { font-size: 22px; font-weight: bold; }
-    
-    /* 업데이트 버튼 스타일 최적화 */
     div.stButton > button:first-child { font-weight: bold; border-radius: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
-# ----------------------------------------------------
-# [추가] 1. 페이지 최초 접속 시 실시간 데이터 자동 생성
-# ----------------------------------------------------
 if 'initialized' not in st.session_state:
     with st.spinner("초기 실시간 데이터를 불러오는 중입니다..."):
         Andy_pension_v2.generate_asset_data()
     st.session_state['initialized'] = True
     st.cache_data.clear()
 
-# 사이드바 및 AI 설정
 api_key = st.secrets.get("GOOGLE_API_KEY")
 with st.sidebar:
     st.markdown('<div class="sidebar-header"><span class="sidebar-icon">🤖</span><span class="sidebar-text">ZAPPA AI 코딩 모드</span></div>', unsafe_allow_html=True)
@@ -79,24 +63,12 @@ data = load_data()
 if not data: st.stop()
 
 total = data.get("_total", {})
-
-# ----------------------------------------------------
-# [수정] 2. 메인 타이틀 & 실시간 업데이트 버튼 나란히 배치
-# ----------------------------------------------------
-col1, col2 = st.columns([8, 2]) # 8:2 비율로 분할
-
-with col1:
-    st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
-
+col1, col2 = st.columns([8, 2])
+with col1: st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 with col2:
-    # 조회시간 바로 위에 업데이트 버튼 배치
     if st.button("🔄 실시간 업데이트", use_container_width=True):
         with st.spinner("한국투자증권 데이터 갱신 중..."):
-            Andy_pension_v2.generate_asset_data()
-            st.cache_data.clear()
-            st.rerun() # 화면 새로고침
-            
-# 업데이트 버튼 바로 아래에 시간 표시 (위아래 간격 좁힘)
+            Andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margin-bottom: 10px; margin-top: -10px;'>[{total.get('조회시간')}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
@@ -137,8 +109,14 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]
         with st.expander(f"📂 [ {acc.get('label')} ] 종목별 현황"):
-            c_s = "red" if acc.get('총손익', 0) > 0 else "blue"
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc.get('총손익'), True)} ({acc.get('수익률(%)'):+.2f}%)</span>**", unsafe_allow_html=True)
+            # [수정] 상세 내역 제목 줄: [2]번 매수금액 대비 수치(acc_g)를 가져와서 표시
+            acc_val_gain = sum(i['평가손익'] for i in acc['상세'] if i['종목명'] != '[ 합계 ]')
+            acc_buy_amt = acc.get('총자산', 0) - acc_val_gain
+            acc_val_yield = (acc_val_gain / acc_buy_amt * 100) if acc_buy_amt > 0 else 0
+            c_s = "red" if acc_val_gain > 0 else "blue"
+            
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc_val_gain, True)} ({acc_val_yield:+.2f}%)</span>**", unsafe_allow_html=True)
+            
             html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             for i in acc.get('상세', []):
                 is_sum = i['종목명'] == "[ 합계 ]"; row_cls = "class='sum-row'" if is_sum else ""
