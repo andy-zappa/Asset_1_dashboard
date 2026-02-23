@@ -28,7 +28,7 @@ st.markdown("""
     .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .sidebar-icon { font-size: 32px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"; }
     .sidebar-text { font-size: 22px; font-weight: bold; }
-    div.stButton > button:first-child { font-weight: bold; border-radius: 8px; }
+    div.stButton > button:first-child { font-weight: bold; border-radius: 8px; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -43,7 +43,6 @@ with st.sidebar:
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            # 사용 가능한 모델 자동 탐색 로직 적용
             available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
             if available_models:
                 target_model = next((m for m in available_models if 'flash' in m), available_models[0])
@@ -70,7 +69,7 @@ data = load_data()
 if not data: st.stop()
 
 total = data.get("_total", {})
-col1, col2 = st.columns([8, 2])
+col1, col2 = st.columns([8.5, 1.5])
 with col1: st.markdown("<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
 with col2:
     if st.button("🔄 실시간 업데이트", use_container_width=True):
@@ -81,13 +80,14 @@ st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margi
 if "_insight" in data:
     filtered = [l for l in data["_insight"] if "조회 기준 시간" not in l]
     content = "".join([f"<p style='margin-bottom:5px;'>• {l}</p>" for l in filtered])
-    st.markdown(f"<div class='insight-box'><span class='box-title'>금융 자산 보고 요약</span>{content}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='insight-box'><span class='box-title'><u>금융 자산 보고 요약</u></span>{content}</div>", unsafe_allow_html=True)
 
+# ----------------------------------------------------
 # --- [1] 투자금 대비 자산 현황 ---
+# ----------------------------------------------------
 p_color = "red" if total.get('총손익', 0) > 0 else "blue"
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
 
-# 줄바꿈 에러 방지용 안전한 포맷팅
 title1 = (
     f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
     f"**총자산 : {format_comma(total.get('총자산', 0))} (원) / 총수익 : "
@@ -96,20 +96,32 @@ title1 = (
 )
 st.markdown(title1, unsafe_allow_html=True)
 
-html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액 (전일比)</th><th>최초원금</th></tr>"
+# [수정] 열 분할 (평가금액 / 전일비) 및 순서 재배치
+html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>최초원금</th><th>수익률</th><th>평가금액</th><th>전일비</th></tr>"
 c_t = "red" if total.get('총손익', 0) > 0 else "blue"
-html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td class='{c_t}'>{total.get('수익률(%)'):+.2f}%</td><td class='{c_t}'>{format_comma(total.get('총손익'), True)} ({format_comma(total.get('평가손익(전일비)'), True)})</td><td>{format_comma(total.get('원금합'))}</td></tr>"
+
+html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td>{format_comma(total.get('원금합'))}</td><td class='{c_t}'>{total.get('수익률(%)'):+.2f}%</td><td class='{c_t}'>{format_comma(total.get('총손익'), True)}</td><td class='{c_t}'>{format_comma(total.get('평가손익(전일비)'), True)}</td></tr>"
+
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]; c = "red" if acc.get('총손익', 0) > 0 else "blue"
-        html1 += f"<tr><td>{acc.get('label')}</td><td>{format_comma(acc.get('총자산'))}</td><td class='{c}'>{acc.get('수익률(%)'):+.2f}%</td><td class='{c}'>{format_comma(acc.get('총손익'), True)} ({format_comma(acc.get('평가손익(전일비)'), True)})</td><td>{format_comma(acc.get('원금'))}</td></tr>"
+        html1 += f"<tr><td>{acc.get('label')}</td><td>{format_comma(acc.get('총자산'))}</td><td>{format_comma(acc.get('원금'))}</td><td class='{c}'>{acc.get('수익률(%)'):+.2f}%</td><td class='{c}'>{format_comma(acc.get('총손익'), True)}</td><td class='{c}'>{format_comma(acc.get('평가손익(전일비)'), True)}</td></tr>"
 st.markdown(html1 + "</table>", unsafe_allow_html=True)
 
+# ----------------------------------------------------
 # --- [2] 매수금액 대비 자산 현황 ---
+# ----------------------------------------------------
+# [수정] 2번 테이블용 계좌명 매핑
+t2_labels = {
+    'DC': '퇴직연금(DC)계좌',
+    'PENSION': '연금저축(CMA)계좌',
+    'ISA': 'ISA(중개형)계좌',
+    'IRP': '퇴직연금(IRP)계좌'
+}
+
 t_acc_g = total.get('총자산', 0) - total.get('매수금액합', 0); t_acc_y = (t_acc_g / total.get('매수금액합', 1) * 100); pg_c = "red" if t_acc_g > 0 else "blue"
 st.markdown("<div class='sub-title'>📈 [2] 매수금액 대비 자산 현황</div>", unsafe_allow_html=True)
 
-# 줄바꿈 에러 방지용 안전한 포맷팅
 title2 = (
     f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
     f"**총자산 : {format_comma(total.get('총자산'))} (원) / 총수익 : "
@@ -120,24 +132,35 @@ st.markdown(title2, unsafe_allow_html=True)
 
 html2 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액</th><th>매수금액</th></tr>"
 html2 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td class='{pg_c}'>{t_acc_y:+.2f}%</td><td class='{pg_c}'>{format_comma(t_acc_g, True)}</td><td>{format_comma(total.get('매수금액합'))}</td></tr>"
+
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]; acc_g = sum(i['평가손익'] for i in acc['상세'] if i['종목명'] != '[ 합계 ]'); acc_p = acc.get('총자산', 0) - acc_g; c = "red" if acc_g > 0 else "blue"
-        html2 += f"<tr><td>{acc.get('label')}</td><td>{format_comma(acc.get('총자산'))}</td><td class='{c}'>{(acc_g/acc_p*100 if acc_p>0 else 0):+.2f}%</td><td class='{c}'>{format_comma(acc_g, True)}</td><td>{format_comma(acc_p)}</td></tr>"
+        html2 += f"<tr><td>{t2_labels.get(k, acc.get('label'))}</td><td>{format_comma(acc.get('총자산'))}</td><td class='{c}'>{(acc_g/acc_p*100 if acc_p>0 else 0):+.2f}%</td><td class='{c}'>{format_comma(acc_g, True)}</td><td>{format_comma(acc_p)}</td></tr>"
 st.markdown(html2 + "</table>", unsafe_allow_html=True)
 
+# ----------------------------------------------------
 # --- [3] 계좌별 상세 내역 ---
+# ----------------------------------------------------
+# [수정] 3번 테이블 상세내역용 계좌명 매핑 (증권사 및 계좌번호 추가)
+t3_labels = {
+    'DC': '퇴직연금(DC)계좌 / (삼성증권 7165962472-28)',
+    'PENSION': '연금저축(CMA)계좌 / (삼성증권 7169434836-15)',
+    'ISA': 'ISA(중개형)계좌 / (키움증권 6448-4934)',
+    'IRP': '퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'
+}
+
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]
-        with st.expander(f"📂 [ {acc.get('label')} ] 종목별 현황"):
+        # [수정] expander 타이틀 업데이트
+        with st.expander(f"📂 [ {t3_labels.get(k, acc.get('label'))} ] 종목별 현황"):
             sum_row_data = next(i for i in acc['상세'] if i['종목명'] == "[ 합계 ]")
             acc_val_gain = sum_row_data['평가손익']
             acc_val_yield = sum_row_data['수익률(%)']
             c_s = "red" if acc_val_gain > 0 else "blue"
             
-            # 줄바꿈 에러 방지용 안전한 포맷팅
             title3 = (
                 f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                 f"**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : "
