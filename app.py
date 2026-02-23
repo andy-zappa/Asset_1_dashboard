@@ -7,7 +7,7 @@ import Andy_pension_v2
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# [핵심] CSS 수정: 종목코드 열 제어 및 색상 설정
+# [핵심] CSS 수정: 우측 정렬 및 아이콘 크기 확대 적용
 css = [
     "<style>",
     ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
@@ -26,12 +26,17 @@ css = [
     ".sidebar-text{font-size:22px;font-weight:bold;}",
     "div.stButton>button:first-child{font-weight:bold;border-radius:8px;padding:0 0.5rem!important;}",
     
-    # 종목코드 열 숨기기 핵심: 초기 상태(not checked)에서 col-code 클래스를 숨김
+    # 종목코드 열 숨기기 로직
     ".col-toggle-chk{display:none;}",
     ".col-toggle-chk:not(:checked)~.table-container .col-code{display:none!important;}",
-    ".col-toggle-label{cursor:pointer;font-size:13px;color:#555;font-weight:bold;display:inline-block;margin-bottom:8px;padding:5px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;}",
+    
+    # [수정] 버튼 우측 정렬 및 디자인
+    ".toggle-wrapper{text-align:right; margin-bottom:8px;}",
+    ".col-toggle-label{cursor:pointer;font-size:13px;color:#555;font-weight:bold;display:inline-block;padding:5px 12px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;user-select:none;}",
     ".col-toggle-label:hover{background:#eee;color:#000;}",
-    ".triangle{display:inline-block;transition:transform 0.2s;font-size:11px;margin-right:4px;}",
+    
+    # [수정] 삼각형 아이콘 크게 변경 및 배치
+    ".triangle{display:inline-block;transition:transform 0.2s;font-size:16px;margin-left:6px;vertical-align:middle;}",
     ".col-toggle-chk:checked+.col-toggle-label .triangle{transform:rotate(90deg);}",
     "</style>"
 ]
@@ -157,11 +162,12 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             t3 += f"총수익 : <span class='{col(ag)}'>{fmt(ag,True)} ({ay:+.2f}%)</span>**"
             st.markdown(t3, unsafe_allow_html=True)
 
-            # 종목코드 표시 버튼 (기본은 unchecked 상태로 시작하여 열을 숨김)
+            # [수정] 우측 정렬 래퍼 및 아이콘 순서/크기 변경 적용
             h3 = [
-                "<div>", 
+                "<div class='toggle-wrapper'>", 
                 f"<input type='checkbox' id='chk_{k}' class='col-toggle-chk'>", 
-                f"<label for='chk_{k}' class='col-toggle-label'><span class='triangle'>▶</span> 종목코드 표시</label>", 
+                f"<label for='chk_{k}' class='col-toggle-label'>종목코드 표시 <span class='triangle'>▶</span></label>", 
+                "</div>",
                 "<div class='table-container'><table class='main-table'><tr><th>종목명</th><th class='col-code'>종목코드</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             ]
 
@@ -169,12 +175,11 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 is_sum = (i['종목명'] == "[ 합계 ]")
                 r_cls = "class='sum-row'" if is_sum else ""
                 cv = i.get('코드', '-')
-                # 종목코드를 검은색(기본색)으로 설정
                 cdisp = "-" if is_sum or cv == "-" else f"<span>{cv}</span>"
                 
                 tr = f"<tr {r_cls}><td>{i['종목명']}</td><td class='col-code'>{cdisp}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i['평가금액'])}</td><td class='{col(i['평가손익'])}'>{fmt(i['평가손익'],True)}</td><td class='{col(i['수익률(%)'])}'>{i['수익률(%)']:+.2f}%</td><td>{fmt(i['수량'])}</td><td>{fmt(i['평단가'])}</td><td>{fmt(i['가격'])}</td></tr>"
                 h3.append(tr)
-            h3.append("</table></div></div>")
+            h3.append("</table></div>")
             st.markdown("".join(h3), unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
