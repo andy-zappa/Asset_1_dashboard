@@ -303,8 +303,5 @@ exp_title = f"📂 [ {t3_labels.get(k, acc.get('label'))} ] 종목별 현황"
         
         html3 += "</table></div></div>"
         st.markdown(html3, unsafe_allow_html=True)
-st.markdown("
+st.markdown("", unsafe_allow_html=True)
 
-
-
-", unsafe_allow_html=True)
