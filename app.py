@@ -5,6 +5,7 @@ import warnings
 import google.generativeai as genai
 import Andy_pension_v2
 
+# 경고 무시
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
@@ -72,7 +73,8 @@ st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margi
 
 if "_insight" in data:
     filtered = [l for l in data["_insight"] if "조회 기준 시간" not in l]
-    content = "".join([f"<p style='margin-bottom:5px;'>• {l}</p>" for line in filtered])
+    # [수정 완료] NameError 방지를 위해 변수 이름을 'line'으로 통일함
+    content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in filtered])
     st.markdown(f"<div class='insight-box'><span class='box-title'>금융 자산 보고 요약</span>{content}</div>", unsafe_allow_html=True)
 
 # --- [1] 투자금 대비 자산 현황 ---
@@ -108,8 +110,6 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         acc = data[k]
         with st.expander(f"📂 [ {acc.get('label')} ] 종목별 현황"):
-            # [수정] 제목 줄 수치: [2]번 테이블용 매수금액 대비 수익 수치와 1원 단위 정합성 통일
-            # JSON의 상세 내역 내 [ 합계 ] 행 데이터를 직접 사용
             sum_row_data = next(i for i in acc['상세'] if i['종목명'] == "[ 합계 ]")
             acc_val_gain = sum_row_data['평가손익']
             acc_val_yield = sum_row_data['수익률(%)']
