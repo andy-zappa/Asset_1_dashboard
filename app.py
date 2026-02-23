@@ -43,12 +43,22 @@ with st.sidebar:
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            # [버그 수정] 가장 호환성이 높은 범용 모델명으로 변경
-            model = genai.GenerativeModel('gemini-pro')
-            prompt = st.text_area("AI에게 수정 요청")
-            if st.button("코드 수정 제안받기"):
-                res = model.generate_content(f"Streamlit 수정 제안: {prompt}"); st.code(res.text)
-        except Exception as e: st.error(f"AI 오류: {e}")
+            
+            # [궁극의 해결책] 숨바꼭질 종료: 구글에 직접 물어보고 사용 가능한 모델을 자동 선택합니다.
+            available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            
+            if available_models:
+                # 사용 가능한 모델 중 flash가 있으면 우선적으로 잡고, 없으면 구글이 주는 첫 번째 호환 모델을 강제 지정합니다.
+                target_model = next((m for m in available_models if 'flash' in m), available_models[0])
+                model = genai.GenerativeModel(target_model)
+                
+                prompt = st.text_area("AI에게 수정 요청")
+                if st.button("코드 수정 제안받기"):
+                    res = model.generate_content(f"Streamlit 수정 제안: {prompt}"); st.code(res.text)
+            else:
+                st.error("사용 가능한 AI 모델 목록이 없습니다. 구글 API 권한을 확인해주세요.")
+                
+        except Exception as e: st.error(f"AI 시스템 오류: {e}")
 
 def format_comma(val, force_sign=False):
     try: 
@@ -116,13 +126,4 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             acc_val_yield = sum_row_data['수익률(%)']
             c_s = "red" if acc_val_gain > 0 else "blue"
             
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc_val_gain, True)} ({acc_val_yield:+.2f}%)</span>**", unsafe_allow_html=True)
-            
-            html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
-            for i in acc.get('상세', []):
-                is_sum = i['종목명'] == "[ 합계 ]"; row_cls = "class='sum-row'" if is_sum else ""
-                c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
-                html3 += f"<tr {row_cls}><td>{i['종목명']}</td><td>{i.get('비중', 0):.1f}%</td><td>{format_comma(i['평가금액'])}</td><td class='{c}'>{format_comma(i['평가손익'], True)}</td><td class='{c}'>{i['수익률(%)']:+.2f}%</td><td>{format_comma(i['수량'])}</td><td>{format_comma(i['평단가'])}</td><td>{format_comma(i['가격'])}</td></tr>"
-            st.markdown(html3 + "</table>", unsafe_allow_html=True)
-
-st.markdown("<br><br>", unsafe_allow_html=True)
+            st.markdown(f"&nbsp;&nbsp;&nbsp
