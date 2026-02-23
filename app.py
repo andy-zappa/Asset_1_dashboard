@@ -7,7 +7,7 @@ import Andy_pension_v2
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# [핵심] 줄바꿈 에러 방지를 위해 CSS와 HTML을 짧게 쪼개서 리스트로 묶음
+# 줄바꿈 에러 방지를 위해 CSS와 HTML을 짧게 쪼개서 리스트로 묶음
 css = [
     "<style>",
     ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
@@ -130,10 +130,47 @@ st.markdown(t2, unsafe_allow_html=True)
 h2 = ["<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액</th><th>매수금액</th></tr>"]
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총자산'))}</td><td class='{col(ay_tot)}'>{ay_tot:+.2f}%</td><td class='{col(ag_tot)}'>{fmt(ag_tot,True)}</td><td>{fmt(tot.get('매수금액합'))}</td></tr>")
 
+# [들여쓰기 버그 수정 완료 부분]
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
-a = data[k]
+        a = data[k]
         ag = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
         ap = a.get('총자산',0) - ag
         ay = (ag/ap*100) if ap > 0 else 0
+        h2.append(f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td><td>{fmt(a.get('총자산'))}</td><td class='{col(ay)}'>{ay:+.2f}%</td><td class='{col(ag)}'>{fmt(ag,True)}</td><td>{fmt(ap)}</td></tr>")
+h2.append("</table>")
+st.markdown("".join(h2), unsafe_allow_html=True)
 
+# --- [3] 계좌별 상세 내역 (종목코드 숨기기/펼치기) ---
+t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
+st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+
+for k in ['DC', 'PENSION', 'ISA', 'IRP']:
+    if k in data:
+        a = data[k]
+        with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황"):
+            s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
+            ag, ay = s_data['평가손익'], s_data['수익률(%)']
+            t3 = f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {fmt(a.get('총자산'))} (원) / "
+            t3 += f"총수익 : <span class='{col(ag)}'>{fmt(ag,True)} ({ay:+.2f}%)</span>**"
+            st.markdown(t3, unsafe_allow_html=True)
+
+            h3 = [
+                "<div>", 
+                f"<input type='checkbox' id='chk_{k}' class='col-toggle-chk' checked>", 
+                f"<label for='chk_{k}' class='col-toggle-label'><span class='triangle'>▶</span> 종목코드 표시</label>", 
+                "<div class='table-container'><table class='main-table'><tr><th>종목명</th><th class='col-code'>종목코드</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
+            ]
+
+            for i in a.get('상세', []):
+                is_sum = (i['종목명'] == "[ 합계 ]")
+                r_cls = "class='sum-row'" if is_sum else ""
+                cv = i.get('코드', '-')
+                cdisp = "-" if is_sum or cv == "-" else f"<span style='color:#0047EB;font-weight:bold;'>{cv}</span>"
+                
+                tr = f"<tr {r_cls}><td>{i['종목명']}</td><td class='col-code'>{cdisp}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i['평가금액'])}</td><td class='{col(i['평가손익'])}'>{fmt(i['평가손익'],True)}</td><td class='{col(i['수익률(%)'])}'>{i['수익률(%)']:+.2f}%</td><td>{fmt(i['수량'])}</td><td>{fmt(i['평단가'])}</td><td>{fmt(i['가격'])}</td></tr>"
+                h3.append(tr)
+            h3.append("</table></div></div>")
+            st.markdown("".join(h3), unsafe_allow_html=True)
+
+st.markdown("<br><br>", unsafe_allow_html=True)
