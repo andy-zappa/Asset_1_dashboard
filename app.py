@@ -4,6 +4,10 @@ import pandas as pd
 import warnings
 import google.generativeai as genai
 
+# [중요 추가] 백엔드 엔진 파일을 불러옵니다.
+import Andy_pension_v2
+
+# 경고 무시
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
@@ -33,8 +37,20 @@ st.markdown("""
     .sidebar-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .sidebar-icon { font-size: 32px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"; }
     .sidebar-text { font-size: 22px; font-weight: bold; }
+    
+    /* 업데이트 버튼 스타일 최적화 */
+    div.stButton > button:first-child { font-weight: bold; border-radius: 8px; }
     </style>
     """, unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# [추가] 1. 페이지 최초 접속 시 실시간 데이터 자동 생성
+# ----------------------------------------------------
+if 'initialized' not in st.session_state:
+    with st.spinner("초기 실시간 데이터를 불러오는 중입니다..."):
+        Andy_pension_v2.generate_asset_data()
+    st.session_state['initialized'] = True
+    st.cache_data.clear()
 
 # 사이드바 및 AI 설정
 api_key = st.secrets.get("GOOGLE_API_KEY")
@@ -63,8 +79,25 @@ data = load_data()
 if not data: st.stop()
 
 total = data.get("_total", {})
-st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
-st.markdown(f"<div style='text-align: right; font-size: 15px; margin-bottom: 10px;'>[{total.get('조회시간')}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# [수정] 2. 메인 타이틀 & 실시간 업데이트 버튼 나란히 배치
+# ----------------------------------------------------
+col1, col2 = st.columns([8, 2]) # 8:2 비율로 분할
+
+with col1:
+    st.markdown(f"<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
+
+with col2:
+    # 조회시간 바로 위에 업데이트 버튼 배치
+    if st.button("🔄 실시간 업데이트", use_container_width=True):
+        with st.spinner("한국투자증권 데이터 갱신 중..."):
+            Andy_pension_v2.generate_asset_data()
+            st.cache_data.clear()
+            st.rerun() # 화면 새로고침
+            
+# 업데이트 버튼 바로 아래에 시간 표시 (위아래 간격 좁힘)
+st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margin-bottom: 10px; margin-top: -10px;'>[{total.get('조회시간')}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
     filtered = [l for l in data["_insight"] if "조회 기준 시간" not in l]
@@ -74,10 +107,8 @@ if "_insight" in data:
 # --- [1] 투자금 대비 자산 현황 ---
 p_color = "red" if total.get('총손익', 0) > 0 else "blue"
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
-# [요청 반영] 총수익 수치 Bold 추가
 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(total.get('총자산', 0))} (원) / 총수익 : <span class='{p_color}' style='font-weight: bold;'>{format_comma(total.get('총손익', 0), True)} ({total.get('수익률(%)', 0):+.2f}%)</span>**", unsafe_allow_html=True)
 
-# [요청 반영] 헤더 간격 수정: 평가금액 (전일比)
 html1 = "<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액 (전일比)</th><th>최초원금</th></tr>"
 c_t = "red" if total.get('총손익', 0) > 0 else "blue"
 html1 += f"<tr class='sum-row'><td>[ 합계 ]</td><td>{format_comma(total.get('총자산'))}</td><td class='{c_t}'>{total.get('수익률(%)'):+.2f}%</td><td class='{c_t}'>{format_comma(total.get('총손익'), True)} ({format_comma(total.get('평가손익(전일비)'), True)})</td><td>{format_comma(total.get('원금합'))}</td></tr>"
@@ -109,7 +140,6 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             c_s = "red" if acc.get('총손익', 0) > 0 else "blue"
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc.get('총손익'), True)} ({acc.get('수익률(%)'):+.2f}%)</span>**", unsafe_allow_html=True)
             html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
-            # [요청 반영] 상세 내역에도 [ 합계 ] 행 포함
             for i in acc.get('상세', []):
                 is_sum = i['종목명'] == "[ 합계 ]"; row_cls = "class='sum-row'" if is_sum else ""
                 c = "red" if i['평가손익'] > 0 else "blue" if i['평가손익'] < 0 else ""
