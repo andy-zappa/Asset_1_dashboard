@@ -7,7 +7,7 @@ import Andy_pension_v2
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# 줄바꿈 에러 방지를 위해 CSS와 HTML을 짧게 쪼개서 리스트로 묶음
+# [핵심] CSS 수정: 종목코드 열 제어 및 색상 설정
 css = [
     "<style>",
     ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
@@ -25,9 +25,12 @@ css = [
     ".sidebar-icon{font-size:32px;}",
     ".sidebar-text{font-size:22px;font-weight:bold;}",
     "div.stButton>button:first-child{font-weight:bold;border-radius:8px;padding:0 0.5rem!important;}",
+    
+    # 종목코드 열 숨기기 핵심: 초기 상태(not checked)에서 col-code 클래스를 숨김
     ".col-toggle-chk{display:none;}",
     ".col-toggle-chk:not(:checked)~.table-container .col-code{display:none!important;}",
-    ".col-toggle-label{cursor:pointer;font-size:13px;color:#555;font-weight:bold;display:inline-block;margin-bottom:8px;}",
+    ".col-toggle-label{cursor:pointer;font-size:13px;color:#555;font-weight:bold;display:inline-block;margin-bottom:8px;padding:5px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;}",
+    ".col-toggle-label:hover{background:#eee;color:#000;}",
     ".triangle{display:inline-block;transition:transform 0.2s;font-size:11px;margin-right:4px;}",
     ".col-toggle-chk:checked+.col-toggle-label .triangle{transform:rotate(90deg);}",
     "</style>"
@@ -130,7 +133,6 @@ st.markdown(t2, unsafe_allow_html=True)
 h2 = ["<table class='main-table'><tr><th>계좌 구분</th><th>총자산</th><th>수익률</th><th>평가금액</th><th>매수금액</th></tr>"]
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총자산'))}</td><td class='{col(ay_tot)}'>{ay_tot:+.2f}%</td><td class='{col(ag_tot)}'>{fmt(ag_tot,True)}</td><td>{fmt(tot.get('매수금액합'))}</td></tr>")
 
-# [들여쓰기 버그 수정 완료 부분]
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
@@ -141,7 +143,7 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 (종목코드 숨기기/펼치기) ---
+# --- [3] 계좌별 상세 내역 ---
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
@@ -155,9 +157,10 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             t3 += f"총수익 : <span class='{col(ag)}'>{fmt(ag,True)} ({ay:+.2f}%)</span>**"
             st.markdown(t3, unsafe_allow_html=True)
 
+            # 종목코드 표시 버튼 (기본은 unchecked 상태로 시작하여 열을 숨김)
             h3 = [
                 "<div>", 
-                f"<input type='checkbox' id='chk_{k}' class='col-toggle-chk' checked>", 
+                f"<input type='checkbox' id='chk_{k}' class='col-toggle-chk'>", 
                 f"<label for='chk_{k}' class='col-toggle-label'><span class='triangle'>▶</span> 종목코드 표시</label>", 
                 "<div class='table-container'><table class='main-table'><tr><th>종목명</th><th class='col-code'>종목코드</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             ]
@@ -166,7 +169,8 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 is_sum = (i['종목명'] == "[ 합계 ]")
                 r_cls = "class='sum-row'" if is_sum else ""
                 cv = i.get('코드', '-')
-                cdisp = "-" if is_sum or cv == "-" else f"<span style='color:#0047EB;font-weight:bold;'>{cv}</span>"
+                # 종목코드를 검은색(기본색)으로 설정
+                cdisp = "-" if is_sum or cv == "-" else f"<span>{cv}</span>"
                 
                 tr = f"<tr {r_cls}><td>{i['종목명']}</td><td class='col-code'>{cdisp}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i['평가금액'])}</td><td class='{col(i['평가손익'])}'>{fmt(i['평가손익'],True)}</td><td class='{col(i['수익률(%)'])}'>{i['수익률(%)']:+.2f}%</td><td>{fmt(i['수량'])}</td><td>{fmt(i['평단가'])}</td><td>{fmt(i['가격'])}</td></tr>"
                 h3.append(tr)
