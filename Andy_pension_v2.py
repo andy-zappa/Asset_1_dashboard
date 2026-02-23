@@ -88,13 +88,12 @@ def generate_asset_data():
             sub_info.append({"종목명": title, "평가금액": asset, "평가손익": gain, "전일비": diff_val, "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, "수량": qty, "평단가": avg_p, "가격": curr})
         for item in sub_info: item["비중"] = (item["평가금액"] / a_asset * 100) if a_asset > 0 else 0
         
-        # [수정] 상세 내역용 [ 합계 ] 행: '매수금액' 대비 수익으로 고정 (DC 포함 모든 계좌 정합성 통일)
+        # [정합성 수정] 상세 내역용 [ 합계 ] 행: '매수금액' 대비 수익으로 계산
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sum_row = {"종목명": "[ 합계 ]", "비중": 100.0, "평가금액": a_asset, "평가손익": a_val_gain, "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, "수량": "-", "평단가": "-", "가격": "-"}
         sub_info.insert(0, sum_row)
         
         t_asset += a_asset; t_p_effective += p_val; t_diff += a_diff
-        # [1]번 테이블용 '총손익'은 기존 원금 대비 로직 유지
         assets_json[acc_key] = {"label": acc_label, "총자산": a_asset, "원금": p_val, "총손익": (a_asset-p_val) if acc_key!='DC' else DC_FIXED_GAIN, "수익률(%)": (DC_FIXED_RATE if acc_key=='DC' else (a_asset-p_val)/p_val*100), "평가손익(전일비)": a_diff, "상세": sub_info}
     
     t_avg_buy = sum(sum(i['수량']*i['평단가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
