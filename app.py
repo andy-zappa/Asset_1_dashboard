@@ -8,7 +8,6 @@ import Andy_pension_v2
 # 경고 무시
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# 1. 페이지 설정 및 디자인 고도화
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 st.markdown("""
@@ -40,19 +39,16 @@ if 'initialized' not in st.session_state:
 
 api_key = st.secrets.get("GOOGLE_API_KEY")
 with st.sidebar:
-    # 🤖 유채색 아이콘 적용된 사이드바 제목
     st.markdown('<div class="sidebar-header"><span class="sidebar-icon">🤖</span><span class="sidebar-text">ZAPPA AI 코딩 모드</span></div>', unsafe_allow_html=True)
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            # [수정] 모델 호출 방식을 가장 표준적인 이름으로 고정
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # [버그 수정] 가장 호환성이 높은 범용 모델명으로 변경
+            model = genai.GenerativeModel('gemini-pro')
             prompt = st.text_area("AI에게 수정 요청")
             if st.button("코드 수정 제안받기"):
-                res = model.generate_content(f"Streamlit 수정 제안: {prompt}")
-                st.code(res.text)
-        except Exception as e: 
-            st.error(f"AI 오류: {e}")
+                res = model.generate_content(f"Streamlit 수정 제안: {prompt}"); st.code(res.text)
+        except Exception as e: st.error(f"AI 오류: {e}")
 
 def format_comma(val, force_sign=False):
     try: 
@@ -75,16 +71,13 @@ with col2:
     if st.button("🔄 실시간 업데이트", use_container_width=True):
         with st.spinner("한국투자증권 데이터 갱신 중..."):
             Andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
-
 st.markdown(f"<div style='text-align: right; font-size: 14px; color: #555; margin-bottom: 10px; margin-top: -10px;'>[{total.get('조회시간')}]&nbsp;&nbsp;</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
-    filtered = [line for line in data["_insight"] if "조회 기준 시간" not in line]
-    # [수정 완료] NameError 해결: 변수 'line'으로 통일
-    content = "".join([f"<p style='margin-bottom:5px;'>• {line}</p>" for line in filtered])
+    filtered = [l for l in data["_insight"] if "조회 기준 시간" not in l]
+    content = "".join([f"<p style='margin-bottom:5px;'>• {l}</p>" for l in filtered])
     st.markdown(f"<div class='insight-box'><span class='box-title'>금융 자산 보고 요약</span>{content}</div>", unsafe_allow_html=True)
 
-# (중략: 이하 테이블 [1], [2], [3] 코드는 이전과 동일하게 유지)
 # --- [1] 투자금 대비 자산 현황 ---
 p_color = "red" if total.get('총손익', 0) > 0 else "blue"
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -122,7 +115,9 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             acc_val_gain = sum_row_data['평가손익']
             acc_val_yield = sum_row_data['수익률(%)']
             c_s = "red" if acc_val_gain > 0 else "blue"
+            
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총자산 : {format_comma(acc.get('총자산'))} (원) / 총수익 : <span class='{c_s}' style='font-weight: bold;'>{format_comma(acc_val_gain, True)} ({acc_val_yield:+.2f}%)</span>**", unsafe_allow_html=True)
+            
             html3 = "<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             for i in acc.get('상세', []):
                 is_sum = i['종목명'] == "[ 합계 ]"; row_cls = "class='sum-row'" if is_sum else ""
