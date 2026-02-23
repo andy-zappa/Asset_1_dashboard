@@ -132,5 +132,8 @@ h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총자산')
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
-        a = data[k]
-        ag = sum(i['평가손익'] for i in
+a = data[k]
+        ag = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
+        ap = a.get('총자산',0) - ag
+        ay = (ag/ap*100) if ap > 0 else 0
+
