@@ -7,7 +7,7 @@ import Andy_pension_v2
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# [핵심] CSS 수정: 토글 작동 보장 및 일반행 볼드 제거
+# [핵심] CSS 수정: 삼각형 회전 각도 조정 (0도 -> 90도)
 css = [
     "<style>",
     ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
@@ -16,8 +16,8 @@ css = [
     ".box-title{font-size:22px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}",
     ".main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;}",
     ".main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important;}",
-    ".main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;font-weight:normal!important;}", # 일반 td 볼드 강제 제거
-    ".sum-row td{background-color:#fff9e6;font-weight:bold!important;}", # 합계 행만 볼드 유지
+    ".main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;font-weight:normal!important;}",
+    ".sum-row td{background-color:#fff9e6;font-weight:bold!important;}",
     ".red{color:#FF2323!important;}",
     ".blue{color:#0047EB!important;}",
     ".sum-row .red, .sum-row .blue{font-weight:bold!important;}",
@@ -27,14 +27,16 @@ css = [
     ".sidebar-text{font-size:22px;font-weight:bold;}",
     "div.stButton>button:first-child{font-weight:bold;border-radius:8px;padding:0 0.5rem!important;}",
     
-    # [수정] 종목코드 열 숨기기 핵심 로직 (ID 기반으로 더 강력하게 제어)
+    # 종목코드 열 제어 로직
     ".col-toggle-chk{display:none!important;}",
     ".col-toggle-chk:not(:checked) ~ .table-container .col-code{display:none!important;}",
     ".toggle-wrapper{text-align:right; margin-bottom:8px;}",
     ".col-toggle-label{cursor:pointer;font-size:13px;color:#555;font-weight:bold;display:inline-block;padding:5px 12px;border:1px solid #ccc;border-radius:5px;background:#f9f9f9;user-select:none;}",
     ".col-toggle-label:hover{background:#eee;color:#000;}",
-    ".triangle{display:inline-block;transition:transform 0.2s;font-size:18px;margin-left:6px;vertical-align:middle;line-height:1;}",
-    ".col-toggle-chk:checked + .col-toggle-label .triangle{transform:rotate(90deg);}",
+    
+    # [수정] 삼각형 아이콘 애니메이션: 체크 시 90도 회전하여 아래를 보게 함
+    ".triangle{display:inline-block;transition:transform 0.2s;font-size:18px;margin-left:6px;vertical-align:middle;line-height:1; transform: rotate(0deg);}",
+    ".col-toggle-chk:checked + .toggle-wrapper .triangle{transform: rotate(90deg);}",
     "</style>"
 ]
 st.markdown("".join(css), unsafe_allow_html=True)
@@ -159,12 +161,12 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             t3 += f"총수익 : <span class='{col(ag_acc)}' style='font-weight:bold;'>{fmt(ag_acc,True)} ({ay_acc:+.2f}%)</span>**"
             st.markdown(t3, unsafe_allow_html=True)
 
-            # [수정] 토글 버튼과 표를 하나의 div로 감싸고 고유 ID 부여
+            # [수정] 토글 버튼 배치 및 삼각형 아이콘 회전 로직 최적화
             h3 = [
                 "<div>",
                 f"<input type='checkbox' id='chk_{k}' class='col-toggle-chk'>", 
                 f"<div class='toggle-wrapper'><label for='chk_{k}' class='col-toggle-label'>종목코드 표시 <span class='triangle'>▶</span></label></div>", 
-                f"<div class='table-container' id='table_{k}'>",
+                f"<div class='table-container'>",
                 "<table class='main-table'><tr><th>종목명</th><th class='col-code'>종목코드</th><th>비중</th><th>총자산(원)</th><th>평가손익(원)</th><th>수익률</th><th>주식수</th><th>평단가</th><th>금일종가</th></tr>"
             ]
 
@@ -174,7 +176,6 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 cv = i.get('코드', '-')
                 cdisp = "-" if is_sum or cv == "-" else cv
                 
-                # [수정] 일반 행 데이터에서 볼드 스타일 제거 (fmt 함수 및 내부 태그 점검)
                 row_html = f"<tr {r_cls}><td>{i['종목명']}</td><td class='col-code'>{cdisp}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i['평가금액'])}</td><td class='{col(i['평가손익'])}'>{fmt(i['평가손익'],True)}</td><td class='{col(i['수익률(%)'])}'>{i['수익률(%)']:+.2f}%</td><td>{fmt(i['수량'])}</td><td>{fmt(i['평단가'])}</td><td>{fmt(i['가격'])}</td></tr>"
                 h3.append(row_html)
             h3.append("</table></div></div>")
