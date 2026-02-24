@@ -23,7 +23,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .zappa-icon {font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important;}
 
 /* =========================================================
-   [문제 해결 2] 완벽한 플로팅 배너 (가변폭 100% 무력화)
+   완벽한 플로팅 배너 (가변폭 100% 무력화)
    ========================================================= */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
@@ -178,33 +178,39 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(tot.get('총 자산',0))} / 총 수익 : <span class='{col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span>**", unsafe_allow_html=True)
 
-h1 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>총 누계손익</th><th>수익률</th><th>최초원금</th></tr>"]
+# [수정] 테이블 1에도 전일비 열(Column) 강제 노출
+h1 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>총 누계손익</th><th>전일비</th><th>수익률</th><th>최초원금</th></tr>"]
 ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총 수익',0), tot.get('총 자산',0), tot.get('원금합',0)
-h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
+td_tot = tot.get('평가손익(전일비)', 0)
+
+h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        h1.append(f"<tr><td>{a['label']}</td><td>{fmt(a['총 자산'])}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(a['원금'])}</td></tr>")
+        ad_acc = a.get('평가손익(전일비)', 0)
+        h1.append(f"<tr><td>{a['label']}</td><td>{fmt(a['총 자산'])}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(a['원금'])}</td></tr>")
 h1.append("</table>")
 st.markdown("".join(h1), unsafe_allow_html=True)
 
 
-# --- [2] 매입금액 대비 자산 현황 (전일비 계산 버그 수정) ---
+# --- [2] 매입금액 대비 자산 현황 ---
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span>**", unsafe_allow_html=True)
 
-h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"]
+# [수정] 테이블 2의 계좌명 고정 매핑
+t2_lbl = {
+    'DC': '퇴직연금(DC)계좌',
+    'PENSION': '연금저축(CMA)계좌',
+    'ISA': 'ISA(중개형)계좌',
+    'IRP': '퇴직연금(IRP)계좌'
+}
 
-# 전일비를 0으로 표출하지 않고, 개별 종목들의 합을 통해 완벽히 역산합니다.
-td_tot = 0
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
-    if k in data:
-        td_tot += sum(i.get('전일비', 0) for i in data[k].get('상세', []) if i.get('종목명') != '[ 합계 ]')
+h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>전일비</th><th>수익률</th><th>매입금액</th></tr>"]
 
-h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
@@ -212,16 +218,15 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
+        ad_acc = a.get('평가손익(전일비)', 0)
+        row_label = t2_lbl.get(k, a['label'])
         
-        # 각 계좌별 전일비 합산 처리
-        ad_acc = sum(i.get('전일비', 0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
-        
-        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
+        h2.append(f"<tr><td>{row_label}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
 
-# --- [3] 계좌별 상세 내역 (에러 원천 차단) ---
+# --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
 b1, b2, b3, b4, b5 = st.columns(5)
@@ -255,7 +260,6 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
-            # next 함수 사용 시 기본값 {} 지정으로 오류 방지
             s_data = next((i for i in a['상세'] if i.get('종목명') == "[ 합계 ]"), {})
             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span>**", unsafe_allow_html=True)
             
