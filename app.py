@@ -1,316 +1,212 @@
-import streamlit as st
+import pandas as pd
+import requests
 import json
-import warnings
-import google.generativeai as genai
-import Andy_pension_v2
+from datetime import datetime, timedelta, timezone
 
-warnings.filterwarnings("ignore")
-st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
+APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
+APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
+URL_BASE = "https://openapi.koreainvestment.com:9443"
 
-css = """
-<style>
-.block-container { padding-top:3rem!important; padding-bottom:5rem!important; }
-h3 { font-size:26px!important; font-weight:bold; margin-bottom:10px; }
-.sub-title { font-size:22px!important; font-weight:bold; margin:25px 0 10px; }
-.main-table { width:100%; border-collapse:collapse; font-size:15px; text-align:center; margin-bottom:10px; }
-.main-table th { background-color:#f2f2f2; padding:10px; border:1px solid #ddd; font-weight:bold!important; }
-.main-table td { padding:8px; border:1px solid #ddd; vertical-align:middle; }
-.sum-row td { background-color:#fff9e6; font-weight:bold!important; }
-.red { color:#FF2323!important; } 
-.blue { color:#0047EB!important; }
-.sidebar-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; font-size:22px; font-weight:bold; }
-
-/* [핵심] 버튼을 1픽셀의 틈도 없이 바싹 붙이는 마법의 CSS */
-div[data-testid='stHorizontalBlock'] { gap: 0px !important; }
-div[data-testid='column'] { padding: 0px !important; }
-div.stButton>button { 
-    font-weight:normal!important; 
-    border-radius:0px!important; 
-    padding:0.2rem 0.5rem!important; 
-    font-size:13px!important; 
-    margin-left:-1px!important; /* 테두리가 겹치도록 당김 */
-    white-space:nowrap!important; 
-    border:1px solid #ccc!important; 
+ORIGINAL_CAPITAL = {
+    '퇴직연금(DC)계좌 (25.8월~)': 254782039, 
+    '연금저축(CMA)계좌 (25.11월~)': 78787722, 
+    'ISA(중개형)계좌 (25.8월~)': 33000000, 
+    '퇴직연금(IRP)계좌 (25.8월~)': 3000000
 }
-/* 첫 번째, 마지막 버튼의 바깥쪽 모서리만 둥글게 처리 */
-div[data-testid='column']:first-child div.stButton>button {
-    border-top-left-radius: 4px !important;
-    border-bottom-left-radius: 4px !important;
-    margin-left: 0 !important;
+
+ACC_MAP = {
+    '퇴직연금(DC)계좌 (25.8월~)': 'DC', 
+    '연금저축(CMA)계좌 (25.11월~)': 'PENSION', 
+    'ISA(중개형)계좌 (25.8월~)': 'ISA', 
+    '퇴직연금(IRP)계좌 (25.8월~)': 'IRP'
 }
-div[data-testid='column']:last-child div.stButton>button {
-    border-top-right-radius: 4px !important;
-    border-bottom-right-radius: 4px !important;
+
+def calc_samsungfire_principal():
+    기준일 = datetime(2026, 2, 21)
+    기준금액 = 90267089
+    원금 = 90000000
+    연이율 = 0.0305
+    today_n = datetime.now().replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+    기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+    n_days = (today_n - 기준일_n).days
+    return int(기준금액 + (원금 * 연이율 * n_days / 365))
+
+PORTFOLIO = {
+    'DC': [
+        ['069500', 635, 49602, 'KODEX 200'], 
+        ['161510', 1300, 19285, 'PLUS 고배당주'], 
+        ['360750', 1402, 23556, 'TIGER 미국S&P500'], 
+        ['379810', 1402, 23465, 'KODEX 나스닥100'], 
+        ['381180', 996, 25427, 'TIGER 미국필라델피아반도체나스닥'], 
+        ['458730', 1353, 12222, 'TIGER 미국배당다우존스'], 
+        ['CASH_INS', 1, 90000000, '삼성화재 퇴직연금(3.05%/年)'], 
+        ['CASH_ETC', 1, 652933, '현금성자산']
+    ],
+    'PENSION': [
+        ['MMF00004', 1, 97708, "삼성신종MMF"], 
+        ['069500', 427, 56911, 'KODEX 200'], 
+        ['360750', 361, 25193, 'TIGER 미국S&P500'], 
+        ['379810', 341, 25105, 'KODEX 나스닥100'], 
+        ['381180', 295, 28543, 'TIGER 미국필라델피아반도체나스닥'], 
+        ['498400', 2444, 13193, 'KODEX 200타겟위클리커버드콜'], 
+        ['PENSION_CASH', 1, 1347241, '현금잔고']
+    ],
+    'ISA': [
+        ['498400', 1176, 12806, 'KODEX 200타겟위클리커버드콜'], 
+        ['475720', 894, 10069, 'RISE 200위클리커버드콜'], 
+        ['494300', 770, 9878, 'KODEX 나스닥데일리'], 
+        ['483280', 260, 12391, 'KODEX AI테크TOP'], 
+        ['CASH_ISA', 1, 209746, '현금성자산']
+    ],
+    'IRP': [
+        ['498400', 189, 11080, 'KODEX 200타겟위클리커버드콜'], 
+        ['CASH_IRP', 1, 1140906, '현금성자산']
+    ]
 }
-div.stButton>button:hover { 
-    border-color:#ff4b4b!important; 
-    z-index:1; 
-    position:relative; 
-}
-</style>
-"""
-st.markdown(css, unsafe_allow_html=True)
 
-if 'sort_mode' not in st.session_state: 
-    st.session_state.sort_mode = 'init'
-if 'show_code' not in st.session_state: 
-    st.session_state.show_code = False
-if 'init' not in st.session_state:
-    with st.spinner("데이터 로딩 중..."): 
-        Andy_pension_v2.generate_asset_data()
-    st.session_state['init'] = True
-    st.cache_data.clear()
-
-# ==========================================
-# [안전장치] 에러가 나도 ZAPPA 엔진은 절대 안 날아가게 보호
-# ==========================================
-with st.sidebar:
-    st.markdown(
-        "<div class='sidebar-header'>"
-        "<span class='sidebar-icon'>🤖</span>"
-        "<span class='sidebar-text'>ZAPPA AI 코딩 모드</span>"
-        "</div>", 
-        unsafe_allow_html=True
-    )
-    try:
-        key = st.secrets.get("GOOGLE_API_KEY") if "GOOGLE_API_KEY" in st.secrets else None
-        if key:
-            genai.configure(api_key=key)
-            models = genai.list_models()
-            avail = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
-            if avail:
-                m_name = next((m for m in avail if 'flash' in m), avail[0])
-                model = genai.GenerativeModel(m_name)
-                pmt = st.text_area("AI에게 요청", placeholder="요청 사항을 입력하세요...")
-                if st.button("수정 제안받기"):
-                    res = model.generate_content("Streamlit 수정: " + pmt)
-                    st.code(res.text)
-        else:
-            st.info("API Key가 설정되지 않았습니다.")
-    except Exception as e:
-        st.error(f"ZAPPA 엔진 연결 지연 (기본 기능은 정상 작동합니다)")
-
-# ==========================================
-# 포맷팅 함수
-# ==========================================
-def fmt(v, sign=False):
-    try:
-        val = int(float(v))
-        if sign and val > 0:
-            return f"+{val:,}"
-        return f"{val:,}"
-    except:
-        return str(v)
-
-def col(v):
-    try:
-        val = float(v)
-        return "red" if val > 0 else ("blue" if val < 0 else "")
-    except:
-        return ""
-
-@st.cache_data(ttl=60)
-def load():
-    try:
-        with open('assets.json', 'r', encoding='utf-8') as f: 
-            return json.load(f)
-    except:
+def get_access_token():
+    payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
+    try: 
+        res = requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload)
+        return res.json().get("access_token")
+    except: 
         return None
 
-data = load()
-if not data: st.stop()
-tot = data.get("_total", {})
-
-c1, c2 = st.columns([8.5, 1.5])
-with c1: 
-    st.markdown("<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
-with c2:
-    if st.button("🔄 업데이트", use_container_width=True):
-        Andy_pension_v2.generate_asset_data()
-        st.cache_data.clear()
-        st.rerun()
-
-time_str = f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>"
-st.markdown(time_str, unsafe_allow_html=True)
-
-unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW), %</div>"
-
-# --- [1] 투자금 대비 자산 현황 ---
-st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
-
-t1_str = (
-    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-    f"**총 자산 : {fmt(tot.get('총자산',0))} / "
-    f"총 수익 : <span class='{col(tot.get('총손익',0))}'>"
-    f"{fmt(tot.get('총손익',0), True)} "
-    f"({'▲' if tot.get('수익률(%)',0)>0 else '▼' if tot.get('수익률(%)',0)<0 else ''}{abs(tot.get('수익률(%)',0)):.2f}%)</span>**"
-)
-st.markdown(t1_str, unsafe_allow_html=True)
-
-h1 = [
-    unit_html, 
-    "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th>"
-    "<th>총 누계손익</th><th>수익률</th><th>최초원금</th></tr>"
-]
-
-ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총손익',0), tot.get('총자산',0), tot.get('원금합',0)
-
-ty_str = f"{'▲' if ty>0 else '▼' if ty<0 else ''}{abs(ty):.2f}%"
-h1.append(
-    f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td>"
-    f"<td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(ty)}'>{ty_str}</td>"
-    f"<td>{fmt(to)}</td></tr>"
-)
-
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
-    if k in data:
-        a = data[k]
-        ay, ag = a.get('수익률(%)',0), a.get('총손익',0)
-        ay_str = f"{'▲' if ay>0 else '▼' if ay<0 else ''}{abs(ay):.2f}%"
-        row = (
-            f"<tr><td>{a.get('label')}</td><td>{fmt(a.get('총자산'))}</td>"
-            f"<td class='{col(ag)}'>{fmt(ag, True)}</td><td class='{col(ay)}'>{ay_str}</td>"
-            f"<td>{fmt(a.get('원금'))}</td></tr>"
+def get_current_price(code, token, avg_p):
+    if code == 'CASH_INS': 
+        return {"c": calc_samsungfire_principal(), "d": 0}
+    if code.startswith('CASH') or code == 'PENSION_CASH' or code == 'MMF00004': 
+        return {"c": int(avg_p), "d": 0}
+    
+    headers = {
+        "authorization": f"Bearer {token}", 
+        "appkey": APP_KEY, 
+        "appsecret": APP_SECRET, 
+        "tr_id": "FHKST01010100"
+    }
+    try:
+        res = requests.get(
+            f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
+            headers=headers, 
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
         )
-        h1.append(row)
-h1.append("</table>")
-st.markdown("".join(h1), unsafe_allow_html=True)
+        out = res.json().get('output', {})
+        return {"c": int(float(out.get('stck_prpr', avg_p))), "d": int(float(out.get('prdy_vrss', 0)))}
+    except: 
+        return {"c": int(avg_p), "d": 0}
 
+def generate_asset_data():
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    days_kr = ['월', '화', '수', '목', '금', '토', '일']
+    day_name = days_kr[now_kst.weekday()]
+    fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
+    
+    token = get_access_token()
 
-# --- [2] 매수금액 대비 자산 현황 ---
-ag_tot = tot.get('총자산',0) - tot.get('매수금액합',0)
-ay_tot = (ag_tot / tot.get('매수금액합',1) * 100) if tot.get('매수금액합',1) > 0 else 0
-
-st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-
-t2_str = (
-    "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-    f"**총 자산 : {fmt(tot.get('총자산'))} / "
-    f"총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} "
-    f"({'▲' if ay_tot>0 else '▼' if ay_tot<0 else ''}{abs(ay_tot):.2f}%)</span>**"
-)
-st.markdown(t2_str, unsafe_allow_html=True)
-
-h2 = [
-    unit_html, 
-    "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th>"
-    "<th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"
-]
-
-ay_tot_str = f"{'▲' if ay_tot>0 else '▼' if ay_tot<0 else ''}{abs(ay_tot):.2f}%"
-td_tot = tot.get('평가손익(전일비)',0)
-
-h2.append(
-    f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총자산'))}</td>"
-    f"<td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{ay_tot_str}</td>"
-    f"<td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매수금액합'))}</td></tr>"
-)
-
-t2_lbl = {
-    'DC':'퇴직연금(DC)계좌', 'PENSION':'연금저축(CMA)계좌', 
-    'ISA':'ISA(중개형)계좌', 'IRP':'퇴직연금(IRP)계좌'
-}
-
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
-    if k in data:
-        a = data[k]
-        ag_acc = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
-        ap_acc = a.get('총자산',0) - ag_acc
-        ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
-        ay_acc_str = f"{'▲' if ay_acc>0 else '▼' if ay_acc<0 else ''}{abs(ay_acc):.2f}%"
-        ad_acc = a.get('평가손익(전일비)', 0)
+    t_asset = 0
+    t_p_effective = 0
+    t_diff = 0
+    assets_json = {}
+    
+    for acc_label, p_val in ORIGINAL_CAPITAL.items():
+        acc_key = ACC_MAP[acc_label]
+        a_asset = 0
+        a_diff = 0
+        sub_info = []
+        a_buy_total = 0 
         
-        row = (
-            f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td>"
-            f"<td>{fmt(a.get('총자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td>"
-            f"<td class='{col(ay_acc)}'>{ay_acc_str}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td>"
-            f"<td>{fmt(ap_acc)}</td></tr>"
-        )
-        h2.append(row)
-h2.append("</table>")
-st.markdown("".join(h2), unsafe_allow_html=True)
-
-
-# --- [3] 계좌별 상세 내역 ---
-st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
-
-# 5개 버튼 우측 정렬 및 간격 완벽 밀착! (표 끝선과 일치)
-spacer, b1, b2, b3, b4, b5 = st.columns([5.8, 0.8, 0.8, 0.8, 0.8, 1.0])
-with b1:
-    if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △", use_container_width=True): 
-        st.session_state.sort_mode = 'init'; st.rerun()
-with b2:
-    if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △", use_container_width=True): 
-        st.session_state.sort_mode = 'asset'; st.rerun()
-with b3:
-    if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △", use_container_width=True): 
-        st.session_state.sort_mode = 'profit'; st.rerun()
-with b4:
-    if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △", use_container_width=True): 
-        st.session_state.sort_mode = 'rate'; st.rerun()
-with b5:
-    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]", use_container_width=True): 
-        st.session_state.show_code = not st.session_state.show_code; st.rerun()
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-t3_lbl = {
-    'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 
-    'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 
-    'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 
-    'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'
-}
-
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
-    if k in data:
-        a = data[k]
-        with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황", expanded=False):
-            s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
+        for code, qty, avg_p, title in PORTFOLIO[acc_key]:
+            px = get_current_price(code, token, avg_p)
+            curr = px['c']
+            diff_val = px['d'] * qty
             
-            t3_str = (
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                f"**총 자산 : {fmt(a.get('총자산'))} / "
-                f"총 수익 : <span class='{col(s_data['평가손익'])}'>"
-                f"{fmt(s_data['평가손익'], True)} "
-                f"({'▲' if s_data['수익률']>0 else '▼' if s_data['수익률']<0 else ''}{abs(s_data['수익률']):.2f}%)</span>**"
-            )
-            st.markdown(t3_str, unsafe_allow_html=True)
+            asset = int(qty * curr)
+            buy_amt = int(qty * avg_p)
+            gain = asset - buy_amt
+            
+            a_asset += asset
+            a_diff += diff_val
+            a_buy_total += buy_amt
+            
+            sub_info.append({
+                "종목명": title, 
+                "코드": code, 
+                "총자산": asset, 
+                "평가손익": gain, 
+                "전일비": diff_val, 
+                "수익률": (gain/buy_amt*100) if buy_amt!=0 else 0, 
+                "주식수": qty, 
+                "평단가": avg_p, 
+                "금일종가": curr
+            })
+            
+        for item in sub_info: 
+            item["비중"] = (item["총자산"] / a_asset * 100) if a_asset > 0 else 0
+        
+        a_val_gain = sum(i['평가손익'] for i in sub_info)
+        sum_row = {
+            "종목명": "[ 합계 ]", 
+            "코드": "-", 
+            "비중": 100.0, 
+            "총자산": a_asset, 
+            "평가손익": a_val_gain, 
+            "수익률": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
+            "주식수": "-", 
+            "평단가": "-", 
+            "금일종가": "-"
+        }
+        sub_info.insert(0, sum_row)
+        
+        t_asset += a_asset
+        t_p_effective += p_val
+        t_diff += a_diff
+        
+        acc_profit = a_asset - p_val
+        acc_rate = (acc_profit / p_val * 100) if p_val > 0 else 0
+        
+        assets_json[acc_key] = {
+            "label": acc_label, 
+            "총자산": a_asset, 
+            "원금": p_val, 
+            "총손익": acc_profit, 
+            "수익률(%)": acc_rate, 
+            "평가손익(전일비)": a_diff, 
+            "상세": sub_info
+        }
+    
+    t_avg_buy = sum(
+        sum(
+            i['주식수'] * i['평단가'] 
+            for i in assets_json[k]['상세'] 
+            if i['종목명'] != '[ 합계 ]' and isinstance(i['주식수'], int)
+        ) 
+        for k in assets_json if k in ACC_MAP.values()
+    )
+    
+    assets_json["_total"] = {
+        "총자산": t_asset, 
+        "원금합": t_p_effective, 
+        "총손익": t_asset - t_p_effective, 
+        "수익률(%)": (t_asset - t_p_effective) / t_p_effective * 100, 
+        "평가손익(전일비)": t_diff, 
+        "매수금액합": t_avg_buy, 
+        "조회시간": fetch_time
+    }
+    
+    assets_json["_insight"] = [
+        f"조회 기준 시간: {fetch_time}", 
+        f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
+        f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
+        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
+        f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
+        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
+    ]
+    
+    with open("assets.json", "w", encoding="utf-8") as f: 
+        json.dump(assets_json, f, ensure_ascii=False, indent=2)
+        
+    return assets_json
 
-            h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
-            if st.session_state.show_code: 
-                h3.append("<th>종목코드</th>")
-            h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
-
-            items = [i for i in a.get('상세', []) if i['종목명'] != "[ 합계 ]"]
-            if st.session_state.sort_mode == 'asset': 
-                items.sort(key=lambda x: x.get('총자산', 0), reverse=True)
-            elif st.session_state.sort_mode == 'profit': 
-                items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
-            elif st.session_state.sort_mode == 'rate': 
-                items.sort(key=lambda x: x.get('수익률', 0), reverse=True)
-
-            for i in ([s_data] + items):
-                is_s = (i['종목명'] == "[ 합계 ]")
-                row = f"<tr class='sum-row'>" if is_s else "<tr>"
-                row += f"<td>{i['종목명']}</td>"
-                
-                if st.session_state.show_code: 
-                    code_val = i.get('코드','-')
-                    cdisp = '-' if is_s or code_val == '-' else code_val
-                    row += f"<td>{cdisp}</td>"
-                    
-                rate_val = i.get('수익률', 0)
-                icon = '▲' if rate_val > 0 else '▼' if rate_val < 0 else ''
-                rate_str = f"{icon}{abs(rate_val):.2f}%"
-
-                row += f"<td>{i.get('비중',0):.1f}%</td>"
-                row += f"<td>{fmt(i.get('총자산',0))}</td>"
-                row += f"<td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td>"
-                row += f"<td class='{col(rate_val)}'>{rate_str}</td>"
-                row += f"<td>{fmt(i.get('주식수','-'))}</td>"
-                row += f"<td>{fmt(i.get('평단가','-'))}</td>"
-                row += f"<td>{fmt(i.get('금일종가','-'))}</td></tr>"
-                h3.append(row)
-                
-            h3.append("</table>")
-            st.markdown("".join(h3), unsafe_allow_html=True)
+if __name__ == "__main__": 
+    generate_asset_data()
