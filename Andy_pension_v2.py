@@ -101,7 +101,6 @@ def generate_asset_data():
         
         t_asset += a_asset; t_p_effective += p_val; t_diff += a_diff
         
-        # DC 계좌 예외 처리 삭제. 모든 계좌에 대해 (총자산 - 최초원금) 계산
         acc_profit = a_asset - p_val
         acc_rate = (acc_profit / p_val * 100) if p_val > 0 else 0
         
