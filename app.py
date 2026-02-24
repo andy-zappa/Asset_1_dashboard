@@ -28,74 +28,81 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [배너 CSS 개편] 넓이/높이 찌그러짐 100% 원천 차단
+   [배너 CSS 고도화] Streamlit 내부 레이아웃 완전히 무력화
    ========================================================= */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 8px 12px !important;
+    padding: 8px 10px !important;
     border-radius: 12px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     
-    /* 가로폭 자동 제어 및 Flex 설정 */
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: nowrap !important; /* 줄바꿈 절대 방지 */
     align-items: center !important;
     justify-content: center !important;
-    gap: 8px !important;
+    gap: 8px !important; /* 버튼 간격을 여기서만 통제 */
     width: max-content !important;
-    max-width: 95vw !important; /* 모바일 넘침 방지 */
-    overflow-x: auto !important; /* 부득이하게 넘치면 스크롤 생성 */
+    min-width: max-content !important;
 }
 
-/* Streamlit이 강제로 부여하는 비율(width: 20%) 무력화 */
+/* Streamlit이 자동 생성하는 column div 무력화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
-    flex: 0 0 auto !important;
     width: auto !important;
     min-width: 0 !important;
+    flex: 0 0 auto !important;
     padding: 0 !important;
+    margin: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
 }
 
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
+/* Streamlit 버튼 래퍼 div 무력화 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div.stButton {
     width: auto !important;
-    height: 36px !important;
-    font-size: 13px !important; /* 글씨 크기를 미세하게 줄여 공간 확보 */
-    font-weight: bold !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+}
+
+/* 실제 버튼 디자인 - 크기 픽셀 단위로 완벽 고정 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
+    height: 34px !important;
+    min-height: 34px !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
-    margin: 0 !important;
-    padding: 0 12px !important;
-    white-space: nowrap !important;
-    display: inline-flex !important;
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
     border-radius: 6px !important;
     box-sizing: border-box !important;
 }
 
+/* 버튼 텍스트 여백 제거 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
-    font-size: 13px !important;
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1 !important;
+    font-size: 13px !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
     border-color: #000 !important;
     color: #000 !important;
     background: #f8f9fa !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 </style>
 """
@@ -194,7 +201,7 @@ with c2:
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현 요약</u></span>"]
+    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
     for line in data["_insight"]:
         if "조회 기준" not in line:
             ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
@@ -205,16 +212,19 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(tot.get('총 자산',0))} / 총 수익 : <span class='{col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(tot.get('총 자산',0))} / 총 수익 : <span class='{col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt(tot.get('평가손익(전일비)',0), True)}) ({fmt_p(tot.get('수익률(%)',0))})</span></b></div>", unsafe_allow_html=True)
 
-h1 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>총 누계손익</th><th>수익률</th><th>최초원금</th></tr>"]
+# [수정] 테이블1 헤더 변경 및 전일비 병기
+h1 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>총 누계손익(전일비)</th><th>수익률</th><th>최초원금</th></tr>"]
 ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총 수익',0), tot.get('총 자산',0), tot.get('원금합',0)
-h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
+td_tot = tot.get('평가손익(전일비)',0)
+h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)} ({fmt(td_tot, True)})</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        h1.append(f"<tr><td>{a['label']}</td><td>{fmt(a['총 자산'])}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(a['원금'])}</td></tr>")
+        ad_acc = a.get('평가손익(전일비)', 0)
+        h1.append(f"<tr><td>{a['label']}</td><td>{fmt(a['총 자산'])}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)} ({fmt(ad_acc, True)})</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(a['원금'])}</td></tr>")
 h1.append("</table>")
 st.markdown("".join(h1), unsafe_allow_html=True)
 
@@ -222,11 +232,11 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt(td_tot, True)}) ({fmt_p(ay_tot)})</span></b></div>", unsafe_allow_html=True)
 
-h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"]
-td_tot = tot.get('평가손익(전일비)',0)
-h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+# [수정] 테이블2 컬럼 분리 제거, 평가손익(전일비)로 병기
+h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익(전일비)</th><th>수익률</th><th>매입금액</th></tr>"]
+h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt(td_tot, True)})</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
@@ -235,7 +245,7 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ad_acc = a.get('평가손익(전일비)', 0)
-        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
+        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)} ({fmt(ad_acc, True)})</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
@@ -280,9 +290,12 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
-            st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></b></div>", unsafe_allow_html=True)
+            s_gain = s_data.get('평가손익', 0)
+            s_diff = s_data.get('전일비', 0)
             
-            # [수정] 평가손익에 (전일비) 병기하도록 헤더 텍스트 변경
+            # [수정] 폴더 아래 요약 텍스트에도 전일비 값 병기
+            st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_gain)}'>{fmt(s_gain, True)} ({fmt(s_diff, True)}) ({fmt_p(s_data.get('수익률(%)'))})</span></b></div>", unsafe_allow_html=True)
+            
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code:
                 h3.append("<th>종목코드</th>")
@@ -308,25 +321,3 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 
                 if st.session_state.show_code:
                     if is_s or i.get('코드', '-') == '-':
-                        row += "<td>-</td>"
-                    else:
-                        row += f"<td>{i.get('코드')}</td>"
-                        
-                row += f"<td>{i.get('비중',0):.1f}%</td>"
-                row += f"<td>{fmt(i.get('총 자산',0))}</td>"
-                
-                # [수정] 평가손익 값에 전일비 값 병기 처리 (예: +48,190,490 (+10,000))
-                gain_val = i.get('평가손익', 0)
-                diff_val = i.get('전일비', 0)
-                row += f"<td class='{col(gain_val)}'>{fmt(gain_val, True)} ({fmt(diff_val, True)})</td>"
-                
-                row += f"<td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td>"
-                row += f"<td>{fmt(i.get('수량','-'))}</td>"
-                row += f"<td>{fmt(i.get('매입가','-'))}</td>"
-                row += f"<td>{fmt(i.get('현재가','-'))}</td>"
-                row += "</tr>"
-                
-                h3.append(row)
-                
-            h3.append("</table>")
-            st.markdown("".join(h3), unsafe_allow_html=True)
