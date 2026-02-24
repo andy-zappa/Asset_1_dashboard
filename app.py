@@ -3,13 +3,12 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
-import os
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 # ==========================================
-# [초정밀 CSS] 완벽한 Floating 배너 구현
+# [완벽 해결 CSS] 심플 이모지 + 반듯한 플로팅 배너
 # ==========================================
 css = """
 <style>
@@ -25,10 +24,12 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
 /* =========================================================
-   [절대 실패하지 않는 Floating 배너 CSS]
-   ".floating-btn-marker" 를 품고 있는 영역을 강제로 우측 하단에 고정합니다.
+   [Floating 배너 UI 해결]
+   글자가 찌그러지거나 줄바꿈되는 것을 방지하고 
+   우측 하단에 반듯하게 정렬되도록 CSS를 수정했습니다.
    ========================================================= */
-div[data-testid='stHorizontalBlock']:has(.floating-btn-marker) {
+.floating-marker { display: none; }
+div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
@@ -40,31 +41,37 @@ div[data-testid='stHorizontalBlock']:has(.floating-btn-marker) {
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 6px !important; /* 버튼 간격 완벽 고정 */
+    flex-direction: row !important; /* 무조건 가로 배치 */
+    flex-wrap: nowrap !important; /* 줄바꿈 절대 금지 */
+    gap: 8px !important; /* 버튼 사이 고정 간격 */
     width: max-content !important;
 }
 
-div[data-testid='stHorizontalBlock']:has(.floating-btn-marker) > div[data-testid='column'] {
-    flex: 0 0 auto !important;
-    width: auto !important;
+div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] > div[data-testid='column'] {
+    flex: 0 0 auto !important; /* 컬럼이 자동으로 찌그러지는 현상 방지 */
+    width: max-content !important;
     min-width: max-content !important;
     padding: 0 !important;
 }
 
-div[data-testid='stHorizontalBlock']:has(.floating-btn-marker) button {
+div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button {
     border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-size: 15px !important;
+    padding: 0 16px !important;
+    height: 38px !important; /* 모든 버튼의 높이를 똑같이 고정 */
+    font-size: 14px !important;
     font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
+    white-space: nowrap !important; /* [핵심] 글자가 2줄로 쪼개지는 것을 완벽 차단 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     transition: all 0.2s ease !important;
 }
 
-div[data-testid='stHorizontalBlock']:has(.floating-btn-marker) button:hover {
+div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button:hover {
     border-color: #000000 !important;
     color: #000000 !important;
     background: #f8f9fa !important;
@@ -83,24 +90,10 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# 좌측 ZAPPA 엔진 로직 (이미지 유무 판별 및 경고창 추가)
+# [수정] 복잡한 Base64 다 빼고 직관적인 심플 이모지 적용
 # ==========================================
 with st.sidebar:
-    icon_path = "image_7cea18.png"
-    
-    # 1. 파일이 있으면 컬러 이미지 렌더링
-    if os.path.exists(icon_path):
-        col_icon, col_txt = st.columns([1, 4])
-        with col_icon:
-            st.image(icon_path, use_container_width=True)
-        with col_txt:
-            st.markdown("<div style='font-size:22px; font-weight:bold; color:#333; padding-top:5px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
-    # 2. 파일이 없으면 흑백 이모지가 뜨는 원인 안내
-    else:
-        st.error("🚨 'image_7cea18.png' 파일이 폴더에 없습니다! 이미지를 폴더에 넣어주셔야 유채색 아이콘이 뜹니다.")
-        st.markdown("<div style='display:flex;align-items:center;gap:10px;'><span style='font-size:32px;'>🤖</span><span style='font-size:22px;font-weight:bold;'>ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:22px; font-weight:bold; color:#333; margin-bottom: 20px;'><span style='font-size: 28px;'>🤖✨</span> ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
     
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -183,8 +176,6 @@ st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(tot.get('총 자
 h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"]
 td_tot = tot.get('평가손익(전일비)',0)
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
-
-t2_lbl = {'DC':'퇴직연금(DC)계좌', 'PENSION':'연금저축(CMA)계좌', 'ISA':'ISA(중개형)계좌', 'IRP':'퇴직연금(IRP)계좌'}
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
@@ -192,17 +183,18 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ad_acc = a.get('평가손익(전일비)', 0)
-        h2.append(f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td><td>{fmt(a.get('총 자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
+        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
 # --- [3] 계좌별 상세 내역 (Floating 배너 고정 지점) ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# [핵심 추적 마커] 이 마커가 포함된 블록을 CSS가 낚아채서 플로팅 배너로 만듭니다.
+# [핵심 추적 마커] 
+# 이 마커가 있으면 상단 CSS가 이 아래의 버튼 5개를 묶어 우측 하단에 반듯한 책갈피로 만듭니다.
+st.markdown("<div class='floating-marker'></div>", unsafe_allow_html=True)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
-    st.markdown("<span class='floating-btn-marker'></span>", unsafe_allow_html=True)
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
@@ -239,5 +231,4 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드')}</td>"
                 row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
                 h3.append(row)
-            h3.append("</table>")
-            st.markdown("".join(h3), unsafe_allow_html=True)
+            h3
