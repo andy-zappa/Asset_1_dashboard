@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 # ==========================================
-# [완벽 해결 CSS] Floating 배너 및 아이콘 필터 차단
+# [완벽 해결 CSS] Floating 배너 및 필터 무력화
 # ==========================================
 css = """
 <style>
@@ -25,18 +25,11 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
-/* [아이콘 흑백 해결] Streamlit 강제 테마 필터를 무시하고 원본 색상 강제 렌더링 */
-[data-testid="stSidebar"] img, 
-.color-emoji { filter: none !important; -webkit-filter: none !important; }
-.sidebar-header-text { font-size: 22px; font-weight: bold; color: #333; }
-
 /* =========================================================
-   [Floating 배너 구현]
-   'floating-marker' 바로 다음에 생성되는 버튼 그룹을 화면 우측 하단에 고정합니다.
-   가변(%) 비율을 완전히 무력화시키고 버튼 간격(6px)을 절대 고정합니다.
-========================================================= */
-.floating-marker { display: none; }
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] {
+   [Floating 배너 구현 - 1.5pt(약 2px) 간격 절대 고정]
+   정확히 5개의 자식 컬럼을 가진 stHorizontalBlock을 찾아서 화면 우측 하단에 고정시킵니다.
+   ========================================================= */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) {
     position: fixed !important;
     bottom: 40px !important;
     right: 40px !important;
@@ -44,37 +37,44 @@ div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock
     backdrop-filter: blur(8px) !important;
     padding: 10px 15px !important;
     border-radius: 12px !important;
-    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 99999 !important;
     display: flex !important;
-    flex-direction: row !important;
-    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    gap: 2px !important; /* 간격 절대 고정 (1.5pt) */
     width: auto !important;
 }
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] > div[data-testid='column'] {
+
+/* 내부 컬럼의 가변 비율(flex)을 파괴하고 콘텐츠 크기에 맞게 고정 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) > div[data-testid='column'] {
     flex: 0 0 auto !important;
     width: auto !important;
-    min-width: max-content !important;
+    min-width: 0 !important;
     padding: 0 !important;
 }
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button {
-    border-radius: 8px !important;
-    padding: 6px 14px !important;
-    font-size: 14px !important;
-    font-weight: bold !important;
-    border: 1px solid #d1d5db !important;
+
+/* 플로팅 배너 내부 버튼 디자인 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) button {
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 15px !important;
+    font-weight: normal !important;
+    border: 1px solid #ccc !important;
     background: #ffffff !important;
-    color: #374151 !important;
+    color: #333 !important;
     margin: 0 !important;
-    transition: all 0.2s ease-in-out !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
 }
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button:hover {
+
+/* 호버 시 검은색 반전 효과 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) button:hover {
     border-color: #000000 !important;
-    color: #000000 !important;
-    background: #f3f4f6 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    color: #ffffff !important;
+    background: #000000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
 }
 </style>
 """
@@ -88,26 +88,26 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# 좌측 ZAPPA 엔진 로직 (아이콘 이미지 Base64 하드코딩 처리로 흑백 필터 파괴)
+# 좌측 ZAPPA 엔진 로직 (이미지 Base64 변환 삽입으로 Streamlit 흑백 필터 완벽 무력화)
 # ==========================================
 with st.sidebar:
     icon_path = "image_7cea18.png"
+    icon_html = ""
+    
     if os.path.exists(icon_path):
         with open(icon_path, "rb") as f:
             encoded_img = base64.b64encode(f.read()).decode()
-        st.markdown(f'''
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-                <img src="data:image/png;base64,{encoded_img}" style="width:45px; height:auto; filter:none !important;">
-                <span class="sidebar-header-text">ZAPPA AI 코딩 엔진</span>
-            </div>
-        ''', unsafe_allow_html=True)
+        # filter: none 을 inline으로 때려박아 강제로 유채색 보존
+        icon_html = f'<img src="data:image/png;base64,{encoded_img}" style="width:45px; height:auto; filter:none !important; -webkit-filter:none !important; margin-right:10px;">'
     else:
-        st.markdown('''
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-                <span class="color-emoji" style="font-size:32px;">🤖</span>
-                <span class="sidebar-header-text">ZAPPA AI 코딩 엔진</span>
-            </div>
-        ''', unsafe_allow_html=True)
+        icon_html = '<span style="font-size:32px; margin-right:10px; filter:none !important;">🤖</span>'
+
+    st.markdown(f'''
+        <div style="display:flex; align-items:center; margin-bottom:20px;">
+            {icon_html}
+            <span style="font-size:22px; font-weight:bold; color:#333;">ZAPPA AI 코딩 엔진</span>
+        </div>
+    ''', unsafe_allow_html=True)
     
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -137,7 +137,7 @@ def fmt_p(v):
 def col(v):
     try:
         val = float(v)
-        return "red" if val > 0 else ("blue" if val < 0 else "")
+        return "red" if val > 0 else "blue" if val < 0 else ""
     except: return ""
 
 @st.cache_data(ttl=60)
@@ -201,11 +201,10 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 (Floating 배너 적용 지점) ---
+# --- [3] 계좌별 상세 내역 (Floating UI 버튼 그룹) ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# [핵심] 투명 마커를 달아서, CSS가 이 아래의 버튼 5개를 우측 하단 Floating 배너로 만듭니다.
-st.markdown("<div class='floating-marker'></div>", unsafe_allow_html=True)
+# 상단 CSS에 의해 이 5개 버튼은 화면 우측 하단에 떠있는 배너(Floating)가 됩니다.
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
