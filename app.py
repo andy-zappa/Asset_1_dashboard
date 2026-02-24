@@ -3,12 +3,13 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
+import os
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 # ==========================================
-# [완벽 해결 CSS] 심플 이모지 + 반듯한 플로팅 배너
+# [완벽 해결 CSS] 가변폭 파괴 및 Floating 배너 고정
 # ==========================================
 css = """
 <style>
@@ -23,55 +24,60 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
+/* [아이콘 흑백 문제 완전 파괴] Streamlit 강제 필터링 제거 및 컬러 폰트 우선 적용 */
+[data-testid="stSidebar"] img { filter: none !important; -webkit-filter: none !important; }
+.color-emoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px; }
+
 /* =========================================================
-   [Floating 배너 UI 해결]
-   글자가 찌그러지거나 줄바꿈되는 것을 방지하고 
-   우측 하단에 반듯하게 정렬되도록 CSS를 수정했습니다.
-   ========================================================= */
-.floating-marker { display: none; }
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] {
+   [Floating 배너 UI 완벽 구현 - 찌그러짐/가변폭 100% 차단]
+   정확히 5개의 버튼 컬럼이 있는 레이어를 찾아 우측 하단에 플로팅 띄움
+========================================================= */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) {
     position: fixed !important;
-    bottom: 30px !important;
-    right: 30px !important;
+    bottom: 40px !important;
+    right: 40px !important;
     background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(10px) !important;
-    padding: 10px 15px !important;
+    padding: 10px 16px !important;
     border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
-    flex-direction: row !important; /* 무조건 가로 배치 */
-    flex-wrap: nowrap !important; /* 줄바꿈 절대 금지 */
-    gap: 8px !important; /* 버튼 사이 고정 간격 */
-    width: max-content !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important; /* [핵심] 줄바꿈 절대 방지 */
+    gap: 6px !important; /* 버튼 사이 간격 1.5pt~2pt 절대 고정 */
+    width: max-content !important; /* 전체 배너 너비를 버튼 크기합에 딱 맞춤 */
 }
 
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] > div[data-testid='column'] {
-    flex: 0 0 auto !important; /* 컬럼이 자동으로 찌그러지는 현상 방지 */
+/* Streamlit이 부여한 20% 가변 폭(width)을 파괴하고 텍스트 길이에 딱 맞게 고정 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) > div[data-testid='column'] {
+    flex: 0 0 auto !important; 
     width: max-content !important;
-    min-width: max-content !important;
+    min-width: 0 !important;
     padding: 0 !important;
 }
 
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button {
+/* 플로팅 배너 내부 버튼 디자인 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) button {
     border-radius: 8px !important;
-    padding: 0 16px !important;
-    height: 38px !important; /* 모든 버튼의 높이를 똑같이 고정 */
+    padding: 0px 14px !important;
+    height: 40px !important; /* 버튼 높이 통일 */
     font-size: 14px !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
-    white-space: nowrap !important; /* [핵심] 글자가 2줄로 쪼개지는 것을 완벽 차단 */
+    white-space: nowrap !important; /* [핵심] 글자가 두 줄로 쪼개지는 현상 100% 방지 */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     transition: all 0.2s ease !important;
 }
 
-div.element-container:has(.floating-marker) + div[data-testid='stHorizontalBlock'] button:hover {
+/* 마우스 호버 효과 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) button:hover {
     border-color: #000000 !important;
     color: #000000 !important;
     background: #f8f9fa !important;
@@ -90,11 +96,25 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# [수정] 복잡한 Base64 다 빼고 직관적인 심플 이모지 적용
+# 좌측 ZAPPA 엔진 로직 (이미지가 있으면 무조건 렌더링, 없으면 컬러 이모지)
 # ==========================================
 with st.sidebar:
-    st.markdown("<div style='font-size:22px; font-weight:bold; color:#333; margin-bottom: 20px;'><span style='font-size: 28px;'>🤖✨</span> ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
+    icon_path = "image_7cea18.png"
     
+    if os.path.exists(icon_path):
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image(icon_path, use_container_width=True) # CSS가 흑백필터를 막아줍니다.
+        with col2:
+            st.markdown("<div style='font-size:22px; font-weight:bold; color:#333; margin-top:5px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div style='display:flex; align-items:center; gap:10px; margin-bottom:15px;'>
+                <span class='color-emoji'>🤖</span>
+                <span style='font-size:22px; font-weight:bold; color:#333;'>ZAPPA AI 코딩 엔진</span>
+            </div>
+        """, unsafe_allow_html=True)
+        
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
         if key:
@@ -176,6 +196,8 @@ st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(tot.get('총 자
 h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"]
 td_tot = tot.get('평가손익(전일비)',0)
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+
+t2_lbl = {'DC':'퇴직연금(DC)계좌', 'PENSION':'연금저축(CMA)계좌', 'ISA':'ISA(중개형)계좌', 'IRP':'퇴직연금(IRP)계좌'}
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
@@ -183,16 +205,16 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ad_acc = a.get('평가손익(전일비)', 0)
-        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
+        h2.append(f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td><td>{fmt(a.get('총 자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 (Floating 배너 고정 지점) ---
+# --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# [핵심 추적 마커] 
-# 이 마커가 있으면 상단 CSS가 이 아래의 버튼 5개를 묶어 우측 하단에 반듯한 책갈피로 만듭니다.
-st.markdown("<div class='floating-marker'></div>", unsafe_allow_html=True)
+# ==========================================
+# [플로팅 배너 타겟] 이 5개의 버튼이 상단 CSS에 의해 강제로 우측 하단 레이어로 뜹니다.
+# ==========================================
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
@@ -231,4 +253,5 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드')}</td>"
                 row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
                 h3.append(row)
-            h3
+            h3.append("</table>")
+            st.markdown("".join(h3), unsafe_allow_html=True)
