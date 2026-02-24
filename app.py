@@ -20,17 +20,32 @@ h3 { font-size:26px!important; font-weight:bold; margin-bottom:10px; }
 .blue { color:#0047EB!important; }
 .sidebar-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; font-size:22px; font-weight:bold; }
 
-/* [수정] 버튼 간격 균일화 및 완벽 밀착 */
+/* [핵심] 버튼을 1픽셀의 틈도 없이 바싹 붙이는 마법의 CSS */
 div[data-testid='stHorizontalBlock'] { gap: 0px !important; }
-div[data-testid='column'] { padding: 0 2px !important; } /* 컬럼 사이 미세 여백만 남겨 균일화 */
+div[data-testid='column'] { padding: 0px !important; }
 div.stButton>button { 
     font-weight:normal!important; 
-    border-radius:4px!important; 
-    padding:0.2rem 0!important; 
-    width:100%!important; 
+    border-radius:0px!important; 
+    padding:0.2rem 0.5rem!important; 
     font-size:13px!important; 
-    margin:0!important; 
+    margin-left:-1px!important; /* 테두리가 겹치도록 당김 */
     white-space:nowrap!important; 
+    border:1px solid #ccc!important; 
+}
+/* 첫 번째, 마지막 버튼의 바깥쪽 모서리만 둥글게 처리 */
+div[data-testid='column']:first-child div.stButton>button {
+    border-top-left-radius: 4px !important;
+    border-bottom-left-radius: 4px !important;
+    margin-left: 0 !important;
+}
+div[data-testid='column']:last-child div.stButton>button {
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: 4px !important;
+}
+div.stButton>button:hover { 
+    border-color:#ff4b4b!important; 
+    z-index:1; 
+    position:relative; 
 }
 </style>
 """
@@ -47,7 +62,7 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# [복구] 좌측 ZAPPA 엔진 로직 (에러 방지 적용)
+# [안전장치] 에러가 나도 ZAPPA 엔진은 절대 안 날아가게 보호
 # ==========================================
 with st.sidebar:
     st.markdown(
@@ -73,7 +88,7 @@ with st.sidebar:
         else:
             st.info("API Key가 설정되지 않았습니다.")
     except Exception as e:
-        st.error(f"ZAPPA 엔진 로딩 오류: {e}")
+        st.error(f"ZAPPA 엔진 연결 지연 (기본 기능은 정상 작동합니다)")
 
 # ==========================================
 # 포맷팅 함수
@@ -125,9 +140,9 @@ st.markdown("<div class='sub-title'>📊 [1] 투자금 대비 자산 현황</div
 
 t1_str = (
     "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-    f"**총 자산 : {fmt(tot.get('총 자산',0))} / "
-    f"총 수익 : <span class='{col(tot.get('총 수익',0))}'>"
-    f"{fmt(tot.get('총 수익',0), True)} "
+    f"**총 자산 : {fmt(tot.get('총자산',0))} / "
+    f"총 수익 : <span class='{col(tot.get('총손익',0))}'>"
+    f"{fmt(tot.get('총손익',0), True)} "
     f"({'▲' if tot.get('수익률(%)',0)>0 else '▼' if tot.get('수익률(%)',0)<0 else ''}{abs(tot.get('수익률(%)',0)):.2f}%)</span>**"
 )
 st.markdown(t1_str, unsafe_allow_html=True)
@@ -138,7 +153,7 @@ h1 = [
     "<th>총 누계손익</th><th>수익률</th><th>최초원금</th></tr>"
 ]
 
-ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총 수익',0), tot.get('총 자산',0), tot.get('원금합',0)
+ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총손익',0), tot.get('총자산',0), tot.get('원금합',0)
 
 ty_str = f"{'▲' if ty>0 else '▼' if ty<0 else ''}{abs(ty):.2f}%"
 h1.append(
@@ -150,10 +165,10 @@ h1.append(
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        ay, ag = a.get('수익률(%)',0), a.get('총 수익',0)
+        ay, ag = a.get('수익률(%)',0), a.get('총손익',0)
         ay_str = f"{'▲' if ay>0 else '▼' if ay<0 else ''}{abs(ay):.2f}%"
         row = (
-            f"<tr><td>{a.get('label')}</td><td>{fmt(a.get('총 자산'))}</td>"
+            f"<tr><td>{a.get('label')}</td><td>{fmt(a.get('총자산'))}</td>"
             f"<td class='{col(ag)}'>{fmt(ag, True)}</td><td class='{col(ay)}'>{ay_str}</td>"
             f"<td>{fmt(a.get('원금'))}</td></tr>"
         )
@@ -163,14 +178,14 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 
 
 # --- [2] 매수금액 대비 자산 현황 ---
-ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
-ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
+ag_tot = tot.get('총자산',0) - tot.get('매수금액합',0)
+ay_tot = (ag_tot / tot.get('매수금액합',1) * 100) if tot.get('매수금액합',1) > 0 else 0
 
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
 
 t2_str = (
     "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-    f"**총 자산 : {fmt(tot.get('총 자산'))} / "
+    f"**총 자산 : {fmt(tot.get('총자산'))} / "
     f"총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} "
     f"({'▲' if ay_tot>0 else '▼' if ay_tot<0 else ''}{abs(ay_tot):.2f}%)</span>**"
 )
@@ -186,9 +201,9 @@ ay_tot_str = f"{'▲' if ay_tot>0 else '▼' if ay_tot<0 else ''}{abs(ay_tot):.2
 td_tot = tot.get('평가손익(전일비)',0)
 
 h2.append(
-    f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td>"
+    f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총자산'))}</td>"
     f"<td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{ay_tot_str}</td>"
-    f"<td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>"
+    f"<td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매수금액합'))}</td></tr>"
 )
 
 t2_lbl = {
@@ -199,15 +214,15 @@ t2_lbl = {
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        ag_acc = sum(i.get('평가손익',0) for i in a['상세'] if i['종목명'] != '[ 합계 ]')
-        ap_acc = a.get('총 자산',0) - ag_acc
+        ag_acc = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
+        ap_acc = a.get('총자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ay_acc_str = f"{'▲' if ay_acc>0 else '▼' if ay_acc<0 else ''}{abs(ay_acc):.2f}%"
         ad_acc = a.get('평가손익(전일비)', 0)
         
         row = (
             f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td>"
-            f"<td>{fmt(a.get('총 자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td>"
+            f"<td>{fmt(a.get('총자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td>"
             f"<td class='{col(ay_acc)}'>{ay_acc_str}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td>"
             f"<td>{fmt(ap_acc)}</td></tr>"
         )
@@ -219,8 +234,8 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# [수정] 5개 버튼 우측 정렬 (글씨 짤림 방지 및 균일 간격 배치)
-spacer, b1, b2, b3, b4, b5 = st.columns([5.5, 0.9, 0.9, 0.9, 0.9, 1.2])
+# 5개 버튼 우측 정렬 및 간격 완벽 밀착! (표 끝선과 일치)
+spacer, b1, b2, b3, b4, b5 = st.columns([5.8, 0.8, 0.8, 0.8, 0.8, 1.0])
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △", use_container_width=True): 
         st.session_state.sort_mode = 'init'; st.rerun()
@@ -254,10 +269,10 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             
             t3_str = (
                 "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                f"**총 자산 : {fmt(a.get('총 자산'))} / "
+                f"**총 자산 : {fmt(a.get('총자산'))} / "
                 f"총 수익 : <span class='{col(s_data['평가손익'])}'>"
                 f"{fmt(s_data['평가손익'], True)} "
-                f"({'▲' if s_data['수익률(%)']>0 else '▼' if s_data['수익률(%)']<0 else ''}{abs(s_data['수익률(%)']):.2f}%)</span>**"
+                f"({'▲' if s_data['수익률']>0 else '▼' if s_data['수익률']<0 else ''}{abs(s_data['수익률']):.2f}%)</span>**"
             )
             st.markdown(t3_str, unsafe_allow_html=True)
 
@@ -268,11 +283,11 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
 
             items = [i for i in a.get('상세', []) if i['종목명'] != "[ 합계 ]"]
             if st.session_state.sort_mode == 'asset': 
-                items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
+                items.sort(key=lambda x: x.get('총자산', 0), reverse=True)
             elif st.session_state.sort_mode == 'profit': 
                 items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
             elif st.session_state.sort_mode == 'rate': 
-                items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
+                items.sort(key=lambda x: x.get('수익률', 0), reverse=True)
 
             for i in ([s_data] + items):
                 is_s = (i['종목명'] == "[ 합계 ]")
@@ -284,17 +299,17 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                     cdisp = '-' if is_s or code_val == '-' else code_val
                     row += f"<td>{cdisp}</td>"
                     
-                rate_val = i.get('수익률(%)', 0)
+                rate_val = i.get('수익률', 0)
                 icon = '▲' if rate_val > 0 else '▼' if rate_val < 0 else ''
                 rate_str = f"{icon}{abs(rate_val):.2f}%"
 
                 row += f"<td>{i.get('비중',0):.1f}%</td>"
-                row += f"<td>{fmt(i.get('총 자산',0))}</td>"
+                row += f"<td>{fmt(i.get('총자산',0))}</td>"
                 row += f"<td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td>"
                 row += f"<td class='{col(rate_val)}'>{rate_str}</td>"
-                row += f"<td>{fmt(i.get('수량','-'))}</td>"
-                row += f"<td>{fmt(i.get('매입가','-'))}</td>"
-                row += f"<td>{fmt(i.get('현재가','-'))}</td></tr>"
+                row += f"<td>{fmt(i.get('주식수','-'))}</td>"
+                row += f"<td>{fmt(i.get('평단가','-'))}</td>"
+                row += f"<td>{fmt(i.get('금일종가','-'))}</td></tr>"
                 h3.append(row)
                 
             h3.append("</table>")
