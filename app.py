@@ -3,7 +3,7 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
-import os
+import os # 이미지 파일 존재 여부 확인을 위해 os 모듈 추가
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
@@ -18,8 +18,9 @@ css = [
     ".main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}",
     ".sum-row td{background-color:#fff9e6;font-weight:bold!important;}",
     ".red{color:#FF2323!important;} .blue{color:#0047EB!important;}",
-    # [수정] 사이드바 헤더에서 특정 색상을 강제하지 않아 이모지가 유채색으로 나오도록 조정
-    ".sidebar-header{display:flex;align-items:center;gap:12px;margin-bottom:20px; font-size:22px;font-weight:bold; filter: none !important;}",
+    # [수정] 사이드바 헤더 CSS 수정 (이미지와 텍스트 정렬을 위해)
+    ".sidebar-header-container{display:flex;align-items:center;gap:12px;margin-bottom:20px;}",
+    ".sidebar-header-text{font-size:20px;font-weight:bold;color: #ff4b4b;}",
     ".insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}",
     ".box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}",
     
@@ -43,15 +44,24 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# [수정] 좌측 ZAPPA 엔진 로직 및 로봇 아이콘 복구
+# [수정] 좌측 ZAPPA 엔진 로직 및 컬러 로봇 아이콘 적용
 # ==========================================
 with st.sidebar:
-    # 아이콘이 검정색으로만 보이지 않도록 🤖 이모지 사용 및 ✨ 제거
-    st.markdown("<div class='sidebar-header'>🤖 <span>ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
+    # [핵심 수정] 이미지 파일이 있으면 이미지를, 없으면 기존 이모지를 표시
+    image_path = "zappa_robot.png"  # 이미지 파일 이름 설정 (필요시 변경)
+    
+    if os.path.exists(image_path):
+        # 이미지가 있을 경우: columns를 사용하여 이미지와 텍스트 나란히 배치
+        col_icon, col_text = st.columns([1, 3])
+        with col_icon:
+            st.image(image_path, width=60) # 이미지 표시 (너비 조절 가능)
+        with col_text:
+            st.markdown("<div class='sidebar-header-text' style='display: flex; align-items: center; height: 100%;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
+    else:
+        # 이미지가 없을 경우: 기존 이모지 방식 사용
+        st.markdown("<div class='sidebar-header-container'><span style='font-size:32px;'>🤖✨</span><span class='sidebar-header-text'> ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
+
     try:
-        # 이전에 제공된 이미지 파일(image_7cea18.png)이 로컬에 있다면 아래 주석을 풀고 사용 가능합니다.
-        # if os.path.exists("image_7cea18.png"): st.image("image_7cea18.png", width=60)
-        
         if "GOOGLE_API_KEY" in st.secrets:
             key = st.secrets.get("GOOGLE_API_KEY")
             genai.configure(api_key=key)
