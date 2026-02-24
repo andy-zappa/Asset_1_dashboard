@@ -3,11 +3,12 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
-import os # 이미지 파일 존재 여부 확인을 위해 os 모듈 추가
+import os
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
+# [핵심] 정밀 CSS 수정: 버튼 간격 1.5pt 강제 고정, 15px 폰트, 검은색 호버 효과
 css = [
     "<style>",
     ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
@@ -18,16 +19,25 @@ css = [
     ".main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}",
     ".sum-row td{background-color:#fff9e6;font-weight:bold!important;}",
     ".red{color:#FF2323!important;} .blue{color:#0047EB!important;}",
-    # [수정] 사이드바 헤더 CSS 수정 (이미지와 텍스트 정렬을 위해)
-    ".sidebar-header-container{display:flex;align-items:center;gap:12px;margin-bottom:20px;}",
-    ".sidebar-header-text{font-size:20px;font-weight:bold;color: #ff4b4b;}",
+    # 사이드바 아이콘 유채색 보장 (Streamlit 기본 필터 무력화)
+    ".sidebar-header{display:flex;align-items:center;gap:12px;margin-bottom:20px; font-size:22px;font-weight:bold; filter: none !important;}",
     ".insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}",
     ".box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}",
     
-    # [핵심] 버튼 간격 1.5pt로 통일 및 15px 폰트 크기, 호버 시 검은색 강조 적용
+    # 버튼 1.5pt 고정 간격 및 6px 둥근 테두리 디자인
     "div[data-testid='stHorizontalBlock'] { gap: 1.5pt !important; }",
-    "div[data-testid='column'] { padding: 0 !important; }",
-    "div.stButton>button { font-weight:normal!important; border-radius:6px; padding:0.3rem 0.5rem!important; width:100%!important; font-size:15px!important; margin:0!important; white-space:nowrap!important; border:1px solid #ccc!important; }",
+    "div[data-testid='column'] { padding: 0 !important; flex: none !important; }",
+    "div.stButton>button { ",
+    "    font-weight:normal!important; ",
+    "    border-radius:6px!important; ",
+    "    padding:0.3rem 0.5rem!important; ",
+    "    font-size:15px!important; ", # 표 안의 종목명 크기와 일치
+    "    white-space:nowrap!important; ",
+    "    border:1px solid #ccc!important; ",
+    "    margin:0!important;",
+    "    width: auto !important;",
+    "}",
+    # 호버 시 테두리 및 글자색 검은색으로 변경
     "div.stButton>button:hover { border-color:#000000!important; color:#000000!important; }",
     "</style>"
 ]
@@ -44,23 +54,11 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# [수정] 좌측 ZAPPA 엔진 로직 및 컬러 로봇 아이콘 적용
+# [수정] 좌측 ZAPPA 엔진 로직 및 유채색 아이콘 복구
 # ==========================================
 with st.sidebar:
-    # [핵심 수정] 이미지 파일이 있으면 이미지를, 없으면 기존 이모지를 표시
-    image_path = "zappa_robot.png"  # 이미지 파일 이름 설정 (필요시 변경)
-    
-    if os.path.exists(image_path):
-        # 이미지가 있을 경우: columns를 사용하여 이미지와 텍스트 나란히 배치
-        col_icon, col_text = st.columns([1, 3])
-        with col_icon:
-            st.image(image_path, width=60) # 이미지 표시 (너비 조절 가능)
-        with col_text:
-            st.markdown("<div class='sidebar-header-text' style='display: flex; align-items: center; height: 100%;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
-    else:
-        # 이미지가 없을 경우: 기존 이모지 방식 사용
-        st.markdown("<div class='sidebar-header-container'><span style='font-size:32px;'>🤖✨</span><span class='sidebar-header-text'> ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
-
+    # 🤖 이모지를 사용하여 유채색 로봇 아이콘 표시 (필터 none 적용)
+    st.markdown("<div class='sidebar-header'>🤖 <span>ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
     try:
         if "GOOGLE_API_KEY" in st.secrets:
             key = st.secrets.get("GOOGLE_API_KEY")
@@ -73,7 +71,7 @@ with st.sidebar:
         else:
             st.info("API Key가 설정되지 않았습니다.")
     except Exception as e:
-        st.error(f"ZAPPA 엔진 로딩 오류: {e}")
+        st.error(f"ZAPPA 엔진 로딩 오류")
 
 def fmt(v):
     try: return f"{int(float(v)):,}"
@@ -108,7 +106,9 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
+# ==========================================
 # [수정] 타이틀 명칭 변경
+# ==========================================
 c1, c2 = st.columns([8.5, 1.5])
 with c1: 
     st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -121,7 +121,7 @@ with c2:
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
 # ==========================================
-# [복원] 자파의 자산 인사이트 (상단 배치)
+# [복원] 절세 자산 현황 요약 (인사이트 박스)
 # ==========================================
 if "_insight" in data:
     ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
@@ -174,8 +174,8 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# 5개 버튼 우측 정렬 (1.5pt 간격 및 표 우측 끝선 일치용 정밀 비율 적용)
-spacer, b1, b2, b3, b4, b5 = st.columns([5.5, 0.9, 0.9, 0.9, 0.9, 1.2])
+# [수정] 버튼들이 화면 크기에 관계없이 우측 끝에 1.5pt 간격으로 정렬되도록 고정 배치
+spacer, b1, b2, b3, b4, b5 = st.columns([6.3, 0.75, 0.75, 0.75, 0.75, 0.95])
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): 
         st.session_state.sort_mode = 'init'; st.rerun()
