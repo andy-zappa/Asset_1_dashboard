@@ -93,7 +93,14 @@ def get_current_price(code, token, avg_p):
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
         )
         out = res.json().get('output', {})
-        return {"c": int(float(out.get('stck_prpr', avg_p))), "d": int(float(out.get('prdy_vrss', 0)))}
+        curr = int(float(out.get('stck_prpr', avg_p)))
+        
+        # 전일비 값과 부호를 정확하게 파싱 (4, 5는 마이너스)
+        diff_abs = int(float(out.get('prdy_vrss', 0)))
+        sign = out.get('prdy_vrss_sign', '3')
+        diff_val = -diff_abs if sign in ['4', '5'] else diff_abs
+        
+        return {"c": curr, "d": diff_val}
     except: 
         return {"c": int(avg_p), "d": 0}
 
