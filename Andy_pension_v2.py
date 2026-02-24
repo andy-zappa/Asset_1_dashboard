@@ -105,7 +105,8 @@ def generate_asset_data():
     fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
     
     token = get_access_token()
-    if not token: return None
+    if not token: 
+        return None
 
     t_asset = 0
     t_p_effective = 0
