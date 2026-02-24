@@ -155,7 +155,7 @@ def generate_asset_data():
             "비중": 100.0, 
             "총 자산": a_asset, 
             "평가손익": a_val_gain, 
-            "전일비": a_diff,  # 전일비 합계값 표출을 위해 로직 보강
+            "전일비": a_diff, 
             "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
             "수량": "-", 
             "매입가": "-", 
