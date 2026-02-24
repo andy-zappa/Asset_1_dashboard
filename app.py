@@ -3,13 +3,11 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
+import os
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# ==========================================
-# [완벽 해결] 플로팅 배너 및 UI 레이아웃 CSS
-# ==========================================
 css = """
 <style>
 .block-container{padding-top:3rem!important;padding-bottom:5rem!important;}
@@ -24,67 +22,62 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
 /* =========================================================
-   [100% 명중하는 Floating 배너 CSS]
-   #menu-marker를 품고 있는 투명 컨테이너는 자리 차지를 하지 않도록 숨기고,
-   그 "바로 다음"에 오는 컨테이너(버튼 5개 묶음)를 우측 하단에 띄웁니다.
-========================================================= */
-div.element-container:has(#menu-marker) {
-    display: none !important;
+   [문제 해결 1] 윈도우 환경 흑백 이모지 파괴 (컬러 폰트 강제 주입)
+   ========================================================= */
+.zappa-icon {
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
+    font-size: 32px !important;
 }
 
-div.element-container:has(#menu-marker) + div.element-container {
+/* =========================================================
+   [문제 해결 2] 완벽한 플로팅 배너 (가변폭 100% 무력화)
+   ========================================================= */
+/* 메뉴 마커(#zappa-floating-menu)가 있는 컨테이너를 절대 위치로 우측 하단에 고정 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
-    bottom: 35px !important;
-    right: 35px !important;
+    bottom: 30px !important;
+    right: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(10px) !important;
-    padding: 10px 14px !important;
+    padding: 10px 15px !important;
     border-radius: 12px !important;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
-    width: max-content !important; /* 배너 너비를 버튼 길이에 딱 맞춤 */
-}
-
-/* 내부 버튼 그룹(가로 정렬) 간격 고정 */
-div.element-container:has(#menu-marker) + div.element-container div[data-testid='stHorizontalBlock'] {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 6px !important; /* 버튼 사이 간격 절대 고정 */
+    flex-wrap: nowrap !important; /* 글자 줄바꿈 및 레이아웃 꼬임 방지 */
+    gap: 5px !important; /* 버튼 간격 고정 */
     width: max-content !important;
-    align-items: center !important;
 }
 
-/* Streamlit의 가변 비율(%) 파괴: 각 칸이 버튼 크기에 맞게 쪼그라듦 */
-div.element-container:has(#menu-marker) + div.element-container div[data-testid='column'] {
+/* Streamlit이 강제로 부여하는 'width: 20%' 가변 속성 파괴 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important;
-    width: max-content !important;
-    min-width: fit-content !important;
+    width: auto !important;
+    min-width: 0 !important;
     padding: 0 !important;
 }
 
-/* 플로팅 배너 내부 개별 버튼 디자인 */
-div.element-container:has(#menu-marker) + div.element-container button {
+/* 플로팅 배너 내부 버튼 디자인 통일 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     border-radius: 6px !important;
-    padding: 6px 14px !important;
+    padding: 6px 12px !important;
     height: 38px !important;
     font-size: 14px !important;
-    font-weight: 600 !important;
+    font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
-    white-space: nowrap !important; /* [핵심] 글자가 두 줄로 찌그러지는 현상 방지 */
-    word-break: keep-all !important;
+    white-space: nowrap !important; /* 텍스트 찌그러짐 100% 방지 */
     transition: all 0.2s ease !important;
 }
 
-div.element-container:has(#menu-marker) + div.element-container button:hover {
-    border-color: #000000 !important;
-    color: #000000 !important;
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
+    border-color: #000 !important;
+    color: #000 !important;
     background: #f8f9fa !important;
-    transform: translateY(-2px);
+    transform: translateY(-1px) !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 </style>
@@ -99,10 +92,15 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# 좌측 ZAPPA 엔진 로직 (초심플 이모지 방식 롤백)
+# 좌측 ZAPPA 엔진 로직 (컬러 이모지 강제 적용)
 # ==========================================
 with st.sidebar:
-    st.markdown("<h3 style='display:flex;align-items:center;gap:8px;margin-bottom:15px;'><span style='font-size:28px;'>🤖</span> ZAPPA AI 코딩 엔진</h3>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style='display:flex; align-items:center; gap:10px; margin-bottom:20px;'>
+            <span class='zappa-icon'>🤖</span>
+            <span style='font-size:22px; font-weight:bold; color:#333;'>ZAPPA AI 코딩 엔진</span>
+        </div>
+    """, unsafe_allow_html=True)
     
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -185,8 +183,6 @@ st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(tot.get('총 자
 h2 = [unit_html, "<table class='main-table'><tr><th>계좌 구분</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>전일비</th><th>매입금액</th></tr>"]
 td_tot = tot.get('평가손익(전일비)',0)
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
-
-t2_lbl = {'DC':'퇴직연금(DC)계좌', 'PENSION':'연금저축(CMA)계좌', 'ISA':'ISA(중개형)계좌', 'IRP':'퇴직연금(IRP)계좌'}
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
@@ -194,7 +190,7 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ad_acc = a.get('평가손익(전일비)', 0)
-        h2.append(f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td><td>{fmt(a.get('총 자산'))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
+        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
@@ -202,14 +198,12 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
 # ==========================================
-# [핵심 타겟팅 마커] 
-# 이 마커를 심어두면, 상단의 CSS가 이 바로 다음 줄에 생성되는 st.columns() 블록을
-# 완벽하게 잡아내서 우측 하단 플로팅 배너로 만듭니다.
+# [플로팅 배너 타겟팅]
+# 이 5개의 버튼을 상단 CSS가 추적하여 우측 하단 배너로 띄웁니다.
 # ==========================================
-st.markdown("<div id='menu-marker'></div>", unsafe_allow_html=True)
-
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
+    st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
