@@ -4,11 +4,14 @@ import warnings
 import google.generativeai as genai
 import Andy_pension_v2
 import os
+import base64
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# [핵심] 고정 레이아웃 CSS: 버튼 그룹을 우측으로 밀고 간격을 1.5pt로 고정
+# ==========================================
+# [초정밀 CSS] 가변폭 차단 및 간격 절대 고정
+# ==========================================
 css = """
 <style>
 .block-container{padding-top:3rem!important;padding-bottom:5rem!important;}
@@ -19,24 +22,21 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
-.sidebar-header{display:flex;align-items:center;gap:12px;margin-bottom:20px; font-size:20px;font-weight:bold; color: #333;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
-/* [아이콘 무채색 해결] 사이드바 내 모든 이미지/이모지에 대한 강제 필터 제거 */
-[data-testid="stSidebar"] img, [data-testid="stSidebar"] span { filter: none !important; -webkit-filter: none !important; }
-
-/* [버튼 간격 고정 프레임] 가변 컬럼 대신 Flex 프레임워크 사용하여 1.5pt 간격 고정 */
-div[data-testid='stHorizontalBlock'] { 
+/* [핵심해결1] 정확히 5개의 버튼이 들어가는 영역을 찾아 가변 비율을 없애고 2px(1.5pt) 고정 간격 적용 */
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) { 
     justify-content: flex-end !important; 
-    gap: 1.5pt !important; 
+    gap: 2px !important; 
 }
-div[data-testid='column'] { 
-    flex: 0 1 auto !important; 
-    min-width: fit-content !important; 
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) > div[data-testid='column'] { 
+    flex: 0 0 auto !important; 
+    width: auto !important; 
+    min-width: 0 !important; 
     padding: 0 !important; 
 }
-div.stButton>button { 
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) button { 
     font-weight:normal!important; 
     border-radius:6px!important; 
     padding:0.3rem 0.6rem!important; 
@@ -45,7 +45,10 @@ div.stButton>button {
     border:1px solid #ccc!important; 
     margin:0!important;
 }
-div.stButton>button:hover { border-color:#000000!important; color:#000000!important; }
+div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5)) button:hover { 
+    border-color:#000000!important; 
+    color:#000000!important; 
+}
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
@@ -57,13 +60,28 @@ if 'init' not in st.session_state:
     st.session_state['init'] = True
     st.cache_data.clear()
 
-# 좌측 ZAPPA 엔진 로직 및 유채색 로봇 아이콘(image_7cea18.png)
+# ==========================================
+# [핵심해결2] ZAPPA 로봇 유채색 보존 (Base64 하드코딩)
+# ==========================================
 with st.sidebar:
-    col_icon, col_title = st.columns([1, 4])
-    with col_icon:
-        if os.path.exists("image_7cea18.png"): st.image("image_7cea18.png", width=45)
-        else: st.markdown("<span style='font-size:32px;'>🤖</span>", unsafe_allow_html=True)
-    with col_title: st.markdown("<div style='font-size:22px; font-weight:bold; padding-top:10px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
+    icon_path = "image_7cea18.png"
+    if os.path.exists(icon_path):
+        with open(icon_path, "rb") as f:
+            encoded_img = base64.b64encode(f.read()).decode()
+        # HTML 태그로 직접 렌더링하여 Streamlit의 흑백 필터 간섭을 완벽히 차단합니다.
+        st.markdown(f'''
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <img src="data:image/png;base64,{encoded_img}" style="width: 45px; height: auto; filter: none !important;">
+                <span style="font-size: 22px; font-weight: bold; color: #333;">ZAPPA AI 코딩 엔진</span>
+            </div>
+        ''', unsafe_allow_html=True)
+    else:
+        st.markdown('''
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <span style="font-size: 32px; filter: none !important;">🤖</span>
+                <span style="font-size: 22px; font-weight: bold; color: #333;">ZAPPA AI 코딩 엔진</span>
+            </div>
+        ''', unsafe_allow_html=True)
     
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -74,6 +92,7 @@ with st.sidebar:
             if st.button("개선 사항 반영하기"):
                 res = model.generate_content("Streamlit 수정: " + pmt)
                 st.code(res.text)
+        else: st.info("API Key 설정 필요")
     except Exception: st.error("엔진 연결 지연")
 
 def fmt(v, sign=False):
@@ -105,6 +124,7 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
+# 타이틀 명칭 변경
 c1, c2 = st.columns([8.5, 1.5])
 with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
@@ -113,6 +133,7 @@ with c2:
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
+# 절세 자산 현황 요약 (인사이트 박스 복원)
 if "_insight" in data:
     ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
     for line in data["_insight"]:
@@ -149,10 +170,9 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
         ag_acc = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
-        ap_acc = a.get('총 자산',0) - ag_acc
+        ap_acc = a['총 자산'] - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
-        # [수정] KeyError 방지를 위해 .get() 사용 및 오타 정정
-        ad_acc = a.get('평가손익(전일비)', 0) 
+        ad_acc = a.get('평가손익(전일비)', 0) # [수정] KeyError 방지용 get 처리
         h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
@@ -160,8 +180,8 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# [FIX] 버튼 그룹: 어떤 화면 너비에서도 1.5pt 간격 보장
-col_spacer, b1, b2, b3, b4, b5 = st.columns([5, 1, 1, 1, 1, 1.2])
+# [적용] 딱 5개 버튼만 생성하여 CSS의 nth-child(5) 규칙에 완벽히 매칭시킴 (여백 고정)
+b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
