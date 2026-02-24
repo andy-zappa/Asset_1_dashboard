@@ -105,8 +105,7 @@ def generate_asset_data():
     fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
     
     token = get_access_token()
-    if not token: 
-        return None
+    if not token: return None
 
     t_asset = 0
     t_p_effective = 0
@@ -154,8 +153,8 @@ def generate_asset_data():
             "코드": "-", 
             "비중": 100.0, 
             "총 자산": a_asset, 
-            "평가손익": a_val_gain, 
-            "전일비": a_diff, 
+            "평가손익": a_val_gain,
+            "전일비": a_diff,  # 데이터 처리를 위해 전일비 추가
             "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
             "수량": "-", 
             "매입가": "-", 
