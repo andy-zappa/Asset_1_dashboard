@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 1. 설정 및 고정 데이터 (핵심 계산 로직)
+# 1. 설정 및 고정 데이터 (원본 계산 로직 복원)
 # ==========================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
@@ -64,8 +64,7 @@ def get_access_token():
     try: 
         res = requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload)
         return res.json().get("access_token")
-    except: 
-        return None
+    except: return None
 
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': return {"c": calc_samsungfire_principal(), "d": 0}
@@ -78,8 +77,11 @@ def get_current_price(code, token, avg_p):
     except: return {"c": int(avg_p), "d": 0}
 
 def generate_asset_data():
-    now_kst = datetime.now(timezone(timedelta(hours=9)))
-    fetch_time = now_kst.strftime("%Y/%m/%d(%a) / %H:%M:%S")
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    days_kr = ['월', '화', '수', '목', '금', '토', '일']
+    day_name = days_kr[now_kst.weekday()]
+    fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
     token = get_access_token()
     if not token: return None
 
@@ -99,14 +101,8 @@ def generate_asset_data():
     
     t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
     assets_json["_total"] = {"총 자산": t_asset, "원금합": t_p_effective, "총 수익": t_asset-t_p_effective, "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, "평가손익(전일비)": t_diff, "매입금액합": t_avg_buy, "조회시간": fetch_time}
-    assets_json["_insight"] = [
-        f"조회 기준 시간: {fetch_time}", 
-        f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
-        f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
-        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
-        f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
-        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
-    ]
+    assets_json["_insight"] = [f"조회 기준 시간: {fetch_time}", f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."]
+    
     with open("assets.json", "w", encoding="utf-8") as f: json.dump(assets_json, f, ensure_ascii=False, indent=2)
     return assets_json
 
