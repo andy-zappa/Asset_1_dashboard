@@ -8,7 +8,7 @@ import os
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-# [핵심 CSS] 버튼 간격 고정 및 로봇 아이콘 색상 보존 필터
+# [핵심] 고정 레이아웃 CSS: 버튼 그룹을 우측으로 밀고 간격을 1.5pt로 고정
 css = """
 <style>
 .block-container{padding-top:3rem!important;padding-bottom:5rem!important;}
@@ -23,10 +23,10 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
-/* [아이콘 정정] 사이드바 내 모든 이미지/이모지에 대한 강제 필터 제거 */
+/* [아이콘 무채색 해결] 사이드바 내 모든 이미지/이모지에 대한 강제 필터 제거 */
 [data-testid="stSidebar"] img, [data-testid="stSidebar"] span { filter: none !important; -webkit-filter: none !important; }
 
-/* [버튼 간격 고정 해결] 가변 컬럼 폭을 차단하고 1.5pt(2px) 간격 절대 고정 */
+/* [버튼 간격 고정 프레임] 가변 컬럼 대신 Flex 프레임워크 사용하여 1.5pt 간격 고정 */
 div[data-testid='stHorizontalBlock'] { 
     justify-content: flex-end !important; 
     gap: 1.5pt !important; 
@@ -44,9 +44,7 @@ div.stButton>button {
     white-space:nowrap!important; 
     border:1px solid #ccc!important; 
     margin:0!important;
-    width: auto !important;
 }
-/* 호버 시 검은색 적용 */
 div.stButton>button:hover { border-color:#000000!important; color:#000000!important; }
 </style>
 """
@@ -59,18 +57,13 @@ if 'init' not in st.session_state:
     st.session_state['init'] = True
     st.cache_data.clear()
 
-# ==========================================
-# 좌측 ZAPPA 엔진 로직 및 유채색 로봇 아이콘 (image_7cea18.png)
-# ==========================================
+# 좌측 ZAPPA 엔진 로직 및 유채색 로봇 아이콘(image_7cea18.png)
 with st.sidebar:
     col_icon, col_title = st.columns([1, 4])
     with col_icon:
-        if os.path.exists("image_7cea18.png"):
-            st.image("image_7cea18.png", width=45)
-        else:
-            st.markdown("<span style='font-size:32px;'>🤖</span>", unsafe_allow_html=True)
-    with col_title:
-        st.markdown("<div style='font-size:22px; font-weight:bold; padding-top:10px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
+        if os.path.exists("image_7cea18.png"): st.image("image_7cea18.png", width=45)
+        else: st.markdown("<span style='font-size:32px;'>🤖</span>", unsafe_allow_html=True)
+    with col_title: st.markdown("<div style='font-size:22px; font-weight:bold; padding-top:10px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
     
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -81,7 +74,6 @@ with st.sidebar:
             if st.button("개선 사항 반영하기"):
                 res = model.generate_content("Streamlit 수정: " + pmt)
                 st.code(res.text)
-        else: st.info("API Key 설정 필요")
     except Exception: st.error("엔진 연결 지연")
 
 def fmt(v, sign=False):
@@ -113,7 +105,6 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
-# 타이틀 명칭: 🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드
 c1, c2 = st.columns([8.5, 1.5])
 with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
@@ -122,7 +113,6 @@ with c2:
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
-# [복원] 절세 자산 현황 요약 박스 (Insight)
 if "_insight" in data:
     ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
     for line in data["_insight"]:
@@ -161,28 +151,27 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ag_acc = sum(i['평가손익'] for i in a['상세'] if i['종목명'] != '[ 합계 ]')
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
-        ad_acc = a['평가손익(전일비)', 0]
-        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt_s(ad_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
+        # [수정] KeyError 방지를 위해 .get() 사용 및 오타 정정
+        ad_acc = a.get('평가손익(전일비)', 0) 
+        h2.append(f"<tr><td>{a['label'].split('(')[0]}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 (고정 간격 버튼) ---
+# --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# Spacer 컬럼 대신 Flex 레이아웃을 통해 우측 밀착 및 절대 간격 1.5pt 보장
-col_spacer, col_btn = st.columns([0.1, 100]) 
-with col_btn:
-    b1, b2, b3, b4, b5 = st.columns(5)
-    with b1:
-        if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
-    with b2:
-        if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
-    with b3:
-        if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"): st.session_state.sort_mode = 'profit'; st.rerun()
-    with b4:
-        if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"): st.session_state.sort_mode = 'rate'; st.rerun()
-    with b5:
-        if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
+# [FIX] 버튼 그룹: 어떤 화면 너비에서도 1.5pt 간격 보장
+col_spacer, b1, b2, b3, b4, b5 = st.columns([5, 1, 1, 1, 1, 1.2])
+with b1:
+    if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
+with b2:
+    if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
+with b3:
+    if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"): st.session_state.sort_mode = 'profit'; st.rerun()
+with b4:
+    if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"): st.session_state.sort_mode = 'rate'; st.rerun()
+with b5:
+    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
@@ -191,7 +180,7 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data['평가손익'])}'>{fmt(s_data['평가손익'], True)} ({fmt_p(s_data['수익률(%)'])})</span>**", unsafe_allow_html=True)
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data['평가손익'])}'>{fmt(s_data['평가손익'], True)} ({fmt_p(s_data['수익률(%)'])})</span>**", unsafe_allow_html=True)
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code: h3.append("<th>종목코드</th>")
             h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
