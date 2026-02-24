@@ -1,15 +1,12 @@
-=====================================================================
-첫 번째 파일: Andy_pension_v2.py (이 아래부터 복사)
-=====================================================================
-
 import pandas as pd
 import requests
 import json
 from datetime import datetime, timedelta, timezone
 
-APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
-APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
-URL_BASE = "[https://openapi.koreainvestment.com:9443](https://openapi.koreainvestment.com:9443)"
+# 긴 문자열 줄바꿈 에러 원천 차단
+APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
+APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
+URL_BASE = "https://openapi.koreainvestment.com:9443"
 
 ORIGINAL_CAPITAL = {
     '퇴직연금(DC)계좌 (25.8월~)': 254782039, 
@@ -107,7 +104,6 @@ def generate_asset_data():
     fetch_time = now_kst.strftime(f"%Y/%m/%d({day_name}) / %H:%M:%S")
     
     token = get_access_token()
-    if not token: return None
 
     t_asset = 0
     t_p_effective = 0
@@ -137,29 +133,29 @@ def generate_asset_data():
             sub_info.append({
                 "종목명": title, 
                 "코드": code, 
-                "총 자산": asset, 
+                "총자산": asset, 
                 "평가손익": gain, 
                 "전일비": diff_val, 
-                "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
-                "수량": qty, 
-                "매입가": avg_p, 
-                "현재가": curr
+                "수익률": (gain/buy_amt*100) if buy_amt!=0 else 0, 
+                "주식수": qty, 
+                "평단가": avg_p, 
+                "금일종가": curr
             })
             
         for item in sub_info: 
-            item["비중"] = (item["총 자산"] / a_asset * 100) if a_asset > 0 else 0
+            item["비중"] = (item["총자산"] / a_asset * 100) if a_asset > 0 else 0
         
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sum_row = {
             "종목명": "[ 합계 ]", 
             "코드": "-", 
             "비중": 100.0, 
-            "총 자산": a_asset, 
+            "총자산": a_asset, 
             "평가손익": a_val_gain, 
-            "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
-            "수량": "-", 
-            "매입가": "-", 
-            "현재가": "-"
+            "수익률": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
+            "주식수": "-", 
+            "평단가": "-", 
+            "금일종가": "-"
         }
         sub_info.insert(0, sum_row)
         
@@ -172,9 +168,9 @@ def generate_asset_data():
         
         assets_json[acc_key] = {
             "label": acc_label, 
-            "총 자산": a_asset, 
+            "총자산": a_asset, 
             "원금": p_val, 
-            "총 수익": acc_profit, 
+            "총손익": acc_profit, 
             "수익률(%)": acc_rate, 
             "평가손익(전일비)": a_diff, 
             "상세": sub_info
@@ -182,20 +178,20 @@ def generate_asset_data():
     
     t_avg_buy = sum(
         sum(
-            i['수량'] * i['매입가'] 
+            i['주식수'] * i['평단가'] 
             for i in assets_json[k]['상세'] 
-            if i['종목명'] != '[ 합계 ]' and isinstance(i['수량'], int)
+            if i['종목명'] != '[ 합계 ]' and isinstance(i['주식수'], int)
         ) 
         for k in assets_json if k in ACC_MAP.values()
     )
     
     assets_json["_total"] = {
-        "총 자산": t_asset, 
+        "총자산": t_asset, 
         "원금합": t_p_effective, 
-        "총 수익": t_asset - t_p_effective, 
+        "총손익": t_asset - t_p_effective, 
         "수익률(%)": (t_asset - t_p_effective) / t_p_effective * 100, 
         "평가손익(전일비)": t_diff, 
-        "매입금액합": t_avg_buy, 
+        "매수금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
