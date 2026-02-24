@@ -25,20 +25,16 @@ css = [
     ".sidebar-icon{font-size:32px;}",
     ".sidebar-text{font-size:22px;font-weight:bold;}",
     
-    # 컬럼 좌우 패딩을 3px 수준으로 줄여 버튼 간격 바싹 밀착
-    "div[data-testid='column'] { padding: 0 3px !important; }",
-    
-    # 폰트 사이즈 표기(15px), 볼드 해제, 버튼 상하좌우 패딩 축소
-    "div.stButton>button{font-weight:normal!important; border-radius:4px; padding:0.2rem 0.2rem!important; width: 100%; font-size: 15px!important; margin:0!important;}",
+    # [버튼 UI 완벽 수정] 패딩 0으로 붙이고, 줄바꿈 강제 차단(nowrap)
+    "div[data-testid='column'] { padding: 0 !important; }",
+    "div.stButton>button { font-weight:normal!important; border-radius:4px; padding:0.2rem 0.1rem!important; width:100%; font-size:15px!important; margin:0!important; white-space:nowrap!important; }",
     "</style>"
 ]
 st.markdown("".join(css), unsafe_allow_html=True)
 
-# 세션 상태 초기화 (정렬 및 종목코드 토글용)
-if 'sort_mode' not in st.session_state: 
-    st.session_state.sort_mode = 'init'
-if 'show_code' not in st.session_state: 
-    st.session_state.show_code = False
+# 세션 상태 초기화
+if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
+if 'show_code' not in st.session_state: st.session_state.show_code = False
 
 if 'init' not in st.session_state:
     with st.spinner("데이터 로딩 중..."):
@@ -64,64 +60,43 @@ with st.sidebar:
         except Exception as e:
             st.error(str(e))
 
-# 포맷팅 함수 (Syntax Error 방지를 위해 들여쓰기 명확화)
+# ==========================================
+# 포맷팅 함수 (에러 안나도록 깔끔하게 인라인 정리)
+# ==========================================
 def fmt(v):
-    try:
-        val = int(float(v))
-        return f"{val:,}"
-    except: 
-        return str(v)
+    try: return f"{int(float(v)):,}"
+    except: return str(v)
 
 def fmt_money_sign(v):
     try:
         val = int(float(v))
-        if val > 0:
-            return f"+{val:,}"
-        elif val < 0:
-            return f"{val:,}" # 음수일 경우 '-'가 자동으로 붙습니다.
-        else:
-            return "0"
-    except: 
-        return str(v)
+        return f"+{val:,}" if val > 0 else f"{val:,}" if val < 0 else "0"
+    except: return str(v)
 
 def fmt_pct(v):
     try:
         val = float(v)
-        if val > 0:
-            return f"▲{val:.2f}%"
-        elif val < 0:
-            return f"▼{abs(val):.2f}%"
-        else:
-            return "0.00%"
-    except: 
-        return str(v)
+        return f"▲{val:.2f}%" if val > 0 else f"▼{abs(val):.2f}%" if val < 0 else "0.00%"
+    except: return str(v)
 
 def col(v):
     try:
         val = float(v)
-        if val > 0:
-            return "red"
-        elif val < 0:
-            return "blue"
-        else:
-            return ""
-    except: 
-        return ""
+        return "red" if val > 0 else "blue" if val < 0 else ""
+    except: return ""
 
 @st.cache_data(ttl=60)
 def load():
     try:
-        with open('assets.json', 'r', encoding='utf-8') as f: 
-            return json.load(f)
-    except: 
-        return None
+        with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
+    except: return None
 
 data = load()
 if not data: st.stop()
 
 tot = data.get("_total", {})
 
-# 상단 헤더부: 왼쪽 8.5, 오른쪽 1.5 비율
+# 상단 헤더부
 c1, c2 = st.columns([8.5, 1.5])
 with c1:
     st.markdown("<h3>📝 이상혁(Andy lee)님 세제혜택 금융상품 자산 현황</h3>", unsafe_allow_html=True)
@@ -140,7 +115,6 @@ if "_insight" in data:
     ins.append("</div>")
     st.markdown("".join(ins), unsafe_allow_html=True)
 
-# 공통 우측 상단 단위
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW), %</div>"
 
 # --- [1] 투자금 대비 자산 현황 ---
@@ -192,8 +166,8 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# 스페이서 비율과 버튼 비율을 정교하게 조정하여 우측 정렬선과 표의 끝선을 정확히 일치시킴
-spacer, b1, b2, b3, b4, b5 = st.columns([5.3, 0.8, 0.8, 0.8, 0.8, 1.2])
+# [수정] 박스 찌그러짐을 방지하기 위해 각 버튼 열에 조금 더 넉넉한 비율 부여 (총 너비 합은 우측 정렬 유지)
+spacer, b1, b2, b3, b4, b5 = st.columns([4.2, 0.9, 0.9, 0.9, 0.9, 1.3])
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"):
         st.session_state.sort_mode = 'init'; st.rerun()
@@ -215,7 +189,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        # expanded=False 로 설정하여 디폴트를 숨겨진 상태로 만듭니다
         with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             ag_acc, ay_acc = s_data['평가손익'], s_data['수익률(%)']
@@ -228,7 +201,6 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 h3.append("<th>종목코드</th>")
             h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
 
-            # 정렬 로직 (비중 정렬 제외됨)
             raw_items = a.get('상세', [])
             sum_row = next((i for i in raw_items if i['종목명'] == "[ 합계 ]"), None)
             items = [i for i in raw_items if i['종목명'] != "[ 합계 ]"]
