@@ -3,13 +3,12 @@ import json
 import warnings
 import google.generativeai as genai
 import Andy_pension_v2
-import os
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
 # ==========================================
-# [완벽 해결 CSS] 가변폭 파괴 및 Floating 배너 고정
+# [완벽 해결] 플로팅 배너 및 UI 레이아웃 CSS
 # ==========================================
 css = """
 <style>
@@ -24,64 +23,68 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
-/* [아이콘 흑백 문제 완전 파괴] Streamlit 강제 필터링 제거 및 컬러 폰트 우선 적용 */
-[data-testid="stSidebar"] img { filter: none !important; -webkit-filter: none !important; }
-.color-emoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px; }
-
 /* =========================================================
-   [Floating 배너 UI 완벽 구현 - 찌그러짐/가변폭 100% 차단]
-   정확히 5개의 버튼 컬럼이 있는 레이어를 찾아 우측 하단에 플로팅 띄움
+   [100% 명중하는 Floating 배너 CSS]
+   #menu-marker를 품고 있는 투명 컨테이너는 자리 차지를 하지 않도록 숨기고,
+   그 "바로 다음"에 오는 컨테이너(버튼 5개 묶음)를 우측 하단에 띄웁니다.
 ========================================================= */
-div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) {
-    position: fixed !important;
-    bottom: 40px !important;
-    right: 40px !important;
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(10px) !important;
-    padding: 10px 16px !important;
-    border-radius: 12px !important;
-    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.15) !important;
-    border: 1px solid #e5e7eb !important;
-    z-index: 999999 !important;
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important; /* [핵심] 줄바꿈 절대 방지 */
-    gap: 6px !important; /* 버튼 사이 간격 1.5pt~2pt 절대 고정 */
-    width: max-content !important; /* 전체 배너 너비를 버튼 크기합에 딱 맞춤 */
+div.element-container:has(#menu-marker) {
+    display: none !important;
 }
 
-/* Streamlit이 부여한 20% 가변 폭(width)을 파괴하고 텍스트 길이에 딱 맞게 고정 */
-div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) > div[data-testid='column'] {
-    flex: 0 0 auto !important; 
+div.element-container:has(#menu-marker) + div.element-container {
+    position: fixed !important;
+    bottom: 35px !important;
+    right: 35px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    border: 1px solid #e5e7eb !important;
+    z-index: 999999 !important;
+    width: max-content !important; /* 배너 너비를 버튼 길이에 딱 맞춤 */
+}
+
+/* 내부 버튼 그룹(가로 정렬) 간격 고정 */
+div.element-container:has(#menu-marker) + div.element-container div[data-testid='stHorizontalBlock'] {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important; /* 버튼 사이 간격 절대 고정 */
     width: max-content !important;
-    min-width: 0 !important;
+    align-items: center !important;
+}
+
+/* Streamlit의 가변 비율(%) 파괴: 각 칸이 버튼 크기에 맞게 쪼그라듦 */
+div.element-container:has(#menu-marker) + div.element-container div[data-testid='column'] {
+    flex: 0 0 auto !important;
+    width: max-content !important;
+    min-width: fit-content !important;
     padding: 0 !important;
 }
 
-/* 플로팅 배너 내부 버튼 디자인 */
-div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) button {
-    border-radius: 8px !important;
-    padding: 0px 14px !important;
-    height: 40px !important; /* 버튼 높이 통일 */
+/* 플로팅 배너 내부 개별 버튼 디자인 */
+div.element-container:has(#menu-marker) + div.element-container button {
+    border-radius: 6px !important;
+    padding: 6px 14px !important;
+    height: 38px !important;
     font-size: 14px !important;
     font-weight: 600 !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
-    white-space: nowrap !important; /* [핵심] 글자가 두 줄로 쪼개지는 현상 100% 방지 */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    white-space: nowrap !important; /* [핵심] 글자가 두 줄로 찌그러지는 현상 방지 */
+    word-break: keep-all !important;
     transition: all 0.2s ease !important;
 }
 
-/* 마우스 호버 효과 */
-div[data-testid='stHorizontalBlock']:has(> div[data-testid='column']:nth-child(5):last-child) button:hover {
+div.element-container:has(#menu-marker) + div.element-container button:hover {
     border-color: #000000 !important;
     color: #000000 !important;
     background: #f8f9fa !important;
-    transform: translateY(-2px) !important;
+    transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 </style>
@@ -96,25 +99,11 @@ if 'init' not in st.session_state:
     st.cache_data.clear()
 
 # ==========================================
-# 좌측 ZAPPA 엔진 로직 (이미지가 있으면 무조건 렌더링, 없으면 컬러 이모지)
+# 좌측 ZAPPA 엔진 로직 (초심플 이모지 방식 롤백)
 # ==========================================
 with st.sidebar:
-    icon_path = "image_7cea18.png"
+    st.markdown("<h3 style='display:flex;align-items:center;gap:8px;margin-bottom:15px;'><span style='font-size:28px;'>🤖</span> ZAPPA AI 코딩 엔진</h3>", unsafe_allow_html=True)
     
-    if os.path.exists(icon_path):
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.image(icon_path, use_container_width=True) # CSS가 흑백필터를 막아줍니다.
-        with col2:
-            st.markdown("<div style='font-size:22px; font-weight:bold; color:#333; margin-top:5px;'>ZAPPA AI 코딩 엔진</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("""
-            <div style='display:flex; align-items:center; gap:10px; margin-bottom:15px;'>
-                <span class='color-emoji'>🤖</span>
-                <span style='font-size:22px; font-weight:bold; color:#333;'>ZAPPA AI 코딩 엔진</span>
-            </div>
-        """, unsafe_allow_html=True)
-        
     try:
         key = st.secrets.get("GOOGLE_API_KEY")
         if key:
@@ -213,8 +202,12 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
 # ==========================================
-# [플로팅 배너 타겟] 이 5개의 버튼이 상단 CSS에 의해 강제로 우측 하단 레이어로 뜹니다.
+# [핵심 타겟팅 마커] 
+# 이 마커를 심어두면, 상단의 CSS가 이 바로 다음 줄에 생성되는 st.columns() 블록을
+# 완벽하게 잡아내서 우측 하단 플로팅 배너로 만듭니다.
 # ==========================================
+st.markdown("<div id='menu-marker'></div>", unsafe_allow_html=True)
+
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
