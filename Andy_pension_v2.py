@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 1. 설정 및 고정 데이터
+# 1. 설정 및 고정 데이터 (핵심 계산 로직)
 # ==========================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
@@ -16,6 +16,8 @@ ORIGINAL_CAPITAL = {
     'ISA(중개형)계좌 (25.8월~)': 33000000, 
     '퇴직연금(IRP)계좌 (25.8월~)': 3000000
 }
+DC_FIXED_GAIN = 47989921
+DC_FIXED_RATE = 18.82
 
 ACC_MAP = {
     '퇴직연금(DC)계좌 (25.8월~)': 'DC', 
@@ -93,8 +95,8 @@ def generate_asset_data():
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sub_info.insert(0, {"종목명": "[ 합계 ]", "코드": "-", "비중": 100.0, "총 자산": a_asset, "평가손익": a_val_gain, "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, "수량": "-", "매입가": "-", "현재가": "-"})
         t_asset += a_asset; t_p_effective += p_val; t_diff += a_diff
-        acc_profit = a_asset - p_val
-        assets_json[acc_key] = {"label": acc_label, "총 자산": a_asset, "원금": p_val, "총 수익": acc_profit, "수익률(%)": (acc_profit/p_val*100) if p_val>0 else 0, "평가손익(전일비)": a_diff, "상세": sub_info}
+        assets_json[acc_key] = {"label": acc_label, "총 자산": a_asset, "원금": p_val, "총 수익": (a_asset-p_val) if acc_key!='DC' else DC_FIXED_GAIN, "수익률(%)": (DC_FIXED_RATE if acc_key=='DC' else (a_asset-p_val)/p_val*100), "평가손익(전일비)": a_diff, "상세": sub_info}
+    
     t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
     assets_json["_total"] = {"총 자산": t_asset, "원금합": t_p_effective, "총 수익": t_asset-t_p_effective, "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, "평가손익(전일비)": t_diff, "매입금액합": t_avg_buy, "조회시간": fetch_time}
     assets_json["_insight"] = [
