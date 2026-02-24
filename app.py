@@ -184,4 +184,83 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         ad_acc = a.get('평가손익(전일비)', 0)
         h2.append(f"<tr><td>{t2_lbl.get(k, a.get('label'))}</td><td>{fmt(a.get('총 자산'))}</td><td class='{col(ag_acc)}'>{fmt_money_sign(ag_acc)}</td><td class='{col(ay_acc)}'>{fmt_pct(ay_acc)}</td><td class='{col(ad_acc)}'>{fmt_money_sign(ad_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
-h2
+h2.append("</table>")
+st.markdown("".join(h2), unsafe_allow_html=True)
+
+
+# --- [3] 계좌별 상세 내역 ---
+t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
+st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+
+# 스페이서 비율과 버튼 비율을 정교하게 조정하여 우측 정렬선과 표의 끝선을 정확히 일치시킴
+spacer, b1, b2, b3, b4, b5 = st.columns([5.3, 0.8, 0.8, 0.8, 0.8, 1.2])
+with b1:
+    if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"):
+        st.session_state.sort_mode = 'init'; st.rerun()
+with b2:
+    if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"):
+        st.session_state.sort_mode = 'asset'; st.rerun()
+with b3:
+    if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"):
+        st.session_state.sort_mode = 'profit'; st.rerun()
+with b4:
+    if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"):
+        st.session_state.sort_mode = 'rate'; st.rerun()
+with b5:
+    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"):
+        st.session_state.show_code = not st.session_state.show_code; st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+for k in ['DC', 'PENSION', 'ISA', 'IRP']:
+    if k in data:
+        a = data[k]
+        # expanded=False 로 설정하여 디폴트를 숨겨진 상태로 만듭니다
+        with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황", expanded=False):
+            s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
+            ag_acc, ay_acc = s_data['평가손익'], s_data['수익률(%)']
+            t3 = f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(a.get('총 자산'))} / "
+            t3 += f"총 수익 : <span class='{col(ag_acc)}' style='font-weight:bold;'>{fmt_money_sign(ag_acc)} ({fmt_pct(ay_acc)})</span>**"
+            st.markdown(t3, unsafe_allow_html=True)
+
+            h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
+            if st.session_state.show_code:
+                h3.append("<th>종목코드</th>")
+            h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
+
+            # 정렬 로직 (비중 정렬 제외됨)
+            raw_items = a.get('상세', [])
+            sum_row = next((i for i in raw_items if i['종목명'] == "[ 합계 ]"), None)
+            items = [i for i in raw_items if i['종목명'] != "[ 합계 ]"]
+            
+            if st.session_state.sort_mode == 'asset':
+                items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
+            elif st.session_state.sort_mode == 'profit':
+                items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
+            elif st.session_state.sort_mode == 'rate':
+                items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
+
+            disp_list = ([sum_row] if sum_row else []) + items
+
+            for i in disp_list:
+                is_sum = (i['종목명'] == "[ 합계 ]")
+                r_cls = "class='sum-row'" if is_sum else ""
+                
+                row_html = f"<tr {r_cls}><td>{i['종목명']}</td>"
+                if st.session_state.show_code:
+                    cdisp = "-" if (is_sum or i.get('코드', '-') == "-") else i.get('코드', '-')
+                    row_html += f"<td>{cdisp}</td>"
+                    
+                row_html += f"<td>{i.get('비중',0):.1f}%</td>"
+                row_html += f"<td>{fmt(i.get('총 자산',0))}</td>"
+                row_html += f"<td class='{col(i.get('평가손익',0))}'>{fmt_money_sign(i.get('평가손익',0))}</td>"
+                row_html += f"<td class='{col(i.get('수익률(%)',0))}'>{fmt_pct(i.get('수익률(%)',0))}</td>"
+                row_html += f"<td>{fmt(i.get('수량','-'))}</td>"
+                row_html += f"<td>{fmt(i.get('매입가','-'))}</td>"
+                row_html += f"<td>{fmt(i.get('현재가','-'))}</td></tr>"
+                h3.append(row_html)
+                
+            h3.append("</table>")
+            st.markdown("".join(h3), unsafe_allow_html=True)
+
+st.markdown("<br><br>", unsafe_allow_html=True)
