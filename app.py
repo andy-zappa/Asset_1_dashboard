@@ -24,7 +24,8 @@ css = [
     ".sidebar-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}",
     ".sidebar-icon{font-size:32px;}",
     ".sidebar-text{font-size:22px;font-weight:bold;}",
-    "div.stButton>button{font-weight:bold;border-radius:8px;padding:0.3rem 0.5rem!important; width: 100%;}",
+    # 폰트 사이즈를 키워(16px) 삼각형(△)이 더 뚜렷하고 크게 보이게 설정
+    "div.stButton>button{font-weight:bold;border-radius:8px;padding:0.4rem 0.5rem!important; width: 100%; font-size: 16px!important;}",
     "</style>"
 ]
 st.markdown("".join(css), unsafe_allow_html=True)
@@ -64,14 +65,16 @@ def fmt(v):
         return f"{val:,}"
     except: return str(v)
 
+# 평가손익, 전일비용 포맷팅 (+, - 사용)
 def fmt_money_sign(v):
     try:
         val = int(float(v))
-        if val > 0: return f"▲{val:,}"
-        elif val < 0: return f"▼{abs(val):,}"
+        if val > 0: return f"+{val:,}"
+        elif val < 0: return f"{val:,}" # 음수일 경우 '-'가 자동으로 붙습니다.
         else: return "0"
     except: return str(v)
 
+# 수익률용 포맷팅 (▲, ▼ 사용)
 def fmt_pct(v):
     try:
         val = float(v)
@@ -166,25 +169,22 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# 정렬 및 토글 제어 5+1 버튼
-b1, b2, b3, b4, b5, b6, _ = st.columns([1, 1, 1, 1, 1, 1.2, 3])
+# 여백 레이아웃을 통해 5개의 버튼을 우측 정렬하고 간격을 동일하게 맞춤
+spacer, b1, b2, b3, b4, b5 = st.columns([3.5, 1.1, 1.1, 1.1, 1.1, 1.4])
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"):
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
-    if st.button("비중 ▲" if st.session_state.sort_mode == 'weight' else "비중 △"):
-        st.session_state.sort_mode = 'weight'; st.rerun()
-with b3:
     if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"):
         st.session_state.sort_mode = 'asset'; st.rerun()
-with b4:
+with b3:
     if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"):
         st.session_state.sort_mode = 'profit'; st.rerun()
-with b5:
+with b4:
     if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"):
         st.session_state.sort_mode = 'rate'; st.rerun()
-with b6:
-    if st.button("종목코드 [＋]" if st.session_state.show_code else "종목코드 [－]"):
+with b5:
+    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"):
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -192,7 +192,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 for k in ['DC', 'PENSION', 'ISA', 'IRP']:
     if k in data:
         a = data[k]
-        with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황", expanded=True):
+        # expanded=False 로 설정하여 디폴트를 숨겨진 상태로 만듭니다
+        with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label'))} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             ag_acc, ay_acc = s_data['평가손익'], s_data['수익률(%)']
             t3 = f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**총 자산 : {fmt(a.get('총 자산'))} / "
@@ -204,14 +205,12 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                 h3.append("<th>종목코드</th>")
             h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
 
-            # 정렬 로직
+            # 정렬 로직 (비중 정렬 제외됨)
             raw_items = a.get('상세', [])
             sum_row = next((i for i in raw_items if i['종목명'] == "[ 합계 ]"), None)
             items = [i for i in raw_items if i['종목명'] != "[ 합계 ]"]
             
-            if st.session_state.sort_mode == 'weight':
-                items.sort(key=lambda x: x.get('비중', 0), reverse=True)
-            elif st.session_state.sort_mode == 'asset':
+            if st.session_state.sort_mode == 'asset':
                 items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
             elif st.session_state.sort_mode == 'profit':
                 items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
