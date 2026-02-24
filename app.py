@@ -28,57 +28,66 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [배너 CSS 개편] 완벽한 플로팅 배너 및 내부 아이콘 정렬
+   [배너 CSS 개편] 넓이/높이 찌그러짐 100% 원천 차단
    ========================================================= */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 10px 12px !important; /* 패딩 균일화 */
+    padding: 8px 12px !important;
     border-radius: 12px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
+    
+    /* 가로폭 자동 제어 및 Flex 설정 */
     display: flex !important;
     flex-direction: row !important;
-    align-items: center !important; /* 수직 중앙 정렬 핵심 */
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     justify-content: center !important;
-    gap: 8px !important; /* 버튼 간격 고정 */
+    gap: 8px !important;
     width: max-content !important;
+    max-width: 95vw !important; /* 모바일 넘침 방지 */
+    overflow-x: auto !important; /* 부득이하게 넘치면 스크롤 생성 */
 }
 
+/* Streamlit이 강제로 부여하는 비율(width: 20%) 무력화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important;
     width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
     display: flex !important;
-    align-items: center !important; /* 내부 컬럼도 중앙 정렬 */
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
-    border-radius: 6px !important;
-    padding: 0 12px !important; /* 좌우 패딩만 유지 */
-    height: 38px !important; /* 높이 완전 고정 */
-    font-size: 14px !important;
+    width: auto !important;
+    height: 36px !important;
+    font-size: 13px !important; /* 글씨 크기를 미세하게 줄여 공간 확보 */
     font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
+    padding: 0 12px !important;
     white-space: nowrap !important;
     display: inline-flex !important;
-    align-items: center !important; /* 버튼 내 텍스트 중앙 정렬 */
+    align-items: center !important;
     justify-content: center !important;
     transition: all 0.2s ease !important;
+    border-radius: 6px !important;
     box-sizing: border-box !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
+    font-size: 13px !important;
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1 !important; /* 텍스트 자체 여백 제거 */
+    line-height: 1 !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
@@ -92,7 +101,6 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
 """
 st.markdown(css, unsafe_allow_html=True)
 
-# 한 줄짜리 if문들을 모두 명확한 들여쓰기로 변경하여 에러 원천 차단
 if 'sort_mode' not in st.session_state:
     st.session_state.sort_mode = 'init'
 
@@ -186,7 +194,7 @@ with c2:
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
+    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현 요약</u></span>"]
     for line in data["_insight"]:
         if "조회 기준" not in line:
             ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
@@ -274,10 +282,11 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             st.markdown(f"<div style='margin-bottom:10px; font-size:16px;'><b>총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></b></div>", unsafe_allow_html=True)
             
+            # [수정] 평가손익에 (전일비) 병기하도록 헤더 텍스트 변경
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code:
                 h3.append("<th>종목코드</th>")
-            h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
+            h3.append("<th>비중</th><th>총 자산</th><th>평가손익(전일비)</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
             
             items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
             if st.session_state.sort_mode == 'asset':
@@ -305,7 +314,12 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
                         
                 row += f"<td>{i.get('비중',0):.1f}%</td>"
                 row += f"<td>{fmt(i.get('총 자산',0))}</td>"
-                row += f"<td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td>"
+                
+                # [수정] 평가손익 값에 전일비 값 병기 처리 (예: +48,190,490 (+10,000))
+                gain_val = i.get('평가손익', 0)
+                diff_val = i.get('전일비', 0)
+                row += f"<td class='{col(gain_val)}'>{fmt(gain_val, True)} ({fmt(diff_val, True)})</td>"
+                
                 row += f"<td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td>"
                 row += f"<td>{fmt(i.get('수량','-'))}</td>"
                 row += f"<td>{fmt(i.get('매입가','-'))}</td>"
