@@ -70,8 +70,7 @@ PORTFOLIO = {
 def get_access_token():
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
-        res = requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload)
-        return res.json().get("access_token")
+        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload).json().get("access_token")
     except: 
         return None
 
