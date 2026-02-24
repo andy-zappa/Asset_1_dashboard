@@ -7,57 +7,41 @@ import Andy_pension_v2
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-css = """
-<style>
-.block-container { padding-top:3rem!important; padding-bottom:5rem!important; }
-h3 { font-size:26px!important; font-weight:bold; margin-bottom:10px; }
-.sub-title { font-size:22px!important; font-weight:bold; margin:25px 0 10px; }
-.main-table { width:100%; border-collapse:collapse; font-size:15px; text-align:center; margin-bottom:10px; }
-.main-table th { background-color:#f2f2f2; padding:10px; border:1px solid #ddd; font-weight:bold!important; }
-.main-table td { padding:8px; border:1px solid #ddd; vertical-align:middle; }
-.sum-row td { background-color:#fff9e6; font-weight:bold!important; }
-.red { color:#FF2323!important; } 
-.blue { color:#0047EB!important; }
-.sidebar-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; font-size:22px; font-weight:bold; color: #ff4b4b; } /* 유채색 강조 */
-.insight-box { background-color:#f0f4f8; padding:20px; border-radius:10px; border-left:5px solid #007bff; margin-bottom:25px; }
-.box-title { font-size:20px!important; font-weight:bold; margin-bottom:15px; display:block; color:#333; }
+css = [
+    "<style>",
+    ".block-container{padding-top:3rem!important;padding-bottom:5rem!important;}",
+    "h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}",
+    ".sub-title{font-size:22px!important;font-weight:bold;margin:25px 0 10px;}",
+    ".main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;margin-bottom:10px;}",
+    ".main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important;}",
+    ".main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}",
+    ".sum-row td{background-color:#fff9e6;font-weight:bold!important;}",
+    ".red{color:#FF2323!important;} .blue{color:#0047EB!important;}",
+    ".sidebar-header{display:flex;align-items:center;gap:12px;margin-bottom:20px; font-size:20px;font-weight:bold; color: #ff4b4b;}",
+    ".insight-box { background-color:#f0f4f8; padding:20px; border-radius:10px; border-left:5px solid #007bff; margin-bottom:25px; }",
+    ".box-title { font-size:20px!important; font-weight:bold; margin-bottom:15px; display:block; color:#333; }",
+    
+    # 버튼 디자인: 둥근 테두리(6px) + 2pt 간격 통일
+    "div[data-testid='stHorizontalBlock'] { gap: 2pt !important; }",
+    "div[data-testid='column'] { padding: 0 !important; }",
+    "div.stButton>button { font-weight:normal!important; border-radius:6px!important; padding:0.3rem 0.5rem!important; width:100%!important; font-size:13px!important; white-space:nowrap!important; border:1px solid #ccc!important; margin:0!important; }",
+    "div.stButton>button:hover { border-color:#ff4b4b!important; color:#ff4b4b!important; }",
+    "</style>"
+]
+st.markdown("".join(css), unsafe_allow_html=True)
 
-/* 버튼 디자인: 둥근 테두리(6px) + 2pt 간격 */
-div[data-testid='stHorizontalBlock'] { gap: 2pt !important; }
-div[data-testid='column'] { padding: 0 !important; }
-div.stButton>button { 
-    font-weight:normal!important; 
-    border-radius:6px!important; 
-    padding:0.3rem 0.5rem!important; 
-    font-size:13px!important; 
-    white-space:nowrap!important; 
-    border:1px solid #ccc!important; 
-    margin:0!important;
-    width: 100% !important;
-}
-div.stButton>button:hover { 
-    border-color:#ff4b4b!important; 
-    color:#ff4b4b!important;
-}
-</style>
-"""
-st.markdown(css, unsafe_allow_html=True)
-
-if 'sort_mode' not in st.session_state: 
-    st.session_state.sort_mode = 'init'
-if 'show_code' not in st.session_state: 
-    st.session_state.show_code = False
+if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
+if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
-    with st.spinner("데이터 로딩 중..."): 
-        Andy_pension_v2.generate_asset_data()
+    with st.spinner("데이터 로딩 중..."): Andy_pension_v2.generate_asset_data()
     st.session_state['init'] = True
     st.cache_data.clear()
 
 # ==========================================
-# 좌측 ZAPPA 엔진 로직 (유채색 아이콘 적용)
+# [수정] 좌측 ZAPPA 엔진 로봇 형상 아이콘 적용
 # ==========================================
 with st.sidebar:
-    st.markdown("<div class='sidebar-header'><span style='font-size:32px;'>🚀</span><span class='sidebar-text'> ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-header'><span style='font-size:32px;'>🤖</span><span class='sidebar-text'> ZAPPA AI 코딩 엔진</span></div>", unsafe_allow_html=True)
     try:
         if "GOOGLE_API_KEY" in st.secrets:
             key = st.secrets.get("GOOGLE_API_KEY")
@@ -97,17 +81,18 @@ def col(v):
 @st.cache_data(ttl=60)
 def load():
     try:
-        with open('assets.json', 'r', encoding='utf-8') as f: 
-            return json.load(f)
+        with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
     except: return None
 
 data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
+# ==========================================
+# [수정] 대시보드 타이틀 변경
+# ==========================================
 c1, c2 = st.columns([8.5, 1.5])
-with c1: 
-    st.markdown("<h3>📝 Andy lee님 절세 자산 통합 관리 대시보드</h3>", unsafe_allow_html=True)
+with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
     if st.button("🔄 실시간 업데이트"):
         Andy_pension_v2.generate_asset_data()
@@ -116,7 +101,9 @@ with c2:
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
-# 금융 자산 보고 요약 (인사이트 박스) 복원
+# ==========================================
+# [복원] 절세 자산 현황 요약 (인사이트 박스)
+# ==========================================
 if "_insight" in data:
     ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
     for line in data["_insight"]:
@@ -142,7 +129,7 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
 h1.append("</table>")
 st.markdown("".join(h1), unsafe_allow_html=True)
 
-# --- [2] 매수금액 대비 자산 현황 ---
+# --- [2] 매입금액 대비 자산 현황 ---
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 
@@ -164,8 +151,14 @@ for k in ['DC', 'PENSION', 'ISA', 'IRP']:
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
+
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+
+# ==========================================
+# [수정] 박스 아이콘 간격 및 여백 균일화 적용
+# '총자산▲'와 '평가손익▲' 사이의 2pt 간격을 모든 버튼에 동일 적용
+# ==========================================
 spacer, b1, b2, b3, b4, b5 = st.columns([5.5, 0.9, 0.9, 0.9, 0.9, 1.2])
 with b1:
     if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
