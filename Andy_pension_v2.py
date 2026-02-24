@@ -120,4 +120,89 @@ def generate_asset_data():
         a_buy_total = 0 
         
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
-            px = get_current_price(code, token, avg_p
+            px = get_current_price(code, token, avg_p)
+            curr = px['c']
+            diff_val = px['d'] * qty
+            
+            asset = int(qty * curr)
+            buy_amt = int(qty * avg_p)
+            gain = asset - buy_amt
+            
+            a_asset += asset
+            a_diff += diff_val
+            a_buy_total += buy_amt
+            
+            sub_info.append({
+                "종목명": title, 
+                "코드": code, 
+                "총 자산": asset, 
+                "평가손익": gain, 
+                "전일비": diff_val, 
+                "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
+                "수량": qty, 
+                "매입가": avg_p, 
+                "현재가": curr
+            })
+            
+        for item in sub_info: 
+            item["비중"] = (item["총 자산"] / a_asset * 100) if a_asset > 0 else 0
+        
+        a_val_gain = sum(i['평가손익'] for i in sub_info)
+        sum_row = {
+            "종목명": "[ 합계 ]", 
+            "코드": "-", 
+            "비중": 100.0, 
+            "총 자산": a_asset, 
+            "평가손익": a_val_gain, 
+            "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
+            "수량": "-", 
+            "매입가": "-", 
+            "현재가": "-"
+        }
+        sub_info.insert(0, sum_row)
+        
+        t_asset += a_asset
+        t_p_effective += p_val
+        t_diff += a_diff
+        
+        acc_profit = a_asset - p_val
+        acc_rate = (acc_profit / p_val * 100) if p_val > 0 else 0
+        
+        assets_json[acc_key] = {
+            "label": acc_label, 
+            "총 자산": a_asset, 
+            "원금": p_val, 
+            "총 수익": acc_profit, 
+            "수익률(%)": acc_rate, 
+            "평가손익(전일비)": a_diff, 
+            "상세": sub_info
+        }
+    
+    t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
+    
+    assets_json["_total"] = {
+        "총 자산": t_asset, 
+        "원금합": t_p_effective, 
+        "총 수익": t_asset-t_p_effective, 
+        "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
+        "평가손익(전일비)": t_diff, 
+        "매입금액합": t_avg_buy, 
+        "조회시간": fetch_time
+    }
+    
+    assets_json["_insight"] = [
+        f"조회 기준 시간: {fetch_time}", 
+        f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
+        f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
+        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
+        f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
+        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
+    ]
+    
+    with open("assets.json", "w", encoding="utf-8") as f: 
+        json.dump(assets_json, f, ensure_ascii=False, indent=2)
+        
+    return assets_json
+
+if __name__ == "__main__": 
+    generate_asset_data()
