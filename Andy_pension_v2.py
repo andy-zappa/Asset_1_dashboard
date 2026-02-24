@@ -16,8 +16,6 @@ ORIGINAL_CAPITAL = {
     'ISA(중개형)계좌 (25.8월~)': 33000000, 
     '퇴직연금(IRP)계좌 (25.8월~)': 3000000
 }
-DC_FIXED_GAIN = 47989921
-DC_FIXED_RATE = 18.82
 
 ACC_MAP = {
     '퇴직연금(DC)계좌 (25.8월~)': 'DC', 
@@ -102,13 +100,7 @@ def generate_asset_data():
         sub_info.insert(0, sum_row)
         
         t_asset += a_asset; t_p_effective += p_val; t_diff += a_diff
-        assets_json[acc_key] = {"label": acc_label, "총 자산": a_asset, "원금": p_val, "총 수익": (a_asset-p_val) if acc_key!='DC' else DC_FIXED_GAIN, "수익률(%)": (DC_FIXED_RATE if acc_key=='DC' else (a_asset-p_val)/p_val*100), "평가손익(전일비)": a_diff, "상세": sub_info}
-    
-    t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
-    assets_json["_total"] = {"총 자산": t_asset, "원금합": t_p_effective, "총 수익": t_asset-t_p_effective, "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, "평가손익(전일비)": t_diff, "매입금액합": t_avg_buy, "조회시간": fetch_time}
-    assets_json["_insight"] = [f"조회 기준 시간: {fetch_time}", f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."]
-    
-    with open("assets.json", "w", encoding="utf-8") as f: json.dump(assets_json, f, ensure_ascii=False, indent=2)
-    return assets_json
-
-if __name__ == "__main__": generate_asset_data()
+        
+        # [수정] DC 계좌 예외 처리 삭제. 모든 계좌에 대해 (총자산 - 최초원금) 계산
+        acc_profit = a_asset - p_val
+        acc_rate = (acc_profit / p_val * 100) if p_val > 0 else
