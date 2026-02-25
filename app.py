@@ -4,6 +4,7 @@ import warnings
 import google.generativeai as genai
 import Andy_pension_v2
 import os
+import re
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
@@ -142,6 +143,10 @@ def fmt_label(lbl):
     style = "font-size:13px; color:#555;"
     return lbl.replace("(▶ Aug. 2025)", f"<span style='{style}'>(▶ Aug. 2025)</span>").replace("(▶ Nov. 2025)", f"<span style='{style}'>(▶ Nov. 2025)</span>")
 
+def clean_label(lbl):
+    # 정규식을 이용해 (▶ ...) 형태의 날짜 텍스트를 완전히 제거
+    return re.sub(r'\s*\(▶.*?\)', '', lbl)
+
 @st.cache_data(ttl=60)
 def load():
     try:
@@ -190,7 +195,7 @@ st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</
 st.markdown(f"**총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span>**", unsafe_allow_html=True)
 
 # ==========================================
-# [디자인 완벽 구현] 엑셀 스타일 역 L자 헤더
+# [디자인 완벽 구현] 엑셀 스타일 역 L자 헤더 (전일비/전주비 병합)
 # ==========================================
 h2 = [unit_html, """
 <table class='main-table'>
@@ -198,25 +203,28 @@ h2 = [unit_html, """
     <th rowspan='2'>계좌 구분</th>
     <th rowspan='2'>총 자산</th>
     <th rowspan='2' class='th-eval'>평가손익</th>
-    <th class='th-blank'>&nbsp;</th>
+    <th colspan='2' class='th-blank'>&nbsp;</th>
     <th rowspan='2'>수익률</th>
     <th rowspan='2'>매입금액</th>
   </tr>
   <tr>
+    <th class='th-week'>전일비</th>
     <th class='th-week'>전주비</th>
   </tr>
 """]
 
-td_tot = tot.get('평가손익(전주비)',0)
-h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(td_tot)}'>{fmt(td_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+td1_tot = tot.get('평가손익(전일비)',0)
+td7_tot = tot.get('평가손익(전주비)',0)
+h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(td1_tot)}'>{fmt(td1_tot, True)}</td><td class='{col(td7_tot)}'>{fmt(td7_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 for k in ['DC', 'IRP', 'PENSION', 'ISA']:
     if k in data:
         a = data[k]
         ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
-        ad_acc = a.get('평가손익(전주비)', 0)
-        h2.append(f"<tr><td>{fmt_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ad_acc)}'>{fmt(ad_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
+        ad1_acc = a.get('평가손익(전일비)', 0)
+        ad7_acc = a.get('평가손익(전주비)', 0)
+        h2.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(ad1_acc)}'>{fmt(ad1_acc, True)}</td><td class='{col(ad7_acc)}'>{fmt(ad7_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
