@@ -11,17 +11,17 @@ APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHC
 URL_BASE = "https://openapi.koreainvestment.com:9443"
 
 ORIGINAL_CAPITAL = {
-    '퇴직연금(DC)계좌 (▶ Aug. 2025)': 254782039, 
-    '연금저축(CMA)계좌 (▶ Nov. 2025)': 78787722, 
-    'ISA(중개형)계좌 (▶ Aug. 2025)': 33000000, 
-    '퇴직연금(IRP)계좌 (▶ Aug. 2025)': 3000000
+    '퇴직연금(DC)계좌 (25.8월)': 254782039, 
+    '연금저축(CMA)계좌 (25.11월)': 78787722, 
+    'ISA(중개형)계좌 (25.8월)': 33000000, 
+    '퇴직연금(IRP)계좌 (25.8월)': 3000000
 }
 
 ACC_MAP = {
-    '퇴직연금(DC)계좌 (▶ Aug. 2025)': 'DC', 
-    '연금저축(CMA)계좌 (▶ Nov. 2025)': 'PENSION', 
-    'ISA(중개형)계좌 (▶ Aug. 2025)': 'ISA', 
-    '퇴직연금(IRP)계좌 (▶ Aug. 2025)': 'IRP'
+    '퇴직연금(DC)계좌 (25.8월)': 'DC', 
+    '연금저축(CMA)계좌 (25.11월)': 'PENSION', 
+    'ISA(중개형)계좌 (25.8월)': 'ISA', 
+    '퇴직연금(IRP)계좌 (25.8월)': 'IRP'
 }
 
 def calc_samsungfire_principal():
@@ -34,10 +34,8 @@ def calc_samsungfire_principal():
     기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     
     n_days = (today_n - 기준일_n).days
-    # 기준일 이전이거나 당일이면 업데이트된 기준금액 그대로 반환
     if n_days <= 0:
         return 기준금액
-        
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
 PORTFOLIO = {
@@ -82,15 +80,17 @@ def get_access_token():
 
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
-        return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0}
+        return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     if code.startswith('CASH') or code == 'PENSION_CASH' or code == 'MMF00004': 
-        return {"c": int(avg_p), "d1": 0, "d7": 0}
+        return {"c": int(avg_p), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     
     curr = int(avg_p)
     diff_1 = 0
     diff_7 = 0
+    diff_15 = 0
+    diff_30 = 0
     
-    # 1. 현재가 및 전일비 조회
+    # 1. 현재가 및 -1일전 조회
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -105,11 +105,11 @@ def get_current_price(code, token, avg_p):
         )
         out = res.json().get('output', {})
         curr = int(float(out.get('stck_prpr', avg_p)))
-        diff_1 = int(float(out.get('prdy_vrss', 0))) # 전일 대비 증감
+        diff_1 = int(float(out.get('prdy_vrss', 0)))
     except: 
         pass
 
-    # 2. 7일 전 종가 조회 (-7일 전주비 계산 로직)
+    # 2. 과거 종가 조회 (최대 30영업일)를 통한 -7일, -15일, -30일 전 계산
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -129,21 +129,34 @@ def get_current_price(code, token, avg_p):
         )
         out_hist = res_hist.json().get('output', [])
         
-        # 7일 전 날짜 계산
-        target_date = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
-        hist_price = curr
+        # 달력일 기준 목표일자 세팅
+        now_dt = datetime.now()
+        t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
+        t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
+        t_30 = (now_dt - timedelta(days=30)).strftime("%Y%m%d")
         
-        # 날짜가 7일 전이거나 그 이전인 가장 최근 거래일의 종가를 확보
+        p_7, p_15, p_30 = curr, curr, curr
+        found_7, found_15, found_30 = False, False, False
+        
+        # 날짜 내림차순(최신순) 리스트에서 각 기준일 이하의 가장 가까운 종가 확보
         for item in out_hist:
-            if item.get('stck_bsop_date', '99999999') <= target_date:
-                hist_price = int(float(item.get('stck_clpr', curr)))
-                break
-        
-        diff_7 = curr - hist_price
+            dt = item.get('stck_bsop_date', '99999999')
+            pr = int(float(item.get('stck_clpr', curr)))
+            
+            if not found_7 and dt <= t_7:
+                p_7 = pr; found_7 = True
+            if not found_15 and dt <= t_15:
+                p_15 = pr; found_15 = True
+            if not found_30 and dt <= t_30:
+                p_30 = pr; found_30 = True
+                
+        diff_7 = curr - p_7
+        diff_15 = curr - p_15
+        diff_30 = curr - p_30
     except: 
         pass
 
-    return {"c": curr, "d1": diff_1, "d7": diff_7}
+    return {"c": curr, "d1": diff_1, "d7": diff_7, "d15": diff_15, "d30": diff_30}
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9))
@@ -159,6 +172,8 @@ def generate_asset_data():
     t_p_effective = 0
     t_diff_1 = 0
     t_diff_7 = 0
+    t_diff_15 = 0
+    t_diff_30 = 0
     assets_json = {}
     
     for acc_label, p_val in ORIGINAL_CAPITAL.items():
@@ -166,14 +181,18 @@ def generate_asset_data():
         a_asset = 0
         a_diff_1 = 0
         a_diff_7 = 0
+        a_diff_15 = 0
+        a_diff_30 = 0
         sub_info = []
         a_buy_total = 0 
         
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
             px = get_current_price(code, token, avg_p)
             curr = px['c']
-            diff_val_1 = px['d1'] * qty  # 전일비 * 수량
-            diff_val_7 = px['d7'] * qty  # 전주비 * 수량
+            diff_val_1 = px['d1'] * qty
+            diff_val_7 = px['d7'] * qty
+            diff_val_15 = px['d15'] * qty
+            diff_val_30 = px['d30'] * qty
             
             asset = int(qty * curr)
             buy_amt = int(qty * avg_p)
@@ -182,6 +201,8 @@ def generate_asset_data():
             a_asset += asset
             a_diff_1 += diff_val_1
             a_diff_7 += diff_val_7
+            a_diff_15 += diff_val_15
+            a_diff_30 += diff_val_30
             a_buy_total += buy_amt
             
             sub_info.append({
@@ -189,8 +210,10 @@ def generate_asset_data():
                 "코드": code, 
                 "총 자산": asset, 
                 "평가손익": gain, 
-                "전일비": diff_val_1,
-                "전주비": diff_val_7, 
+                "-1일전": diff_val_1,
+                "-7일전": diff_val_7, 
+                "-15일전": diff_val_15,
+                "-30일전": diff_val_30,
                 "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
                 "수량": qty, 
                 "매입가": avg_p, 
@@ -218,6 +241,8 @@ def generate_asset_data():
         t_p_effective += p_val
         t_diff_1 += a_diff_1
         t_diff_7 += a_diff_7
+        t_diff_15 += a_diff_15
+        t_diff_30 += a_diff_30
         
         acc_profit = a_asset - p_val
         acc_rate = (acc_profit / p_val * 100) if p_val > 0 else 0
@@ -228,8 +253,10 @@ def generate_asset_data():
             "원금": p_val, 
             "총 수익": acc_profit, 
             "수익률(%)": acc_rate, 
-            "평가손익(전일비)": a_diff_1,
-            "평가손익(전주비)": a_diff_7, 
+            "평가손익(-1일전)": a_diff_1,
+            "평가손익(-7일전)": a_diff_7, 
+            "평가손익(-15일전)": a_diff_15, 
+            "평가손익(-30일전)": a_diff_30, 
             "상세": sub_info
         }
     
@@ -240,15 +267,17 @@ def generate_asset_data():
         "원금합": t_p_effective, 
         "총 수익": t_asset-t_p_effective, 
         "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
-        "평가손익(전일비)": t_diff_1,
-        "평가손익(전주비)": t_diff_7, 
+        "평가손익(-1일전)": t_diff_1,
+        "평가손익(-7일전)": t_diff_7, 
+        "평가손익(-15일전)": t_diff_15, 
+        "평가손익(-30일전)": t_diff_30, 
         "매입금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}", 
-        f"a) 계좌별 증감: 전일 대비 {t_diff_1:+,d}원, 전주 대비 {t_diff_7:+,d}원 변동되었습니다.", 
+        f"a) 단기 및 중장기 흐름: -1일 전 대비 {t_diff_1:+,d}원, -30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
         f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
         "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
         f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
