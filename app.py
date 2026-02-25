@@ -23,7 +23,14 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
 /* =========================================================
-   [문제 해결 1] 윈도우 환경 흑백 이모지 파괴 (컬러 폰트 강제 주입)
+   [문제 해결 1] 평가손익 & 전주비 엑셀 스타일 병합 (역 L자 테두리 제거)
+   ========================================================= */
+.main-table th.th-eval { border-right: none !important; }
+.main-table th.th-blank { border-left: none !important; border-bottom: none !important; padding: 0 !important; }
+.main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; }
+
+/* =========================================================
+   [문제 해결 2] 윈도우 환경 흑백 이모지 파괴 (컬러 폰트 강제 주입)
    ========================================================= */
 .zappa-icon {
     font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
@@ -31,7 +38,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [문제 해결 2] 완벽한 플로팅 배너 (가변폭 100% 무력화)
+   [문제 해결 3] 완벽한 플로팅 배너 (가변폭 100% 무력화)
    ========================================================= */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
@@ -183,20 +190,20 @@ st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</
 st.markdown(f"**총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span>**", unsafe_allow_html=True)
 
 # ==========================================
-# [디자인 수정] 엑셀 스타일의 이중 헤더 (금액 라벨 삭제 및 병합)
+# [디자인 완벽 구현] 엑셀 스타일 역 L자 헤더
 # ==========================================
 h2 = [unit_html, """
 <table class='main-table'>
   <tr>
     <th rowspan='2'>계좌 구분</th>
     <th rowspan='2'>총 자산</th>
-    <th rowspan='2' style='border-right: none !important;'>평가손익</th>
-    <th style='border-left: none !important; border-bottom: 1px solid #ddd !important; padding:0;'>&nbsp;</th>
+    <th rowspan='2' class='th-eval'>평가손익</th>
+    <th class='th-blank'>&nbsp;</th>
     <th rowspan='2'>수익률</th>
     <th rowspan='2'>매입금액</th>
   </tr>
   <tr>
-    <th style='border-left: 1px solid #ddd !important;'>전주비</th>
+    <th class='th-week'>전주비</th>
   </tr>
 """]
 
