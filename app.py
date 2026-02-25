@@ -14,7 +14,7 @@ css = """
 h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .sub-title{font-size:22px!important;font-weight:bold;margin:25px 0 10px;}
 .main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;margin-bottom:10px;}
-/* 헤더 병합 시 글씨가 위아래 정중앙에 오도록 vertical-align:middle 추가 */
+/* 헤더 글씨가 위아래 정중앙에 오도록 vertical-align 적용 */
 .main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important; vertical-align:middle;}
 .main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
@@ -182,19 +182,21 @@ ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액�
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"**총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span>**", unsafe_allow_html=True)
 
-# 테이블 2 헤더 (이중 병합 적용)
+# ==========================================
+# [디자인 수정] 엑셀 스타일의 이중 헤더 (금액 라벨 삭제 및 병합)
+# ==========================================
 h2 = [unit_html, """
 <table class='main-table'>
   <tr>
     <th rowspan='2'>계좌 구분</th>
     <th rowspan='2'>총 자산</th>
-    <th colspan='2'>평가손익</th>
+    <th rowspan='2' style='border-right: none !important;'>평가손익</th>
+    <th style='border-left: none !important; border-bottom: 1px solid #ddd !important; padding:0;'>&nbsp;</th>
     <th rowspan='2'>수익률</th>
     <th rowspan='2'>매입금액</th>
   </tr>
   <tr>
-    <th>금액</th>
-    <th>전주비</th>
+    <th style='border-left: 1px solid #ddd !important;'>전주비</th>
   </tr>
 """]
 
