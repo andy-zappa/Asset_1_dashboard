@@ -11,17 +11,17 @@ APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHC
 URL_BASE = "https://openapi.koreainvestment.com:9443"
 
 ORIGINAL_CAPITAL = {
-    '퇴직연금(DC)계좌 (25.8월~)': 254782039, 
-    '연금저축(CMA)계좌 (25.11월~)': 78787722, 
-    'ISA(중개형)계좌 (25.8월~)': 33000000, 
-    '퇴직연금(IRP)계좌 (25.8월~)': 3000000
+    '퇴직연금(DC)계좌 (▶ Aug. 2025)': 254782039, 
+    '연금저축(CMA)계좌 (▶ Nov. 2025)': 78787722, 
+    'ISA(중개형)계좌 (▶ Aug. 2025)': 33000000, 
+    '퇴직연금(IRP)계좌 (▶ Aug. 2025)': 3000000
 }
 
 ACC_MAP = {
-    '퇴직연금(DC)계좌 (25.8월~)': 'DC', 
-    '연금저축(CMA)계좌 (25.11월~)': 'PENSION', 
-    'ISA(중개형)계좌 (25.8월~)': 'ISA', 
-    '퇴직연금(IRP)계좌 (25.8월~)': 'IRP'
+    '퇴직연금(DC)계좌 (▶ Aug. 2025)': 'DC', 
+    '연금저축(CMA)계좌 (▶ Nov. 2025)': 'PENSION', 
+    'ISA(중개형)계좌 (▶ Aug. 2025)': 'ISA', 
+    '퇴직연금(IRP)계좌 (▶ Aug. 2025)': 'IRP'
 }
 
 def calc_samsungfire_principal():
@@ -39,7 +39,7 @@ PORTFOLIO = {
         ['069500', 635, 49602, 'KODEX 200'], 
         ['161510', 1300, 19285, 'PLUS 고배당주'], 
         ['360750', 1402, 23556, 'TIGER 미국S&P500'], 
-        ['379810', 1402, 23465, 'KODEX 나스닥100'], 
+        ['379810', 1402, 23465, 'KODEX 미국나스닥100'], 
         ['381180', 996, 25427, 'TIGER 미국필라델피아반도체나스닥'], 
         ['458730', 1353, 12222, 'TIGER 미국배당다우존스'], 
         ['CASH_INS', 1, 90000000, '삼성화재 퇴직연금(3.05%/年)'], 
@@ -49,7 +49,7 @@ PORTFOLIO = {
         ['MMF00004', 1, 97708, "삼성신종MMF"], 
         ['069500', 427, 56911, 'KODEX 200'], 
         ['360750', 361, 25193, 'TIGER 미국S&P500'], 
-        ['379810', 341, 25105, 'KODEX 나스닥100'], 
+        ['379810', 341, 25105, 'KODEX 미국나스닥100'], 
         ['381180', 295, 28543, 'TIGER 미국필라델피아반도체나스닥'], 
         ['498400', 2444, 13193, 'KODEX 200타겟위클리커버드콜'], 
         ['PENSION_CASH', 1, 1347241, '현금잔고']
@@ -93,14 +93,7 @@ def get_current_price(code, token, avg_p):
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
         )
         out = res.json().get('output', {})
-        curr = int(float(out.get('stck_prpr', avg_p)))
-        
-        # 전일비 값과 부호를 정확하게 파싱 (4, 5는 마이너스)
-        diff_abs = int(float(out.get('prdy_vrss', 0)))
-        sign = out.get('prdy_vrss_sign', '3')
-        diff_val = -diff_abs if sign in ['4', '5'] else diff_abs
-        
-        return {"c": curr, "d": diff_val}
+        return {"c": int(float(out.get('stck_prpr', avg_p))), "d": int(float(out.get('prdy_vrss', 0)))}
     except: 
         return {"c": int(avg_p), "d": 0}
 
@@ -160,8 +153,7 @@ def generate_asset_data():
             "코드": "-", 
             "비중": 100.0, 
             "총 자산": a_asset, 
-            "평가손익": a_val_gain,
-            "전일비": a_diff,
+            "평가손익": a_val_gain, 
             "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
             "수량": "-", 
             "매입가": "-", 
