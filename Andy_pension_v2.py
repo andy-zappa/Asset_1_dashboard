@@ -25,13 +25,19 @@ ACC_MAP = {
 }
 
 def calc_samsungfire_principal():
-    기준일 = datetime(2026, 2, 21)
-    기준금액 = 90267089
+    # 2026년 2월 25일 자 증권사 앱 기준금액으로 영점 재조정 (당일 이자 선반영 분 포함)
+    기준일 = datetime(2026, 2, 25)
+    기준금액 = 90304247
     원금 = 90000000
     연이율 = 0.0305
     today_n = datetime.now().replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+    
     n_days = (today_n - 기준일_n).days
+    # 기준일 이전이거나 당일이면 업데이트된 기준금액 그대로 반환
+    if n_days <= 0:
+        return 기준금액
+        
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
 PORTFOLIO = {
