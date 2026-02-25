@@ -80,7 +80,11 @@ def get_current_price(code, token, avg_p):
     if code.startswith('CASH') or code == 'PENSION_CASH' or code == 'MMF00004': 
         return {"c": int(avg_p), "d": 0}
     
-    headers = {
+    curr = int(avg_p)
+    diff = 0
+    
+    # 1. 현재가 조회
+    headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
         "appsecret": APP_SECRET, 
@@ -89,13 +93,48 @@ def get_current_price(code, token, avg_p):
     try:
         res = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
-            headers=headers, 
+            headers=headers_curr, 
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
         )
-        out = res.json().get('output', {})
-        return {"c": int(float(out.get('stck_prpr', avg_p))), "d": int(float(out.get('prdy_vrss', 0)))}
+        curr = int(float(res.json().get('output', {}).get('stck_prpr', avg_p)))
     except: 
-        return {"c": int(avg_p), "d": 0}
+        pass
+
+    # 2. 7일 전 종가 조회 (-7일 전주비 계산 로직)
+    headers_hist = {
+        "authorization": f"Bearer {token}", 
+        "appkey": APP_KEY, 
+        "appsecret": APP_SECRET, 
+        "tr_id": "FHKST01010400"
+    }
+    try:
+        res_hist = requests.get(
+            f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
+            headers=headers_hist, 
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J", 
+                "FID_INPUT_ISCD": code.zfill(6),
+                "FID_PERIOD_DIV_CODE": "D",
+                "FID_ORG_ADJ_PRC": "0"
+            }
+        )
+        out_hist = res_hist.json().get('output', [])
+        
+        # 7일 전 날짜 계산
+        target_date = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+        hist_price = curr
+        
+        # 날짜가 7일 전이거나 그 이전인 가장 최근 거래일의 종가를 확보
+        for item in out_hist:
+            if item.get('stck_bsop_date', '99999999') <= target_date:
+                hist_price = int(float(item.get('stck_clpr', curr)))
+                break
+        
+        diff = curr - hist_price
+    except: 
+        pass
+
+    return {"c": curr, "d": diff}
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9))
@@ -122,7 +161,7 @@ def generate_asset_data():
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
             px = get_current_price(code, token, avg_p)
             curr = px['c']
-            diff_val = px['d'] * qty
+            diff_val = px['d'] * qty  # 전주비 * 수량
             
             asset = int(qty * curr)
             buy_amt = int(qty * avg_p)
@@ -137,7 +176,7 @@ def generate_asset_data():
                 "코드": code, 
                 "총 자산": asset, 
                 "평가손익": gain, 
-                "전일비": diff_val, 
+                "전주비": diff_val, 
                 "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
                 "수량": qty, 
                 "매입가": avg_p, 
@@ -174,7 +213,7 @@ def generate_asset_data():
             "원금": p_val, 
             "총 수익": acc_profit, 
             "수익률(%)": acc_rate, 
-            "평가손익(전일비)": a_diff, 
+            "평가손익(전주비)": a_diff, 
             "상세": sub_info
         }
     
@@ -185,14 +224,14 @@ def generate_asset_data():
         "원금합": t_p_effective, 
         "총 수익": t_asset-t_p_effective, 
         "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
-        "평가손익(전일비)": t_diff, 
+        "평가손익(전주비)": t_diff, 
         "매입금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}", 
-        f"a) 계좌별 증감: 금일 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
+        f"a) 계좌별 증감: 전주 대비 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
         f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
         "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
         f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
