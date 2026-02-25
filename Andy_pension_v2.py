@@ -82,14 +82,15 @@ def get_access_token():
 
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
-        return {"c": calc_samsungfire_principal(), "d": 0}
+        return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0}
     if code.startswith('CASH') or code == 'PENSION_CASH' or code == 'MMF00004': 
-        return {"c": int(avg_p), "d": 0}
+        return {"c": int(avg_p), "d1": 0, "d7": 0}
     
     curr = int(avg_p)
-    diff = 0
+    diff_1 = 0
+    diff_7 = 0
     
-    # 1. 현재가 조회
+    # 1. 현재가 및 전일비 조회
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -102,7 +103,9 @@ def get_current_price(code, token, avg_p):
             headers=headers_curr, 
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
         )
-        curr = int(float(res.json().get('output', {}).get('stck_prpr', avg_p)))
+        out = res.json().get('output', {})
+        curr = int(float(out.get('stck_prpr', avg_p)))
+        diff_1 = int(float(out.get('prdy_vrss', 0))) # 전일 대비 증감
     except: 
         pass
 
@@ -136,11 +139,11 @@ def get_current_price(code, token, avg_p):
                 hist_price = int(float(item.get('stck_clpr', curr)))
                 break
         
-        diff = curr - hist_price
+        diff_7 = curr - hist_price
     except: 
         pass
 
-    return {"c": curr, "d": diff}
+    return {"c": curr, "d1": diff_1, "d7": diff_7}
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9))
@@ -154,27 +157,31 @@ def generate_asset_data():
 
     t_asset = 0
     t_p_effective = 0
-    t_diff = 0
+    t_diff_1 = 0
+    t_diff_7 = 0
     assets_json = {}
     
     for acc_label, p_val in ORIGINAL_CAPITAL.items():
         acc_key = ACC_MAP[acc_label]
         a_asset = 0
-        a_diff = 0
+        a_diff_1 = 0
+        a_diff_7 = 0
         sub_info = []
         a_buy_total = 0 
         
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
             px = get_current_price(code, token, avg_p)
             curr = px['c']
-            diff_val = px['d'] * qty  # 전주비 * 수량
+            diff_val_1 = px['d1'] * qty  # 전일비 * 수량
+            diff_val_7 = px['d7'] * qty  # 전주비 * 수량
             
             asset = int(qty * curr)
             buy_amt = int(qty * avg_p)
             gain = asset - buy_amt
             
             a_asset += asset
-            a_diff += diff_val
+            a_diff_1 += diff_val_1
+            a_diff_7 += diff_val_7
             a_buy_total += buy_amt
             
             sub_info.append({
@@ -182,7 +189,8 @@ def generate_asset_data():
                 "코드": code, 
                 "총 자산": asset, 
                 "평가손익": gain, 
-                "전주비": diff_val, 
+                "전일비": diff_val_1,
+                "전주비": diff_val_7, 
                 "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
                 "수량": qty, 
                 "매입가": avg_p, 
@@ -208,7 +216,8 @@ def generate_asset_data():
         
         t_asset += a_asset
         t_p_effective += p_val
-        t_diff += a_diff
+        t_diff_1 += a_diff_1
+        t_diff_7 += a_diff_7
         
         acc_profit = a_asset - p_val
         acc_rate = (acc_profit / p_val * 100) if p_val > 0 else 0
@@ -219,7 +228,8 @@ def generate_asset_data():
             "원금": p_val, 
             "총 수익": acc_profit, 
             "수익률(%)": acc_rate, 
-            "평가손익(전주비)": a_diff, 
+            "평가손익(전일비)": a_diff_1,
+            "평가손익(전주비)": a_diff_7, 
             "상세": sub_info
         }
     
@@ -230,14 +240,15 @@ def generate_asset_data():
         "원금합": t_p_effective, 
         "총 수익": t_asset-t_p_effective, 
         "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
-        "평가손익(전주비)": t_diff, 
+        "평가손익(전일비)": t_diff_1,
+        "평가손익(전주비)": t_diff_7, 
         "매입금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}", 
-        f"a) 계좌별 증감: 전주 대비 전체 자산은 {t_diff:+,d}원 변동되었습니다.", 
+        f"a) 계좌별 증감: 전일 대비 {t_diff_1:+,d}원, 전주 대비 {t_diff_7:+,d}원 변동되었습니다.", 
         f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
         "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
         f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
