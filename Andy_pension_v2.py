@@ -90,7 +90,7 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
-    # 1. 현재가 및 -1일전 조회
+    # 1. 현재가 및 전일비 조회
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -109,7 +109,7 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
-    # 2. 과거 종가 조회 (최대 30영업일)를 통한 -7일, -15일, -30일 전 계산
+    # 2. 과거 종가 조회 (최대 30영업일)를 통한 7일, 15일, 30일 전 계산
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -210,10 +210,10 @@ def generate_asset_data():
                 "코드": code, 
                 "총 자산": asset, 
                 "평가손익": gain, 
-                "-1일전": diff_val_1,
-                "-7일전": diff_val_7, 
-                "-15일전": diff_val_15,
-                "-30일전": diff_val_30,
+                "1일전": diff_val_1,
+                "7일전": diff_val_7, 
+                "15일전": diff_val_15,
+                "30일전": diff_val_30,
                 "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
                 "수량": qty, 
                 "매입가": avg_p, 
@@ -253,10 +253,10 @@ def generate_asset_data():
             "원금": p_val, 
             "총 수익": acc_profit, 
             "수익률(%)": acc_rate, 
-            "평가손익(-1일전)": a_diff_1,
-            "평가손익(-7일전)": a_diff_7, 
-            "평가손익(-15일전)": a_diff_15, 
-            "평가손익(-30일전)": a_diff_30, 
+            "평가손익(1일전)": a_diff_1,
+            "평가손익(7일전)": a_diff_7, 
+            "평가손익(15일전)": a_diff_15, 
+            "평가손익(30일전)": a_diff_30, 
             "상세": sub_info
         }
     
@@ -267,17 +267,17 @@ def generate_asset_data():
         "원금합": t_p_effective, 
         "총 수익": t_asset-t_p_effective, 
         "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
-        "평가손익(-1일전)": t_diff_1,
-        "평가손익(-7일전)": t_diff_7, 
-        "평가손익(-15일전)": t_diff_15, 
-        "평가손익(-30일전)": t_diff_30, 
+        "평가손익(1일전)": t_diff_1,
+        "평가손익(7일전)": t_diff_7, 
+        "평가손익(15일전)": t_diff_15, 
+        "평가손익(30일전)": t_diff_30, 
         "매입금액합": t_avg_buy, 
         "조회시간": fetch_time
     }
     
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}", 
-        f"a) 단기 및 중장기 흐름: -1일 전 대비 {t_diff_1:+,d}원, -30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
+        f"a) 단기 및 중장기 흐름: 1일 전 대비 {t_diff_1:+,d}원, 30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
         f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
         "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
         f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
