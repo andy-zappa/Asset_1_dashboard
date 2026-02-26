@@ -61,19 +61,22 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     left: auto !important;
     transform: none !important;
     
-    /* [Andy님 피드백 반영] 픽셀 고정 대신 내부 내용물 길이에 딱 맞게 자동 밀착 */
-    width: max-content !important; 
+    /* 픽셀 고정 대신 내부 내용물 길이에 딱 맞게 자동 밀착 */
+    width: auto !important; 
+    min-width: max-content !important; 
     
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 10px 15px !important; 
+    padding: 10px 25px !important; 
     border-radius: 8px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
+    
     display: flex !important;
+    flex-wrap: nowrap !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    gap: 0 !important; 
+    gap: 15px !important; 
 }
 
 div.element-container:has(#zappa-floating-menu) { 
@@ -87,13 +90,11 @@ div.element-container:has(#zappa-floating-menu) {
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
-    flex: 0 0 auto !important; 
+    flex: 1 1 auto !important; 
     width: max-content !important; 
-    min-width: max-content !important;
+    min-width: max-content !important; 
     
-    /* 🛠️ 버튼들 사이의 간격(여백)을 조정하고 싶다면 이 14px 수치만 바꾸시면 됩니다! */
-    padding: 0 14px !important; 
-    
+    padding: 0 5px !important; 
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
@@ -107,9 +108,9 @@ div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after {
     content: "/" !important;
     position: absolute !important;
-    right: -4px !important;
+    right: -12px !important; 
     top: 50% !important;
-    transform: translate(50%, -50%) !important;
+    transform: translateY(-50%) !important;
     color: #d1d5db !important;
     font-size: 15px !important;
     font-weight: 600 !important;
@@ -149,6 +150,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     line-height: 1 !important; 
     text-align: center !important; 
     width: max-content !important; 
+    white-space: nowrap !important;
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover,
@@ -169,6 +171,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="prim
 st.markdown(css, unsafe_allow_html=True)
 
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
+# 초기값: 종목코드 열은 제외되어 있음 (False)
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
     with st.spinner("데이터 업데이트 중..."): Andy_pension_v2.generate_asset_data()
@@ -385,9 +388,9 @@ with b4:
     if st.button("수익률 [ ● ]" if is_rate else "수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
-    # [Andy님 피드백 반영] 종목코드 텍스트가 상태에 따라 토글되도록 수정
     is_code = st.session_state.show_code
-    code_btn_label = "종목코드 [ - ]" if is_code else "종목코드 [ + ]"
+    # [수정 반영] is_code가 False(숨김)일 때 [ - ], True(노출)일 때 [ + ]
+    code_btn_label = "종목코드 [ + ]" if is_code else "종목코드 [ - ]"
     if st.button(code_btn_label, type="primary" if is_code else "secondary"):
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
@@ -424,6 +427,8 @@ for k in keys_1:
         st.markdown(header_html, unsafe_allow_html=True)
         
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
+        
+        # is_code (st.session_state.show_code)가 True일 때만 표에 열 추가
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
         h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         
@@ -437,7 +442,10 @@ for k in keys_1:
             is_s = (i.get('종목명') == "[ 합계 ]")
             row = f"<tr class='sum-row'>" if is_s else "<tr>"
             row += f"<td>{i.get('종목명')}</td>"
+            
+            # 열 데이터 추가 부분
             if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드')}</td>"
+            
             row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
             h3.append(row)
         h3.append("</table>")
