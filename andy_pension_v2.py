@@ -62,7 +62,7 @@ PORTFOLIO = {
         ['498400', 1176, 12806, 'KODEX 200타겟위클리커버드콜'], 
         ['475720', 894, 10069, 'RISE 200위클리커버드콜'], 
         ['494300', 770, 9878, 'KODEX 나스닥데일리'], 
-        ['483280', 285, 12353, 'KODEX AI테크TOP'],  # [수량/평단가 업데이트됨]
+        ['483280', 285, 12353, 'KODEX AI테크TOP'],
         ['CASH_ISA', 1, 209746, '현금성자산']
     ],
     'IRP': [
@@ -74,7 +74,8 @@ PORTFOLIO = {
 def get_access_token():
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
-        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload).json().get("access_token")
+        # 무한 대기 방지를 위해 timeout=5 설정
+        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5).json().get("access_token")
     except: 
         return None
 
@@ -90,7 +91,6 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
-    # 1. 현재가 및 전일비 조회
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -98,10 +98,12 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010100"
     }
     try:
+        # timeout=5 설정 추가
         res = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
             headers=headers_curr, 
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)},
+            timeout=5
         )
         out = res.json().get('output', {})
         curr = int(float(out.get('stck_prpr', avg_p)))
@@ -109,7 +111,6 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
-    # 2. 과거 종가 조회 (최대 30영업일)를 통한 7일, 15일, 30일 전 계산
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -117,6 +118,7 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010400"
     }
     try:
+        # timeout=5 설정 추가
         res_hist = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
             headers=headers_hist, 
@@ -125,11 +127,11 @@ def get_current_price(code, token, avg_p):
                 "FID_INPUT_ISCD": code.zfill(6),
                 "FID_PERIOD_DIV_CODE": "D",
                 "FID_ORG_ADJ_PRC": "0"
-            }
+            },
+            timeout=5
         )
         out_hist = res_hist.json().get('output', [])
         
-        # 달력일 기준 목표일자 세팅
         now_dt = datetime.now()
         t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
         t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
@@ -138,7 +140,6 @@ def get_current_price(code, token, avg_p):
         p_7, p_15, p_30 = curr, curr, curr
         found_7, found_15, found_30 = False, False, False
         
-        # 날짜 내림차순(최신순) 리스트에서 각 기준일 이하의 가장 가까운 종가 확보
         for item in out_hist:
             dt = item.get('stck_bsop_date', '99999999')
             pr = int(float(item.get('stck_clpr', curr)))
@@ -275,13 +276,109 @@ def generate_asset_data():
         "조회시간": fetch_time
     }
     
+    # ==========================================
+    # [추가/수정] ZAPPA 인사이트 맞춤형 요약 로직
+    # ==========================================
+    def fmt_mil(val): return round(val / 1000000, 1)
+    def fmt_rate(rate): return f"▲{rate:.1f}%" if rate > 0 else (f"▼{abs(rate):.1f}%" if rate < 0 else "0.0%")
+    def fmt_profit_mil(val): 
+        mil = fmt_mil(val)
+        return f"+{mil:.1f}백만" if mil > 0 else (f"{mil:.1f}백만" if mil < 0 else "0.0백만")
+
+    # [1] 전체 요약
+    t_buy_profit = t_asset - t_avg_buy
+    t_buy_rate = (t_buy_profit / t_avg_buy * 100) if t_avg_buy > 0 else 0
+    t_prin_rate = assets_json['_total']['수익률(%)']
+    b1 = f"현재 절세계좌 자산 총액은 {t_asset:,}원, 평가손익은 {t_buy_profit:,}원 / 전일비 {t_diff_1:+,}원 으로 매입금액比 {fmt_rate(t_buy_rate)} (투자원금比 {fmt_rate(t_prin_rate)}) 수익률을 나타내고 있습니다."
+
+    # [2] 계좌별 수익률 순위
+    acc_list = []
+    for k in ACC_MAP.values():
+        if k in assets_json:
+            clean_name = assets_json[k]['label'].split(' (')[0]
+            acc_list.append({
+                'name': clean_name,
+                'rate': assets_json[k]['수익률(%)'],
+                'profit': assets_json[k]['총 수익']
+            })
+    acc_list.sort(key=lambda x: x['rate'], reverse=True)
+    b2_str = " / ".join([f"{x['name']} {fmt_rate(x['rate'])}({fmt_profit_mil(x['profit'])})" for x in acc_list])
+    b2 = f"수익률 높은 계좌 순: {b2_str}"
+
+    # [3 & 4] ETF 그룹핑 및 세부 종목 분석을 위한 데이터 준비
+    us_etfs = ['TIGER 미국S&P500', 'KODEX 미국나스닥100', 'TIGER 미국필라델피아반도체나스닥', 'TIGER 미국배당다우존스', 'KODEX 나스닥데일리', 'KODEX AI테크TOP']
+    kr_etfs = ['KODEX 200', 'PLUS 고배당주', 'KODEX 200타겟위클리커버드콜', 'RISE 200위클리커버드콜']
+    
+    stock_agg = {}
+    stock_acc_details = {}
+    
+    for k in ACC_MAP.values():
+        if k in assets_json:
+            acc_clean_name = assets_json[k]['label'].split(' (')[0]
+            for item in assets_json[k]['상세']:
+                if item['종목명'] == '[ 합계 ]' or '현금' in item['종목명'] or '삼성화재' in item['종목명'] or 'MMF' in item['종목명']: continue
+                name = item['종목명']
+                
+                if name not in stock_agg: stock_agg[name] = {'buy': 0, 'gain': 0, 'd1': 0}
+                stock_agg[name]['buy'] += (item['수량'] * item['매입가'])
+                stock_agg[name]['gain'] += item['평가손익']
+                stock_agg[name]['d1'] += item['1일전']
+                
+                if name not in stock_acc_details: stock_acc_details[name] = []
+                stock_acc_details[name].append((acc_clean_name, item['수익률(%)'], item['평가손익']))
+
+    # [3] 미국 ETF vs 한국 ETF 흐름 비교
+    us_stats, kr_stats = [], []
+    for name, data in stock_agg.items():
+        rate = (data['gain'] / data['buy'] * 100) if data['buy'] > 0 else 0
+        if name in us_etfs: us_stats.append((name, rate, data['gain']))
+        elif name in kr_etfs: kr_stats.append((name, rate, data['gain']))
+        
+    us_str = ", ".join([f"{n} {fmt_rate(r)}" for n, r, g in us_stats])
+    kr_str = ", ".join([f"{n} {fmt_rate(r)}" for n, r, g in kr_stats])
+    
+    us_total_gain = sum(g for n,r,g in us_stats)
+    kr_total_gain = sum(g for n,r,g in kr_stats)
+    leader = "코스피 등 한국" if kr_total_gain >= us_total_gain else "미국"
+    b3 = f"종목별 전체 흐름: 미국 ETF 장기간 횡보 속에({us_str}), 한국 ETF({kr_str})를 기록 중이며, {leader} ETF가 전체 평가 손익을 주도하고 있습니다."
+
+    # [4] 상세 종목 수치 요약 (수익률 높은 순 4개 종목 추출)
+    sorted_stocks = sorted(stock_acc_details.keys(), key=lambda x: sum(p for a, r, p in stock_acc_details[x]), reverse=True)
+    b4_parts = []
+    circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+    for idx, name in enumerate(sorted_stocks[:4]):
+        acc_strs = []
+        sorted_accs = sorted(stock_acc_details[name], key=lambda x: x[2], reverse=True)
+        for a_name, r, p in sorted_accs:
+            acc_strs.append(f"{a_name} {fmt_rate(r)}({fmt_profit_mil(p)})")
+        
+        circle_num = circle_nums[idx] if idx < len(circle_nums) else str(idx+1)
+        if len(acc_strs) > 1:
+            b4_parts.append(f"{circle_num} {name} : {', '.join(acc_strs)}")
+        else:
+            b4_parts.append(f"{circle_num} {name} {acc_strs[0]}")
+            
+    b4 = f"주요 종목 상세: " + " / ".join(b4_parts)
+
+    # [5] 전일비(d1)를 동적으로 읽어내는 시장 동향 인사이트 분석
+    us_d1 = sum(data['d1'] for name, data in stock_agg.items() if name in us_etfs)
+    kr_d1 = sum(data['d1'] for name, data in stock_agg.items() if name in kr_etfs)
+    
+    if us_d1 < 0 and kr_d1 > 0:
+        market_flow = "미국 빅테크 및 기술주가 전반적으로 조정을 받는 가운데, 투자자금의 방향 전환으로 한국 코스피 관련 종목이 상승 흐름을 보이고 있습니다."
+    elif us_d1 > 0 and kr_d1 < 0:
+        market_flow = "미국 빅테크 및 기술주가 견조한 상승세를 이어가는 가운데, 한국 증시는 다소 쉬어가는 흐름을 보이고 있습니다."
+    elif us_d1 > 0 and kr_d1 > 0:
+        market_flow = "고용지표 및 금리 인하 소식 등 대외 변수 속에서도 미국 기술주와 한국 코스피 종목 모두 동반 상승하며 양호한 시장 흐름을 기록 중입니다."
+    else:
+        market_flow = "미국과 한국 증시 모두 전반적인 조정을 겪고 있으며, 변동성 확대에 대비한 리스크 관리가 필요한 시점입니다."
+        
+    b5 = f"시장 동향 및 전망: {market_flow} 한국형 추세 흐름과 동시에 수익이 큰 종목의 현금화 및 리밸런싱 등 주의 깊은 관리가 필요합니다."
+
+    # 최종 병합
     assets_json["_insight"] = [
         f"조회 기준 시간: {fetch_time}", 
-        f"a) 단기 및 중장기 흐름: 1일 전 대비 {t_diff_1:+,d}원, 30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
-        f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
-        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
-        f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
-        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
+        b1, b2, b3, b4, b5
     ]
     
     with open("assets.json", "w", encoding="utf-8") as f: 
