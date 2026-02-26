@@ -15,7 +15,6 @@ css = """
 h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .sub-title{font-size:22px!important;font-weight:bold;margin:25px 0 10px;}
 .main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;margin-bottom:10px;}
-/* 헤더 글씨가 위아래 정중앙에 오도록 vertical-align 적용 */
 .main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important; vertical-align:middle;}
 .main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
@@ -24,7 +23,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
 /* =========================================================
-   [추가 CSS] 요약 텍스트 정밀 디자인 (글씨는 주변과 동일, 숫자는 크게)
+   [추가 CSS] 요약 텍스트 정밀 디자인
    ========================================================= */
 .summary-text {
     font-size: 16px !important;
@@ -33,18 +32,18 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
     margin-bottom: 10px;
 }
 .summary-val {
-    font-size: 20px !important; /* 절세 자산 현황 요약 크기(20px)와 완벽 일치 */
+    font-size: 20px !important; 
 }
 
 /* =========================================================
-   [문제 해결 1] 평가손익 & 기간비용 엑셀 스타일 병합 (역 L자 테두리 제거)
+   [문제 해결 1] 평가손익 & 기간비용 엑셀 스타일 병합
    ========================================================= */
 .main-table th.th-eval { border-right: none !important; }
 .main-table th.th-blank { border-left: none !important; border-bottom: none !important; padding: 0 !important; }
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
 /* =========================================================
-   [문제 해결 2] 윈도우 환경 흑백 이모지 파괴 (컬러 폰트 강제 주입)
+   [문제 해결 2] 컬러 이모지 강제 주입
    ========================================================= */
 .zappa-icon {
     font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
@@ -52,22 +51,23 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [문제 해결 3] 완벽한 플로팅 배너 (가변폭 100% 무력화)
+   [문제 해결 3] 완벽한 플로팅 배너 (버튼 높낮이, 간격, 글씨, hover 효과 전면 수정)
    ========================================================= */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 10px 15px !important;
-    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    gap: 5px !important;
+    align-items: center !important; /* 내부 요소 세로 중앙 정렬 */
+    gap: 6px !important; /* 버튼 간격 촘촘하고 균일하게 */
     width: max-content !important;
 }
 
@@ -76,28 +76,42 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     border-radius: 6px !important;
-    padding: 6px 12px !important;
-    height: 38px !important;
-    font-size: 14px !important;
+    padding: 0 12px !important;
+    height: 34px !important; /* 높이 완벽 일치 */
+    font-size: 13px !important; /* 글씨 사이즈 축소 통일 */
     font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
     white-space: nowrap !important;
-    transition: all 0.2s ease !important;
+    transition: background 0.2s ease !important; /* 배경색만 바뀌도록 수정 */
+    display: flex !important;
+    justify-content: center !important; /* 가로 중앙 정렬 */
+    align-items: center !important; /* 세로 중앙 정렬 */
+    line-height: 1 !important;
+}
+
+/* Streamlit이 자동 생성하는 내부 p 태그 폰트 강제 초기화 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
+    font-size: 13px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    border-color: #000 !important;
-    color: #000 !important;
-    background: #f8f9fa !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    background: #f0f2f5 !important; /* 마우스 올리면 회색 채우기 */
+    border-color: #d1d5db !important; /* 테두리색 유지 (까맣게 안 변함) */
+    color: #374151 !important;
+    transform: none !important; /* 튀어오르는 효과 제거 */
+    box-shadow: none !important; /* 그림자 효과 제거 */
 }
 </style>
 """
@@ -292,9 +306,6 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             
-            # ==========================================
-            # [추가 요청 반영] DC 및 IRP 계좌 위험/안전자산 우측 정렬 및 볼드 해제
-            # ==========================================
             extra_info_html = ""
             if k in ['DC', 'IRP']:
                 safe_pct = 0.0
@@ -307,10 +318,8 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
                         safe_pct += item.get('비중', 0)
                 
                 risky_pct = 100.0 - safe_pct
-                # 글자 볼드 해제 (font-weight: normal) 및 색상 조정
                 extra_info_html = f"<div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 위험자산 : {risky_pct:.1f}% | 안전자산 : {safe_pct:.1f}% ]</div>"
             
-            # Flexbox를 사용하여 '총 자산 요약'은 좌측, '위험/안전자산 정보'는 우측 끝으로 완벽히 분리 정렬
             header_html = f"""
             <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
                 <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
