@@ -51,28 +51,29 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 완벽한 대칭 & 테두리 회색화 & Bold 제거
+   [문제 해결 3] 완벽한 대칭 플로팅 배너 (Streamlit 간섭 완벽 차단)
    ========================================================= */
+/* 1. 배너 컨테이너: 넉넉한 패딩과 부드러운 회색 테두리 지정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
-    left: auto !important;
-    transform: none !important;
-    width: max-content !important;
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 8px 6px !important; 
+    padding: 10px 20px !important; /* 배너 내부 상하좌우 넉넉한 공간 */
     border-radius: 8px !important; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; /* 그림자도 부드럽게 조정 */
-    border: 1px solid #d1d5db !important; /* [수정] 진한 검은색 대신 연한 회색으로 변경 */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; 
+    border: 1px solid #d1d5db !important; /* 연한 회색 테두리 */
     z-index: 999999 !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important; 
+    justify-content: center !important;
     gap: 0 !important; 
+    width: max-content !important; /* 글자 길이에 맞춰 유동적 크기 할당 */
 }
 
+/* 앵커 스팬 숨김 처리 */
 div.element-container:has(#zappa-floating-menu) { 
     display: none !important; 
     position: absolute !important; 
@@ -82,48 +83,55 @@ div.element-container:has(#zappa-floating-menu) {
     padding: 0 !important; 
 }
 
-/* [핵심] 버튼을 감싸는 방(Column) 자체에 완벽히 동일한 여백과 우측 구분선을 강제 고정 */
+/* 2. 각 항목의 방(Column): 여기서 글자 겹침을 방지하고 정확한 구분선을 긋습니다. */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
-    flex: 0 0 auto !important; 
-    width: max-content !important; /* 빈 공간 생기지 않도록 내용물에 딱 맞춤 */
-    min-width: 0 !important; 
-    padding: 0 14px !important; /* 단어 양옆의 여백을 14px로 동일하게 강제 고정 */
+    flex: 0 0 auto !important; /* Streamlit의 강제 축소 방지 */
+    width: max-content !important; /* 절대 찌그러지지 않도록 보호 */
+    min-width: max-content !important; /* 글자 겹침 원천 봉쇄 */
+    padding: 0 15px !important; /* 글자와 구분선 사이의 정확하고 균일한 간격 */
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    border-right: 1px solid #b0b0b0 !important; /* 방의 우측 벽에 선을 그음 */
+    border-right: 1.5px solid #d1d5db !important; /* 항목을 나누는 수직선(|) */
 }
 
-/* 마지막 방(5번째 열)의 오른쪽 선은 철저하게 삭제하여 찌꺼기 선 원천 봉쇄 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
+/* 3. 첫번째 / 마지막 항목 여백 & 찌꺼기 선 밸런스 조정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-of-type,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-of-type { 
-    border-right: none !important; 
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child { 
+    border-right: none !important; /* 마지막 구분선 무조건 날림 */
+    padding-right: 0 !important; /* 마지막 항목 우측 여백 0 (컨테이너 여백이 담당) */
+}
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child { 
+    padding-left: 0 !important; /* 첫번째 항목 좌측 여백 0 (컨테이너 여백이 담당) */
 }
 
-/* 버튼 본체는 테두리 일절 없이 투명하게 껍데기 역할만 수행 */
+/* 4. 버튼 본체: 껍데기 역할만 수행하며 투명하게 유지 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] { 
     margin: 0 !important; 
     padding: 0 !important; 
+    width: max-content !important; 
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
     width: max-content !important; 
     background: transparent !important; 
     border: none !important; 
     border-radius: 0 !important; 
-    height: 16px !important; 
-    min-height: 16px !important; 
-    color: #8c8c8c !important; 
+    padding: 0 !important; 
+    margin: 0 !important; 
+    height: auto !important; 
+    min-height: 0 !important; 
+    color: #8c8c8c !important; /* 기본 회색 글자 */
     font-size: 15px !important; 
     font-weight: 500 !important; /* 기본 굵기 */
-    white-space: nowrap !important; 
+    white-space: nowrap !important; /* 글자 줄바꿈 절대 방지 */
     box-shadow: none !important; 
+    transition: color 0.1s ease !important; 
     display: flex !important; 
     align-items: center !important; 
     justify-content: center !important; 
@@ -141,19 +149,19 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     width: max-content !important; 
 }
 
+/* 5. 호버 및 활성화 상태: Bold(두꺼움) 없이 오직 진한 검은색만 적용 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover { 
     color: #111111 !important; 
     background: transparent !important; 
 }
 
-/* [수정] 클릭(활성화) 시 Bold 해제. 오직 색상만 검은색 유지 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     background: transparent !important; 
     border: none !important; 
-    color: #111111 !important; 
-    font-weight: 500 !important; /* Bold체 삭제. 기본 굵기 유지 */
+    color: #111111 !important; /* 엣지있는 진한 검은색 */
+    font-weight: 500 !important; /* Bold 해제! 굵기 그대로 유지 */
 }
 </style>
 """
