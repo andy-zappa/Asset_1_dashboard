@@ -175,7 +175,7 @@ if "_insight" in data:
             <div class="card-sub">
                 <div class="card-sub-title">{acc_name}</div>
                 <div class="card-sub-row"><span>총 자산</span><span class="card-sub-val" style="font-weight:normal;">{fmt(a['총 자산'])}</span></div>
-                <div class="card-sub-row"><span>총 손익</span><span class="card-sub-val {col(a['총 수익'])}">{fmt(a['총 수익'], True)}<br>{fmt_p(a['수익률(%)'])}</span></div>
+                <div class="card-sub-row"><span>총 손익</span><span class="card-sub-val {col(a['총 손익'])}">{fmt(a['총 손익'], True)}<br>{fmt_p(a['수익률(%)'])}</span></div>
             </div>
             """
 
@@ -407,3 +407,4 @@ for k in FIXED_ACCOUNT_ORDER:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
+
