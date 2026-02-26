@@ -1,11 +1,11 @@
 import pandas as pd
 import requests
 import json
-import time  # API 호출 과부하 방지를 위해 추가
+import time  # API 호출 과부하 방지
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 1. 설정 및 고정 데이터 (핵심 계산 로직)
+# 1. 설정 및 고정 데이터
 # ==========================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
@@ -26,7 +26,6 @@ ACC_MAP = {
 }
 
 def calc_samsungfire_principal():
-    # 2026년 2월 25일 자 증권사 앱 기준금액으로 영점 재조정 (당일 이자 선반영 분 포함)
     기준일 = datetime(2026, 2, 25)
     기준금액 = 90304247
     원금 = 90000000
@@ -75,7 +74,8 @@ PORTFOLIO = {
 def get_access_token():
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
-        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload).json().get("access_token")
+        # 무한 멈춤 방지: 5초 이상 응답 없으면 포기 (timeout=5)
+        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5).json().get("access_token")
     except: 
         return None
 
@@ -99,10 +99,12 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010100"
     }
     try:
+        # 무한 멈춤 방지: 3초 이상 응답 없으면 포기 (timeout=3)
         res = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
             headers=headers_curr, 
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)},
+            timeout=3
         )
         out = res.json().get('output', {})
         curr = int(float(out.get('stck_prpr', avg_p)))
@@ -110,7 +112,7 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
-    # 2. 과거 종가 조회 (최대 30영업일)를 통한 7일, 15일, 30일 전 계산
+    # 2. 과거 종가 조회 (최대 30영업일)
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -118,6 +120,7 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010400"
     }
     try:
+        # 무한 멈춤 방지: 3초 이상 응답 없으면 포기 (timeout=3)
         res_hist = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
             headers=headers_hist, 
@@ -126,11 +129,11 @@ def get_current_price(code, token, avg_p):
                 "FID_INPUT_ISCD": code.zfill(6),
                 "FID_PERIOD_DIV_CODE": "D",
                 "FID_ORG_ADJ_PRC": "0"
-            }
+            },
+            timeout=3
         )
         out_hist = res_hist.json().get('output', [])
         
-        # 달력일 기준 목표일자 세팅
         now_dt = datetime.now()
         t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
         t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
@@ -187,7 +190,7 @@ def generate_asset_data():
         a_buy_total = 0 
         
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
-            # 💡 한투 API 호출 제한(초당 20건 초과) 방지를 위한 안전 딜레이 추가
+            # 너무 잦은 API 호출로 인해 한투 서버가 끊는 것 방지 (0.1초 휴식)
             time.sleep(0.1) 
             
             px = get_current_price(code, token, avg_p)
@@ -278,14 +281,8 @@ def generate_asset_data():
         "조회시간": fetch_time
     }
     
-    assets_json["_insight"] = [
-        f"조회 기준 시간: {fetch_time}", 
-        f"a) 단기 및 중장기 흐름: 1일 전 대비 {t_diff_1:+,d}원, 30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
-        f"b) ETF 분석: 전체 수익률 {assets_json['_total']['수익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
-        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
-        f"d) 원인 파악: 총자본 대비 수익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
-        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['수익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
-    ]
+    # 이 부분은 app.py에서 자파의 자산 인사이트로 덮어씌워지지만, 로드 판별을 위해 남겨둡니다.
+    assets_json["_insight"] = ["로드 완료"]
     
     with open("assets.json", "w", encoding="utf-8") as f: 
         json.dump(assets_json, f, ensure_ascii=False, indent=2)
