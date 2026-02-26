@@ -30,7 +30,6 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 
 .card-main { background-color: #fffdf2; border: 2px solid #f2e2a4; border-radius: 15px; padding: 20px 25px; position: relative; }
 .card-main-title { font-size: 24px; font-weight: 900; color: #111; }
-.card-main-date { background: #fff; border: 1px solid #ddd; border-radius: 15px; padding: 4px 12px; font-size: 13.5px; color: #333; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .val-asset { font-size: 28px; font-weight: 900; color: #111; }
 .val-profit { font-size: 24px; font-weight: 800; }
 .val-diff { font-size: 14.5px; color: #777; font-weight: 600; margin-top: 3px; }
@@ -52,22 +51,110 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS]
+   [ZAPPA 플로팅 배너 CSS] 원본 100% 복구 🔥
    ========================================================= */
-.zappa-icon { font-family: "Segoe UI Emoji", sans-serif !important; font-size: 32px !important; }
+.zappa-icon {
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
+    font-size: 32px !important;
+}
+
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
-    position: fixed !important; bottom: 30px !important; right: 30px !important; left: auto !important; transform: none !important;
-    width: max-content !important; background: rgba(255, 255, 255, 0.98) !important; padding: 10px 25px !important; 
-    border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important;
-    z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 14px !important; 
+    position: fixed !important;
+    bottom: 30px !important;
+    right: 30px !important;
+    left: auto !important;
+    transform: none !important;
+    
+    width: max-content !important; 
+    
+    background: rgba(255, 255, 255, 0.98) !important;
+    padding: 10px 25px !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+    border: 1px solid #e5e7eb !important;
+    z-index: 999999 !important;
+    
+    display: flex !important;
+    flex-wrap: nowrap !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+    
+    gap: 14px !important; 
 }
-div.element-container:has(#zappa-floating-menu) { display: none !important; position: absolute !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border-right: none !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button { margin: 0 !important; padding: 0 !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 15px !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button p { color: inherit !important; font-size: 14.5px !important; margin: 0 !important; text-align: center !important; width: max-content !important; white-space: nowrap !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover { color: #111111 !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"] { color: #111111 !important; font-weight: bold !important; }
+
+div.element-container:has(#zappa-floating-menu) { 
+    display: none !important; 
+    position: absolute !important; 
+    width: 0 !important; 
+    height: 0 !important; 
+    margin: 0 !important; 
+    padding: 0 !important; 
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { 
+    flex: 0 0 auto !important; 
+    width: auto !important; 
+    min-width: 0 !important; 
+    padding: 0 !important; 
+    margin: 0 !important; 
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+    position: relative !important; 
+    border-right: none !important; 
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"],
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    width: auto !important; 
+    background: transparent !important; 
+    border: none !important; 
+    border-radius: 0 !important; 
+    height: 24px !important; 
+    min-height: 24px !important; 
+    color: #9ca3af !important; 
+    font-size: 15px !important; 
+    font-weight: normal !important; 
+    white-space: nowrap !important; 
+    box-shadow: none !important; 
+    transition: color 0.1s ease !important; 
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p { 
+    color: inherit !important; 
+    font-size: 14.5px !important; 
+    font-weight: inherit !important; 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    line-height: 1 !important; 
+    text-align: center !important; 
+    width: max-content !important; 
+    white-space: nowrap !important;
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover { 
+    color: #111111 !important; 
+    background: transparent !important; 
+}
+
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
+    background: transparent !important; 
+    border: none !important; 
+    color: #111111 !important; 
+    font-weight: bold !important; 
+}
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
@@ -112,6 +199,16 @@ def col(v):
         return "red" if val > 0 else ("blue" if val < 0 else "")
     except: return ""
 
+def get_html_val(v, is_percent=False):
+    color_class = col(v)
+    if is_percent:
+        text = fmt_p(v)
+    else:
+        text = fmt(v, sign=True)
+    if color_class:
+        return f"<span class='{color_class}'>{text}</span>"
+    return str(text)
+
 def clean_label(lbl):
     return re.sub(r'\s*\(\d{2}\.\d+월\)', '', lbl)
 
@@ -131,12 +228,13 @@ with c2:
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
-st.markdown("<br>", unsafe_allow_html=True)
+# [원상 복구] 날짜와 시간창을 원래 있던 우측 상단 자리에 표출
+st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간', '')}]</div>", unsafe_allow_html=True)
 
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (.get() 방식으로 안전하게 구축)
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (마크다운 에러 원천 차단 방식)
 # =====================================================================
 if "_insight" in data:
     
@@ -155,68 +253,63 @@ if "_insight" in data:
     # 2. 우측 인사이트 텍스트 (앞 부분 요약 문장 삭제, 분석 문장만 표출)
     insight_texts = data.get("_insight", [])
     right_html = "".join([f"<p style='margin-bottom:12px;'>{text}</p>" for text in insight_texts if text.startswith("• 미국 ETF") or text.startswith("• 종목별로는") or text.startswith("• 간밤 미국") or text.startswith("• 고용지표")])
-    if not right_html and insight_texts: # 혹시라도 필터링이 안잡히면 뒤에서 3개만 강제 출력
+    if not right_html and insight_texts: 
         right_html = "".join([f"<p style='margin-bottom:12px;'>{text}</p>" for text in insight_texts[-3:]])
 
-    # 3. 좌측 하단 그리드 뷰 (DC, IRP, CMA, ISA) - 에러 절대 방어 처리
+    # 3. 좌측 하단 그리드 뷰 HTML
     grid_html = ""
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
             a = data.get(k, {})
             acc_name = '연금저축(CMA)' if k == 'PENSION' else ('ISA(중개형)' if k == 'ISA' else f'퇴직연금({k})')
-            grid_html += f"""
-            <div class="card-sub">
-                <div class="card-sub-title">{acc_name}</div>
-                <div class="card-sub-row"><span style="color:#777;">총 자산</span><span class="card-sub-val" style="font-weight:normal; color:#111;">{fmt(a.get('총 자산', 0))}</span></div>
-                <div class="card-sub-row" style="margin-bottom:0;"><span style="color:#777;">총 손익</span><span class="card-sub-val {col(a.get('총 손익', 0))}">{fmt(a.get('총 손익', 0), True)}</span></div>
-                <div class="card-sub-row" style="justify-content:flex-end;"><span class="card-sub-val {col(a.get('손익률(%)', 0))}">{fmt_p(a.get('손익률(%)', 0))}</span></div>
-            </div>
-            """
+            grid_html += (
+                f"<div class='card-sub'>"
+                f"<div class='card-sub-title'>{acc_name}</div>"
+                f"<div class='card-sub-row'><span style='color:#777;'>총 자산</span><span class='card-sub-val' style='font-weight:normal; color:#111;'>{fmt(a.get('총 자산', 0))}</span></div>"
+                f"<div class='card-sub-row' style='margin-bottom:0;'><span style='color:#777;'>총 손익</span><span class='card-sub-val {col(a.get('총 손익', 0))}'>{fmt(a.get('총 손익', 0), True)}</span></div>"
+                f"<div class='card-sub-row' style='justify-content:flex-end;'><span class='card-sub-val {col(a.get('손익률(%)', 0))}'>{fmt_p(a.get('손익률(%)', 0))}</span></div>"
+                f"</div>"
+            )
 
-    # 4. 전체 레이아웃 조립
-    html_layout = f"""
-    <div class="insight-container">
-        <div class="insight-left">
-            <div class="card-main">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div class="card-main-title">총 자산</div>
-                    <div class="card-main-date">{tot.get('조회시간', '')} <span style='font-size:16px; cursor:pointer;'>🔄</span></div>
-                </div>
-                
-                <div style="text-align: right; margin-top: 15px;">
-                    <div class="val-asset" style="margin-bottom:8px;">{fmt(tot.get('총 자산', 0))}원</div>
-                    
-                    <table style="width:100%; border:none; border-collapse: collapse; margin-top: 10px;">
-                        <tr>
-                            <td style="text-align:right; font-size:18px; font-weight:bold; color:#111; vertical-align:top; padding-right:15px; width:40%;">총 손익</td>
-                            <td style="text-align:right; width:60%;">
-                                <div class="val-profit {col(tot.get('총 손익', 0))}">{fmt(tot.get('총 손익', 0), True)}원</div>
-                                <div class="val-diff">({fmt(tot.get('평가손익(1일전)', 0), True)}원)</div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="text-align:right; font-size:14px; font-weight:bold; color:#777; vertical-align:bottom; padding-right:15px; padding-top:15px; line-height: 1.5;">
-                                <span style="font-size:13px; font-weight:normal;">매입금액比 손익</span> <span class="{col(ag_tot)}">{fmt(ag_tot, True)}원</span><br>
-                                현금성자산 {fmt(cash_total)}원
-                            </td>
-                            <td style="text-align:right; vertical-align:bottom; padding-top:10px;">
-                                <div class="val-rate {col(tot.get('손익률(%)', 0))}">{fmt_p(tot.get('손익률(%)', 0))}</div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="grid-2x2">
-                {grid_html}
-            </div>
-        </div>
-        
-        <div class="insight-right">
-            {right_html}
-        </div>
-    </div>
-    """
+    # 4. 전체 레이아웃 조립 (들여쓰기로 인한 코드 블록 파싱 방지 처리)
+    html_layout = (
+        f"<div class='insight-container'>"
+        f"<div class='insight-left'>"
+        f"<div class='card-main'>"
+        f"<div style='display:flex; justify-content:space-between; align-items:flex-start;'>"
+        f"<div class='card-main-title'>총 자산</div>"
+        f"</div>"
+        f"<div style='text-align: right; margin-top: 15px;'>"
+        f"<div class='val-asset' style='margin-bottom:8px;'>{fmt(tot.get('총 자산', 0))}원</div>"
+        f"<table style='width:100%; border:none; border-collapse: collapse; margin-top: 10px;'>"
+        f"<tr>"
+        f"<td style='text-align:right; font-size:18px; font-weight:bold; color:#111; vertical-align:top; padding-right:15px; width:40%;'>총 손익</td>"
+        f"<td style='text-align:right; width:60%;'>"
+        f"<div class='val-profit {col(tot.get('총 손익', 0))}'>{fmt(tot.get('총 손익', 0), True)}원</div>"
+        f"<div class='val-diff'>({fmt(tot.get('평가손익(1일전)', 0), True)}원)</div>"
+        f"</td>"
+        f"</tr>"
+        f"<tr>"
+        f"<td style='text-align:right; font-size:14px; font-weight:bold; color:#777; vertical-align:bottom; padding-right:15px; padding-top:15px; line-height: 1.5;'>"
+        f"<span style='font-size:13px; font-weight:normal;'>매입금액比 손익</span> <span class='{col(ag_tot)}'>{fmt(ag_tot, True)}원</span><br>"
+        f"현금성자산 {fmt(cash_total)}원"
+        f"</td>"
+        f"<td style='text-align:right; vertical-align:bottom; padding-top:10px;'>"
+        f"<div class='val-rate {col(tot.get('손익률(%)', 0))}'>{fmt_p(tot.get('손익률(%)', 0))}</div>"
+        f"</td>"
+        f"</tr>"
+        f"</table>"
+        f"</div>"
+        f"</div>"
+        f"<div class='grid-2x2'>"
+        f"{grid_html}"
+        f"</div>"
+        f"</div>"
+        f"<div class='insight-right'>"
+        f"{right_html}"
+        f"</div>"
+        f"</div>"
+    )
     st.markdown(html_layout, unsafe_allow_html=True)
 
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
