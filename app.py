@@ -184,7 +184,6 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-# 텍스트는 일반 크기, 숫자만 20px로 분리
 st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>", unsafe_allow_html=True)
 
 h1 = [unit_html, """
@@ -229,7 +228,6 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-# 텍스트는 일반 크기, 숫자만 20px로 분리
 st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 수익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
 h2 = [unit_html, """
@@ -294,7 +292,10 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             
-            extra_info = ""
+            # ==========================================
+            # [추가 요청 반영] DC 및 IRP 계좌 위험/안전자산 우측 정렬 및 볼드 해제
+            # ==========================================
+            extra_info_html = ""
             if k in ['DC', 'IRP']:
                 safe_pct = 0.0
                 for item in a.get('상세', []):
@@ -306,11 +307,17 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
                         safe_pct += item.get('비중', 0)
                 
                 risky_pct = 100.0 - safe_pct
-                # 안전자산/위험자산 텍스트는 일반 폰트 사이즈(16px)로 자동 상속됨
-                extra_info = f" &nbsp;&nbsp;&nbsp; ● 위험자산 : {risky_pct:.1f}% / 안전자산 : {safe_pct:.1f}%"
+                # 글자 볼드 해제 (font-weight: normal) 및 색상 조정
+                extra_info_html = f"<div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 위험자산 : {risky_pct:.1f}% | 안전자산 : {safe_pct:.1f}% ]</div>"
             
-            # 텍스트는 일반 크기, 숫자만 20px로 분리
-            st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span>{extra_info}</div>", unsafe_allow_html=True)
+            # Flexbox를 사용하여 '총 자산 요약'은 좌측, '위험/안전자산 정보'는 우측 끝으로 완벽히 분리 정렬
+            header_html = f"""
+            <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
+                <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
+                {extra_info_html}
+            </div>
+            """
+            st.markdown(header_html, unsafe_allow_html=True)
             
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code: h3.append("<th>종목코드</th>")
