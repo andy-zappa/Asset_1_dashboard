@@ -22,9 +22,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .insight-box{background-color:#f0f4f8;padding:20px;border-radius:10px;border-left:5px solid #007bff;margin-bottom:25px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
-/* =========================================================
-   [추가 CSS] 요약 텍스트 정밀 디자인
-   ========================================================= */
+/* 요약 텍스트 정밀 디자인 */
 .summary-text {
     font-size: 16px !important;
     font-weight: bold !important;
@@ -35,100 +33,103 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
     font-size: 20px !important; 
 }
 
-/* =========================================================
-   [문제 해결 1] 평가손익 & 기간비용 엑셀 스타일 병합
-   ========================================================= */
+/* 엑셀 스타일 병합 지원 */
 .main-table th.th-eval { border-right: none !important; }
 .main-table th.th-blank { border-left: none !important; border-bottom: none !important; padding: 0 !important; }
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
-/* =========================================================
-   [문제 해결 2] 컬러 이모지 강제 주입
-   ========================================================= */
+/* 이모지 지원 */
 .zappa-icon {
     font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
     font-size: 32px !important;
 }
 
 /* =========================================================
-   [문제 해결 3] 완벽한 플로팅 배너 (버튼 높낮이 정렬 및 텍스트 잘림 절대 방지)
+   [완벽 해결 4] 플로팅 배너 화면 중앙 확장 배치 & 높낮이 절대 고정
    ========================================================= */
-/* 플로팅 배너 전체 틀: 너비를 내용물에 맞춰 유연하게 확장 */
+
+/* 1. 배너 전체 틀: 화면 하단 중앙 배치, 폭 확장 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
-    right: 30px !important;
+    left: 50% !important; /* 화면 중앙 기준점 */
+    transform: translateX(-50%) !important; /* 정확히 정가운데로 당기기 */
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 10px 14px !important;
-    border-radius: 10px !important;
+    padding: 12px 20px !important;
+    border-radius: 12px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
+    justify-content: center !important; /* 배너 안의 내용물을 가운데로 정렬 */
     align-items: center !important; 
-    gap: 8px !important; 
-    width: auto !important;
-    max-width: none !important; /* Streamlit 제한 해제 */
+    gap: 6px !important; /* 박스 간격 타이트하게 설정 */
+    width: max-content !important; 
+    min-width: 60% !important; /* 배너 사이즈를 화면의 60%까지 최대한 확장 */
 }
 
-/* Streamlit의 st.columns 20% 분할 강제 무력화 */
+/* 2. Streamlit이 만든 쓸데없는 컬럼 속성(비율 분할 등) 전면 백지화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
-    flex: 0 0 auto !important;
+    flex: 0 0 auto !important; /* 20% 분할 강제 무력화 */
     width: auto !important;
-    min-width: max-content !important; /* 컬럼 자체가 텍스트 크기에 맞춰지도록 보호 */
+    min-width: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
     display: flex !important;
+    justify-content: center !important;
     align-items: center !important;
 }
 
-/* 버튼을 감싸는 내부 div 컨테이너 너비 제한 해제 */
+/* 3. 버튼 껍데기(컨테이너) 정렬 초기화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] {
-    width: auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
+    width: auto !important;
 }
 
-/* 버튼 본체: 높이 36px 통일 및 텍스트 안 잘리게 여백 확보 */
+/* 4. 버튼 본체: 첨부 이미지와 완벽히 동일한 디자인 이식 (높이 절대 고정) */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
-    border-radius: 6px !important;
-    padding: 0 14px !important; 
-    height: 36px !important; 
-    min-height: 36px !important;
-    font-size: 14px !important;
-    font-weight: bold !important;
+    border-radius: 6px !important; /* 둥근 테두리 */
+    padding: 0 16px !important; /* 글자와 박스 테두리 여백 */
+    height: 40px !important; /* 높이 픽셀 단위로 완전 고정! */
+    min-height: 40px !important;
+    max-height: 40px !important;
+    font-size: 15px !important; /* 이미지와 동일한 폰트 사이즈 */
+    font-weight: 600 !important; /* 약간 두꺼운 폰트 */
     background: white !important;
-    border: 1px solid #d1d5db !important;
-    color: #374151 !important;
+    border: 1px solid #d1d5db !important; /* 연한 회색 테두리 */
+    color: #4b5563 !important; /* 짙은 회색 글씨 */
     margin: 0 !important;
-    white-space: nowrap !important; /* 텍스트 줄바꿈 절대 금지 */
+    white-space: nowrap !important; /* 글자 줄바꿈 금지 */
     width: auto !important;
-    min-width: max-content !important; /* 내용물 크기만큼 무조건 공간 확보 */
-    transition: background 0.2s ease !important; 
+    transition: all 0.2s ease !important; 
     display: flex !important;
     justify-content: center !important; 
     align-items: center !important; 
+    line-height: 1 !important; /* 내부 줄간격 오차 완벽 제거 */
 }
 
-/* 버튼 내부 텍스트 태그(p) 여백 완전 초기화 */
+/* 5. 버튼 내부 텍스트(p) 요소가 버튼 밖으로 튀어나가거나 밀리지 않도록 완전 종속 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
-    font-size: 14px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1 !important;
     white-space: nowrap !important;
+    display: inline-block !important;
+    color: inherit !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    background: #f0f2f5 !important; 
-    border-color: #d1d5db !important; 
-    color: #374151 !important;
-    transform: none !important;
-    box-shadow: none !important;
+    background: #f9fafb !important; 
+    border-color: #9ca3af !important; 
+    color: #1f2937 !important;
 }
 </style>
 """
@@ -312,7 +313,7 @@ with b3:
 with b4:
     if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"): st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
-    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
+    if st.button("종목코드 표시 ▼" if st.session_state.show_code else "종목코드 숨김 ▲"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
