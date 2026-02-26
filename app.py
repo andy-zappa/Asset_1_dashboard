@@ -257,10 +257,10 @@ if "_insight" in data:
     p1_v2 = f"{get_html_val(tot.get('총 수익',0), False)}원 ({get_html_val(origin_yield, True)})"
     p1_v3 = f"{get_html_val(ag_tot, False)}원({get_html_val(ay_tot, True)})"
     
-    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 현재 총 자산 '{bold_16(p1_v1)}' |  투자원금比 총 수익 '{bold_16(p1_v2)}' | 매입금액比 총 수익 '{bold_16(p1_v3)}'</p>")
+    # 텍스트 수정: '총 수익' -> '총 손익'
+    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 현재 총 자산 '{bold_16(p1_v1)}' |  투자원금比 총 손익 '{bold_16(p1_v2)}' | 매입금액比 총 손익 '{bold_16(p1_v3)}'</p>")
 
-    # [문단 2] 수익률 높은 순서
-    # 백만원 단위 및 소수점 자리 자동 조절 함수
+    # [문단 2] 손익률 높은 순서
     def format_mil(v):
         abs_v = abs(v)
         if abs_v >= 10000000:
@@ -346,7 +346,7 @@ if "_insight" in data:
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
 # =====================================================================
-# (이하 Andy님 원본 1, 2, 3 테이블 출력 로직 100% 동일 보존)
+# (이하 Andy님 원본 1, 2, 3 테이블 출력 로직 100% 동일 보존 / 텍스트만 손익으로 수정)
 # =====================================================================
 
 # --- [1] 투자금 대비 자산 현황 ---
@@ -354,7 +354,7 @@ st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</
 
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
+    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 손익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
     <div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 25.8월 : 퇴직연금(DC/IRP), ISA(중개형), 25.11월 : 연금저축(CMA) ]</div>
 </div>
 """, unsafe_allow_html=True)
@@ -366,7 +366,7 @@ h1 = [unit_html, """
     <th rowspan='2'>총 자산</th>
     <th rowspan='2' class='th-eval'>평가손익</th>
     <th colspan='3' class='th-blank'>&nbsp;</th>
-    <th rowspan='2'>수익률</th>
+    <th rowspan='2'>손익률</th>
     <th rowspan='2'>투자원금</th>
   </tr>
   <tr>
@@ -408,7 +408,7 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 수익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
 h2 = [unit_html, """
 <table class='main-table'>
@@ -417,7 +417,7 @@ h2 = [unit_html, """
     <th rowspan='2'>총 자산</th>
     <th rowspan='2' class='th-eval'>평가손익</th>
     <th colspan='3' class='th-blank'>&nbsp;</th>
-    <th rowspan='2'>수익률</th>
+    <th rowspan='2'>손익률</th>
     <th rowspan='2'>매입금액</th>
   </tr>
   <tr>
@@ -479,7 +479,7 @@ with b3:
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_rate = (st.session_state.sort_mode == 'rate')
-    if st.button("📈 수익률 [ ● ]" if is_rate else "📈 수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
+    if st.button("📈 손익률 [ ● ]" if is_rate else "📈 손익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_code = st.session_state.show_code
@@ -513,7 +513,7 @@ for k in FIXED_ACCOUNT_ORDER:
         
         header_html = f"""
         <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
+            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 손익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
             {extra_info_html}
         </div>
         """
@@ -522,7 +522,7 @@ for k in FIXED_ACCOUNT_ORDER:
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
         
-        h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
+        h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
         if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
