@@ -246,7 +246,7 @@ if "_insight" in data:
     
     ag_tot = tot.get('총 자산', 0) - tot.get('매입금액합', 0)
     ay_tot = (ag_tot / tot.get('매입금액합', 1) * 100) if tot.get('매입금액합', 1) > 0 else 0
-    origin_yield = tot.get('수익률(%)', 0)
+    origin_yield = tot.get('손익률(%)', 0)
 
     # 볼드 및 16px 스타일 함수 적용
     def bold_16(text):
@@ -254,7 +254,7 @@ if "_insight" in data:
 
     # [문단 1] 자산 총액
     p1_v1 = f"{fmt(tot.get('총 자산',0))}원"
-    p1_v2 = f"{get_html_val(tot.get('총 수익',0), False)}원 ({get_html_val(origin_yield, True)})"
+    p1_v2 = f"{get_html_val(tot.get('총 손익',0), False)}원 ({get_html_val(origin_yield, True)})"
     p1_v3 = f"{get_html_val(ag_tot, False)}원({get_html_val(ay_tot, True)})"
     
     # 텍스트 수정: '총 수익' -> '총 손익'
@@ -306,7 +306,7 @@ if "_insight" in data:
                 name = item.get('종목명', '')
                 if name == '[ 합계 ]' or not name or any(x in name for x in ['현금', '삼성화재', 'MMF']): continue
                 
-                y = item.get('수익률(%)', 0)
+                y = item.get('손익률(%)', 0)
                 p = item.get('평가손익', 0)
                 
                 if name not in stock_dict: stock_dict[name] = []
@@ -354,7 +354,7 @@ st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</
 
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 손익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
+    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 손익 : <span class='summary-val {col(tot.get('총 손익',0))}'>{fmt(tot.get('총 손익',0), True)} ({fmt_p(tot.get('손익률(%)',0))})</span></div>
     <div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 25.8월 : 퇴직연금(DC/IRP), ISA(중개형), 25.11월 : 연금저축(CMA) ]</div>
 </div>
 """, unsafe_allow_html=True)
@@ -376,7 +376,7 @@ h1 = [unit_html, """
   </tr>
 """]
 
-ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총 수익',0), tot.get('총 자산',0), tot.get('원금합',0)
+ty, tg, ta, to = tot.get('손익률(%)',0), tot.get('총 손익',0), tot.get('총 자산',0), tot.get('원금합',0)
 td7_tot_1 = (ta - tot.get('평가손익(7일전)', 0)) - to
 td15_tot_1 = (ta - tot.get('평가손익(15일전)', 0)) - to
 td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
@@ -387,9 +387,9 @@ keys_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
 if st.session_state.sort_mode == 'asset':
     keys_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
 elif st.session_state.sort_mode == 'profit':
-    keys_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
+    keys_1.sort(key=lambda k: data[k].get('총 손익', 0), reverse=True)
 elif st.session_state.sort_mode == 'rate':
-    keys_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
+    keys_1.sort(key=lambda k: data[k].get('손익률(%)', 0), reverse=True)
 
 for k in keys_1:
     a = data[k]
@@ -400,7 +400,7 @@ for k in keys_1:
     ad15_acc_1 = (curr_asset - a.get('평가손익(15일전)', 0)) - principal
     ad30_acc_1 = (curr_asset - a.get('평가손익(30일전)', 0)) - principal
     
-    h1.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(curr_asset)}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col(ad7_acc_1)}'>{fmt(ad7_acc_1, True)}</td><td class='{col(ad15_acc_1)}'>{fmt(ad15_acc_1, True)}</td><td class='{col(ad30_acc_1)}'>{fmt(ad30_acc_1, True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(principal)}</td></tr>")
+    h1.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(curr_asset)}</td><td class='{col(a['총 손익'])}'>{fmt(a['총 손익'],True)}</td><td class='{col(ad7_acc_1)}'>{fmt(ad7_acc_1, True)}</td><td class='{col(ad15_acc_1)}'>{fmt(ad15_acc_1, True)}</td><td class='{col(ad30_acc_1)}'>{fmt(ad30_acc_1, True)}</td><td class='{col(a['손익률(%)'])}'>{fmt_p(a['손익률(%)'])}</td><td>{fmt(principal)}</td></tr>")
 h1.append("</table>")
 st.markdown("".join(h1), unsafe_allow_html=True)
 
@@ -431,7 +431,7 @@ td1_tot = tot.get('평가손익(1일전)',0)
 td7_tot = tot.get('평가손익(7일전)',0)
 td30_tot = tot.get('평가손익(30일전)',0)
 
-h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td>{fmt(td1_tot, True)}</td><td>{fmt(td7_tot, True)}</td><td>{fmt(td30_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(td1_tot)}'>{fmt(td1_tot, True)}</td><td class='{col(td7_tot)}'>{fmt(td7_tot, True)}</td><td class='{col(td30_tot)}'>{fmt(td30_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
 sec2_items = []
 for k in FIXED_ACCOUNT_ORDER:
@@ -455,7 +455,7 @@ for item in sec2_items:
     ad7_acc = a.get('평가손익(7일전)', 0)
     ad30_acc = a.get('평가손익(30일전)', 0)
     
-    h2.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(item['ag_acc'])}'>{fmt(item['ag_acc'], True)}</td><td>{fmt(ad1_acc, True)}</td><td>{fmt(ad7_acc, True)}</td><td>{fmt(ad30_acc, True)}</td><td class='{col(item['ay_acc'])}'>{fmt_p(item['ay_acc'])}</td><td>{fmt(item['ap_acc'])}</td></tr>")
+    h2.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(item['ag_acc'])}'>{fmt(item['ag_acc'], True)}</td><td class='{col(ad1_acc)}'>{fmt(ad1_acc, True)}</td><td class='{col(ad7_acc)}'>{fmt(ad7_acc, True)}</td><td class='{col(ad30_acc)}'>{fmt(ad30_acc, True)}</td><td class='{col(item['ay_acc'])}'>{fmt_p(item['ay_acc'])}</td><td>{fmt(item['ap_acc'])}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
@@ -513,7 +513,7 @@ for k in FIXED_ACCOUNT_ORDER:
         
         header_html = f"""
         <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 손익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
+            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 손익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('손익률(%)'))})</span></div>
             {extra_info_html}
         </div>
         """
@@ -527,14 +527,14 @@ for k in FIXED_ACCOUNT_ORDER:
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
         if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
         elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
-        elif st.session_state.sort_mode == 'rate': items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
+        elif st.session_state.sort_mode == 'rate': items.sort(key=lambda x: x.get('손익률(%)', 0), reverse=True)
         
         for i in ([s_data] + items):
             is_s = (i.get('종목명') == "[ 합계 ]")
             row = f"<tr class='sum-row'>" if is_s else "<tr>"
             row += f"<td>{i.get('종목명')}</td>"
             if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드')}</td>"
-            row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
+            row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('손익률(%)',0))}'>{fmt_p(i.get('손익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
