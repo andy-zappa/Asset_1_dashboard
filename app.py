@@ -7,7 +7,7 @@ import os
 import re
 
 warnings.filterwarnings("ignore")
-st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
+st.set_page_config(layout="wide", page_title="Andy's ZAPPA Cockpit")
 
 css = """
 <style>
@@ -33,7 +33,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 이미지 2(image_7c8084.png) 스타일 복구 🔥
+   [ZAPPA 플로팅 배너 CSS] image_7c8084.png 스타일 완벽 복원 🔥
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -44,7 +44,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: translateX(50%) !important; 
     width: max-content !important; 
     background: #FFFFFF !important; 
-    padding: 5px 25px !important; 
+    padding: 6px 30px !important; 
     border-radius: 50px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
     border: 1px solid #e0e0e0 !important;
@@ -53,12 +53,12 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     flex-wrap: nowrap !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    gap: 15px !important;
+    gap: 12px !important;
 }
 
 div.element-container:has(#zappa-floating-menu) { display: none !important; }
 
-/* 버튼 내부 텍스트 투명화 (이미지 2의 심플한 텍스트 스타일) */
+/* 버튼 디자인을 원본처럼 텍스트 위주로 투명화 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"] button { 
     background: transparent !important; 
     border: none !important; 
@@ -66,13 +66,12 @@ div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton
     color: #4b5563 !important;
     font-size: 14.5px !important;
     font-weight: 500 !important;
-    padding: 0 5px !important;
+    padding: 0 8px !important;
     height: auto !important;
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover {
     color: #111111 !important;
-    background: transparent !important;
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"] {
@@ -137,15 +136,16 @@ if not data: st.stop()
 tot = data.get("_total", {})
 
 c1, c2 = st.columns([8.5, 1.5])
-with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
+with c1: st.markdown("<h3>🚀 Andy lee님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
+# [자파의 자산 인사이트] 상단 배치 규칙 준수
 if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현 요약</u></span>"]
+    ins = ["<div class='insight-box'><span class='box-title'><u>💡 자파의 자산 인사이트</u></span>"]
     for line in data["_insight"]:
         if "조회 기준" not in line: ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
     ins.append("</div>")
@@ -153,9 +153,10 @@ if "_insight" in data:
 
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
+# 계좌 고정 순서 (DC-IRP-PENSION-ISA)
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
-# --- [1] 투자금 대비 자산 현황 ---
+# --- [1] 투자원금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
@@ -195,7 +196,7 @@ for k in keys_sorted:
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 ---
+# --- [3] 계좌별 상세 내역 (ZAPPA 플로팅 메뉴 적용) ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
@@ -208,12 +209,14 @@ with b3:
 with b4:
     if st.button("📈 수익률 [ " + ("●" if st.session_state.sort_mode == 'rate' else "○") + " ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary"): st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
-    if st.button("💻 종목코드 [ " + ("+" if st.session_state.show_code else "-") + " ]", type="primary" if st.session_state.show_code else "secondary"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
+    btn_label = "💻 종목코드 [ " + ("+" if st.session_state.show_code else "-") + " ]"
+    if st.button(btn_label, type="primary" if st.session_state.show_code else "secondary"):
+        st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-# 중요: [3] 상세 현황 섹션은 FIXED_ACCOUNT_ORDER 순서로 고정 출력 (정렬과 무관)
+# 상세 현황: 순서 고정 (DC-IRP-PENSION-ISA)
 for k in FIXED_ACCOUNT_ORDER:
     if k not in data: continue
     a = data[k]
@@ -223,8 +226,10 @@ for k in FIXED_ACCOUNT_ORDER:
         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div><div style='font-size:14.5px; color:#555;'>[ 위험자산 : {100.0-safe_pct:.1f}% | 안전자산 : {safe_pct:.1f}% ]</div></div>", unsafe_allow_html=True)
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
-        # 문법 에러 해결 ( line 227 )
+        
+        # 문법 에러 해결: 괄호를 )로 닫음 (line 227 수정)
         h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
+        
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
         if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
         elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
