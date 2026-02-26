@@ -235,11 +235,11 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
 
-# [수정] 14.5px 우측 정렬 텍스트 추가 (위험/안전자산 텍스트와 사이즈/색상 완벽하게 매칭)
+# [수정] 안내 텍스트 띄어쓰기 변경 (DC/IRP)
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
     <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
-    <div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 25.8월 : 퇴직연금(DC / IRP), ISA(중개형), 25.11월 : 연금저축(CMA) ]</div>
+    <div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 25.8월 : 퇴직연금(DC/IRP), ISA(중개형), 25.11월 : 연금저축(CMA) ]</div>
 </div>
 """, unsafe_allow_html=True)
 
