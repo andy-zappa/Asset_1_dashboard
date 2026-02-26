@@ -227,7 +227,7 @@ st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10p
 
 if "_insight" in data:
     # 인사이트 요약 텍스트 수정 및 <u> 태그 제거
-    ins = ["<div class='insight-box'><span class='box-title'>💡 '[절세계좌] 자산 현황 요약'</span>"]
+    ins = ["<div class='insight-box'><span class='box-title'>💡 [절세계좌] 자산 현황 요약</span>"]
     for line in data["_insight"]:
         if "조회 기준" not in line: ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
     ins.append("</div>")
@@ -427,3 +427,4 @@ for k in FIXED_ACCOUNT_ORDER:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
+
