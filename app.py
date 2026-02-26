@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 우측 하단 고정 & 완벽한 1칸 대칭 간격 구현
+   [ZAPPA 플로팅 배너 CSS] 간격 축소 및 활성 상태(Black) 디자인 고정
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -62,14 +62,14 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: none !important;
     width: max-content !important;
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 8px 10px !important;
+    padding: 8px 18px !important; /* 좌우 테두리 여백을 넉넉하게 주어 대칭 확보 */
     border-radius: 8px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
-    gap: 0 !important; 
+    gap: 0 !important; /* 요소 간 기본 간격 제거 */
 }
 
 div.element-container:has(#zappa-floating-menu) { 
@@ -107,11 +107,11 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     border: none !important; 
     border-right: 1.5px solid #d1d5db !important; 
     border-radius: 0 !important; 
-    padding: 0 16px !important; 
+    padding: 0 10px !important; /* 버튼 내부 간격을 10px로 좁혀 밀착력 향상 */
     height: 24px !important; 
     min-height: 24px !important; 
-    color: #8c8c8c !important; 
-    font-size: 15px !important; 
+    color: #9ca3af !important; /* 비활성화 기본 색상 (연한 회색) */
+    font-size: 14.5px !important; 
     font-weight: 600 !important; 
     white-space: nowrap !important; 
     box-shadow: none !important; 
@@ -121,6 +121,9 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     justify-content: center !important; 
 }
 
+/* 5번째(마지막) 버튼의 오른쪽 세로선 완벽 제거 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button { 
     border-right: none !important; 
@@ -130,7 +133,7 @@ div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p { 
     color: inherit !important; 
     font-size: 14.5px !important; 
-    font-weight: 600 !important; 
+    font-weight: inherit !important; 
     margin: 0 !important; 
     padding: 0 !important; 
     line-height: 1 !important; 
@@ -143,14 +146,19 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
     background: transparent !important; 
 }
 
+/* 활성화 상태 (Primary 버튼) 색상 고정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     background: transparent !important; 
     border: none !important; 
     border-right: 1.5px solid #d1d5db !important; 
-    color: #111111 !important; 
+    color: #111111 !important; /* 진한 검은색 유지 */
+    font-weight: 800 !important; /* 활성화 시 폰트를 더 굵게 */
 }
 
+/* 5번째(마지막) 활성 버튼 오른쪽 세로선 완벽 제거 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"] { 
     border-right: none !important; 
@@ -330,18 +338,29 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
+# ZAPPA 메뉴 버튼들 (활성화 시 검은색 유지 로직 추가)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
-    if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
+    is_init = (st.session_state.sort_mode == 'init')
+    if st.button("초기화 ▲" if is_init else "초기화 △", type="primary" if is_init else "secondary"): 
+        st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
-    if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
+    is_asset = (st.session_state.sort_mode == 'asset')
+    if st.button("총 자산 ▲" if is_asset else "총 자산 △", type="primary" if is_asset else "secondary"): 
+        st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
-    if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"): st.session_state.sort_mode = 'profit'; st.rerun()
+    is_profit = (st.session_state.sort_mode == 'profit')
+    if st.button("평가손익 ▲" if is_profit else "평가손익 △", type="primary" if is_profit else "secondary"): 
+        st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
-    if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"): st.session_state.sort_mode = 'rate'; st.rerun()
+    is_rate = (st.session_state.sort_mode == 'rate')
+    if st.button("수익률 ▲" if is_rate else "수익률 △", type="primary" if is_rate else "secondary"): 
+        st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
-    if st.button("종목코드 [ + ]" if st.session_state.show_code else "종목코드 [ - ]"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
+    is_code = st.session_state.show_code
+    if st.button("종목코드 [ + ]" if is_code else "종목코드 [ - ]", type="primary" if is_code else "secondary"): 
+        st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
