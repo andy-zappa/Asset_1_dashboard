@@ -45,91 +45,82 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [완벽 해결 4] 플로팅 배너 화면 중앙 확장 배치 & 높낮이 절대 고정
+   [완벽 해결 5] 박스 제거 & 텍스트 형태의 플로팅 배너 (알약 디자인)
    ========================================================= */
 
-/* 1. 배너 전체 틀: 화면 하단 중앙 배치, 폭 확장 */
+/* 1. 배너 틀: 슬림하고 둥근 알약(Pill) 형태로 화면 하단 중앙 배치 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
-    left: 50% !important; /* 화면 중앙 기준점 */
-    transform: translateX(-50%) !important; /* 정확히 정가운데로 당기기 */
+    left: 50% !important; 
+    transform: translateX(-50%) !important; 
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 12px 20px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+    padding: 8px 15px !important; /* 위아래 패딩을 확 줄여서 슬림하게 */
+    border-radius: 50px !important; /* 완전 둥근 알약 형태 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: center !important; /* 배너 안의 내용물을 가운데로 정렬 */
+    justify-content: center !important; 
     align-items: center !important; 
-    gap: 6px !important; /* 박스 간격 타이트하게 설정 */
+    gap: 0 !important; /* CSS 선으로 구분할 거라 gap은 0으로 */
     width: max-content !important; 
-    min-width: 60% !important; /* 배너 사이즈를 화면의 60%까지 최대한 확장 */
 }
 
-/* 2. Streamlit이 만든 쓸데없는 컬럼 속성(비율 분할 등) 전면 백지화 */
+/* 2. Streamlit 컬럼 분할 속성 전면 무력화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
-    flex: 0 0 auto !important; /* 20% 분할 강제 무력화 */
+    flex: 0 0 auto !important; 
     width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
 }
 
-/* 3. 버튼 껍데기(컨테이너) 정렬 초기화 */
+/* 버튼 껍데기(컨테이너) 정렬 초기화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
     margin: 0 !important;
     padding: 0 !important;
-    width: auto !important;
 }
 
-/* 4. 버튼 본체: 첨부 이미지와 완벽히 동일한 디자인 이식 (높이 절대 고정) */
+/* 3. 버튼 본체: 텍스트 링크처럼 보이도록 모든 껍데기 제거 + 우측 구분선(|) 추가 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
-    border-radius: 6px !important; /* 둥근 테두리 */
-    padding: 0 16px !important; /* 글자와 박스 테두리 여백 */
-    height: 40px !important; /* 높이 픽셀 단위로 완전 고정! */
-    min-height: 40px !important;
-    max-height: 40px !important;
-    font-size: 15px !important; /* 이미지와 동일한 폰트 사이즈 */
-    font-weight: 600 !important; /* 약간 두꺼운 폰트 */
-    background: white !important;
-    border: 1px solid #d1d5db !important; /* 연한 회색 테두리 */
-    color: #4b5563 !important; /* 짙은 회색 글씨 */
-    margin: 0 !important;
-    white-space: nowrap !important; /* 글자 줄바꿈 금지 */
-    width: auto !important;
-    transition: all 0.2s ease !important; 
+    background: transparent !important; /* 배경 투명 */
+    border: none !important; /* 기본 테두리 제거 */
+    border-right: 1.5px solid #d1d5db !important; /* 파이프(|) 구분선 역할 */
+    border-radius: 0 !important; /* 각지게 만들어서 선이 똑바로 서게 함 */
+    padding: 0 16px !important; /* 텍스트 좌우 여백 */
+    height: 20px !important; /* 높이를 글자 크기에 맞춰 대폭 축소 */
+    min-height: 20px !important;
+    color: #6b7280 !important; /* 기본 회색 글씨 */
+    font-size: 15px !important; 
+    font-weight: 600 !important; 
+    white-space: nowrap !important; 
+    box-shadow: none !important; /* 버튼 그림자 완전 제거 */
+    transition: color 0.2s ease !important; /* 글씨 색만 부드럽게 변하도록 */
     display: flex !important;
-    justify-content: center !important; 
-    align-items: center !important; 
-    line-height: 1 !important; /* 내부 줄간격 오차 완벽 제거 */
+    align-items: center !important;
 }
 
-/* 5. 버튼 내부 텍스트(p) 요소가 버튼 밖으로 튀어나가거나 밀리지 않도록 완전 종속 */
+/* 마지막 버튼은 파이프(|) 선 제거 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button {
+    border-right: none !important;
+}
+
+/* 4. 버튼 내부 텍스트(p) 요소 속성 동기화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
+    color: inherit !important;
     font-size: 15px !important;
     font-weight: 600 !important;
     margin: 0 !important;
     padding: 0 !important;
     line-height: 1 !important;
-    white-space: nowrap !important;
-    display: inline-block !important;
-    color: inherit !important;
 }
 
+/* 5. 마우스 호버 효과: 버튼 배경색이 아닌 '글씨 색'만 파란색으로 변경 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    background: #f9fafb !important; 
-    border-color: #9ca3af !important; 
-    color: #1f2937 !important;
+    color: #007bff !important; 
+    background: transparent !important; 
+    border-color: #d1d5db !important; /* 마우스 올려도 구분선 색상 유지 */
 }
 </style>
 """
