@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import warnings
 import google.generativeai as genai
-import Andy_pension_v2
+import andy_pension_v2
 import os
 import re
 
@@ -157,7 +157,7 @@ st.markdown(css, unsafe_allow_html=True)
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
-    with st.spinner("데이터 업데이트 중..."): Andy_pension_v2.generate_asset_data()
+    with st.spinner("데이터 업데이트 중..."): andy_pension_v2.generate_asset_data()
     st.session_state['init'] = True
     st.cache_data.clear()
 
@@ -220,7 +220,7 @@ c1, c2 = st.columns([8.5, 1.5])
 with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
     if st.button("🔄 업데이트", use_container_width=True):
-        Andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
+        andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
@@ -241,7 +241,7 @@ st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</
 
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span>/ 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
+    <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
     <div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 25.8월 : 퇴직연금(DC/IRP), ISA(중개형), 25.11월 : 연금저축(CMA) ]</div>
 </div>
 """, unsafe_allow_html=True)
@@ -295,7 +295,7 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span>/ 총 수익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 수익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
 h2 = [unit_html, """
 <table class='main-table'>
@@ -349,24 +349,24 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (공백 완벽히 제거 및 버튼 텍스트 자체에 슬래시 병합)
+# ZAPPA 메뉴 버튼들 (공백 및 슬래시 완벽히 제거)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_init = (st.session_state.sort_mode == 'init')
-    if st.button("🛠️ 초기화 [ ● ]/" if is_init else "🛠️ 초기화 [ ○ ]/", type="primary" if is_init else "secondary"): 
+    if st.button("🛠️ 초기화 [ ● ]" if is_init else "🛠️ 초기화 [ ○ ]", type="primary" if is_init else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_asset = (st.session_state.sort_mode == 'asset')
-    if st.button("💰 총 자산 [ ● ]/" if is_asset else "💰 총 자산 [ ○ ]/", type="primary" if is_asset else "secondary"):  
+    if st.button("💰 총 자산 [ ● ]" if is_asset else "💰 총 자산 [ ○ ]", type="primary" if is_asset else "secondary"):  
         st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
     is_profit = (st.session_state.sort_mode == 'profit')
-    if st.button("📊 평가손익 [ ● ]/" if is_profit else "📊 평가손익 [ ○ ]/", type="primary" if is_profit else "secondary"): 
+    if st.button("📊 평가손익 [ ● ]" if is_profit else "📊 평가손익 [ ○ ]", type="primary" if is_profit else "secondary"): 
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_rate = (st.session_state.sort_mode == 'rate')
-    if st.button("📈 수익률 [ ● ]/" if is_rate else "📈 수익률 [ ○ ]/", type="primary" if is_rate else "secondary"): 
+    if st.button("📈 수익률 [ ● ]" if is_rate else "📈 수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_code = st.session_state.show_code
@@ -376,7 +376,7 @@ with b5:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-t3_lbl = {'DC':'퇴직연금(DC)계좌/ (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌/ (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌/ (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌/ (삼성증권 7164499007-29)'}
+t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
 for k in keys_1:
     a = data[k]
@@ -399,7 +399,7 @@ for k in keys_1:
         
         header_html = f"""
         <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
-            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span>/ 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
+            <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div>
             {extra_info_html}
         </div>
         """
