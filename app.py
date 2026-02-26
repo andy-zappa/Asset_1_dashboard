@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 완벽한 대칭 & 찌꺼기 선 원천 차단
+   [ZAPPA 플로팅 배너 CSS] 첨부 이미지와 완벽하게 동일한 텍스트형 디자인 구현
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -62,10 +62,10 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: none !important;
     width: max-content !important;
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 8px 6px !important; 
-    border-radius: 8px !important; 
+    padding: 6px 4px !important; /* 배너 겉 테두리 여유 공간을 이미지 비율에 맞춤 */
+    border-radius: 6px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
-    border: 1px solid #e5e7eb !important;
+    border: 1.5px solid #999 !important; /* 진한 회색 테두리 반영 */
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
@@ -81,41 +81,41 @@ div.element-container:has(#zappa-floating-menu) {
     padding: 0 !important; 
 }
 
+/* 컬럼은 모든 여백/선을 지우고 껍데기 역할만 하도록 수정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
     flex: 0 0 auto !important; 
     width: auto !important; 
     min-width: 0 !important; 
-    padding: 0 14px !important; 
+    padding: 0 !important; 
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    border-right: 1.5px solid #d1d5db !important; 
-}
-
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child { 
-    border-right: none !important; 
+    border: none !important; 
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] { 
     margin: 0 !important; 
     padding: 0 !important; 
     width: auto !important; 
+}
+
+/* 버튼 본체에 테두리를 주되 높이를 글자크기(16px)와 맞춰 짧은 '선' 형태 구현 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
+    width: auto !important; 
     background: transparent !important; 
     border: none !important; 
+    border-right: 1.5px solid #a3a3a3 !important; /* 텍스트형 파이프(|) 효과 */
     border-radius: 0 !important; 
-    height: 24px !important; 
-    min-height: 24px !important; 
-    color: #9ca3af !important; 
+    padding: 0 12px !important; /* 좌우 완벽 대칭 여백 */
+    height: 16px !important; /* 높이를 확 줄여서 텍스트처럼 보이게 만듦 */
+    min-height: 16px !important; 
+    color: #8c8c8c !important; 
     font-size: 15px !important; 
-    font-weight: 600 !important; 
+    font-weight: 500 !important; 
     white-space: nowrap !important; 
     box-shadow: none !important; 
     transition: color 0.1s ease !important; 
@@ -124,10 +124,19 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     justify-content: center !important; 
 }
 
+/* 마지막 버튼 우측 선은 무조건 삭제 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button { 
+    border-right: none !important; 
+}
+
+/* Streamlit 내부 텍스트(p) 정렬 보정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p { 
     color: inherit !important; 
-    font-size: 14.5px !important; 
+    font-size: 15px !important; 
     font-weight: inherit !important; 
     margin: 0 !important; 
     padding: 0 !important; 
@@ -142,12 +151,22 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
     background: transparent !important; 
 }
 
+/* 클릭(활성화) 시 진한 검은색 유지, 우측 구분선은 그대로 유지 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     background: transparent !important; 
     border: none !important; 
+    border-right: 1.5px solid #a3a3a3 !important; 
     color: #111111 !important; 
     font-weight: 800 !important; 
+}
+
+/* 마지막 버튼의 활성화 시 구분선 역시 삭제 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"] { 
+    border-right: none !important; 
 }
 </style>
 """
@@ -235,7 +254,6 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
 
-# [수정] 안내 텍스트 띄어쓰기 변경 (DC/IRP)
 st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'>
     <div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산',0))}</span> / 총 수익 : <span class='summary-val {col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>
@@ -348,28 +366,28 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들
+# ZAPPA 메뉴 버튼들 (텍스트 띄어쓰기 완전 제거하여 이미지와 동일하게)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_init = (st.session_state.sort_mode == 'init')
-    if st.button("초기화 △" if not is_init else "초기화 ▲", type="primary" if is_init else "secondary"): 
+    if st.button("초기화△" if not is_init else "초기화▲", type="primary" if is_init else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_asset = (st.session_state.sort_mode == 'asset')
-    if st.button("총자산 △" if not is_asset else "총자산 ▲", type="primary" if is_asset else "secondary"): 
+    if st.button("총자산△" if not is_asset else "총자산▲", type="primary" if is_asset else "secondary"): 
         st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
     is_profit = (st.session_state.sort_mode == 'profit')
-    if st.button("평가손익 △" if not is_profit else "평가손익 ▲", type="primary" if is_profit else "secondary"): 
+    if st.button("평가손익△" if not is_profit else "평가손익▲", type="primary" if is_profit else "secondary"): 
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_rate = (st.session_state.sort_mode == 'rate')
-    if st.button("수익률 △" if not is_rate else "수익률 ▲", type="primary" if is_rate else "secondary"): 
+    if st.button("수익률△" if not is_rate else "수익률▲", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_code = st.session_state.show_code
-    if st.button("종목코드 [ - ]" if not is_code else "종목코드 [ + ]", type="primary" if is_code else "secondary"): 
+    if st.button("종목코드[-]" if not is_code else "종목코드[+]", type="primary" if is_code else "secondary"): 
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
