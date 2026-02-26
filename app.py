@@ -33,18 +33,19 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 이미지 2 스타일로 원상복구 🔥
+   [ZAPPA 플로팅 배너 CSS] 이미지 2(image_7c8084.png) 스타일 복구 🔥
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 35px !important;
     right: 50% !important;
-    transform: translateX(50%) !important; /* 화면 중앙 정렬 */
+    left: auto !important;
+    transform: translateX(50%) !important; 
     width: max-content !important; 
     background: #FFFFFF !important; 
-    padding: 5px 25px !important; /* 이미지 2의 얇은 느낌 재현 */
-    border-radius: 50px !important; /* 완전한 라운드 형태 */
+    padding: 5px 25px !important; 
+    border-radius: 50px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
     border: 1px solid #e0e0e0 !important;
     z-index: 999999 !important;
@@ -57,7 +58,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
 
 div.element-container:has(#zappa-floating-menu) { display: none !important; }
 
-/* 버튼 내부 텍스트 및 투명화 설정 (이미지 2의 텍스트 버튼 스타일) */
+/* 버튼 내부 텍스트 투명화 (이미지 2의 심플한 텍스트 스타일) */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"] button { 
     background: transparent !important; 
     border: none !important; 
@@ -89,6 +90,7 @@ if 'init' not in st.session_state:
     st.session_state['init'] = True
     st.cache_data.clear()
 
+# --- 사이드바 ZAPPA 엔진 ---
 with st.sidebar:
     st.markdown("""<div style='display:flex; align-items:center; gap:10px; margin-bottom:20px;'><span class='zappa-icon'>🤖</span><span style='font-size:22px; font-weight:bold; color:#333;'>ZAPPA AI 코딩 엔진</span></div>""", unsafe_allow_html=True)
     try:
@@ -163,9 +165,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 h1 = [unit_html, "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"]
-ty, tg, ta, to = tot.get('수익률(%)',0), tot.get('총 수익',0), tot.get('총 자산',0), tot.get('원금합',0)
-td7, td15, td30 = (ta - tot.get('평가손익(7일전)', 0)) - to, (ta - tot.get('평가손익(15일전)', 0)) - to, (ta - tot.get('평가손익(30일전)', 0)) - to
-h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7)}'>{fmt(td7, True)}</td><td class='{col(td15)}'>{fmt(td15, True)}</td><td class='{col(td30)}'>{fmt(td30, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
+ta, to = tot.get('총 자산',0), tot.get('원금합',0)
+h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tot.get('총 수익'))}'>{fmt(tot.get('총 수익'), True)}</td><td>{fmt((ta-tot.get('평가손익(7일전)',0))-to, True)}</td><td>{fmt((ta-tot.get('평가손익(15일전)',0))-to, True)}</td><td>{fmt((ta-tot.get('평가손익(30일전)',0))-to, True)}</td><td class='{col(tot.get('수익률(%)'))}'>{fmt_p(tot.get('수익률(%)'))}</td><td>{fmt(to)}</td></tr>")
 
 keys_sorted = [k for k in FIXED_ACCOUNT_ORDER if k in data]
 if st.session_state.sort_mode == 'asset': keys_sorted.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
@@ -174,29 +175,27 @@ elif st.session_state.sort_mode == 'rate': keys_sorted.sort(key=lambda k: data[k
 
 for k in keys_sorted:
     a = data[k]
-    curr_asset, prn = a['총 자산'], a['원금']
-    h1.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(curr_asset)}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col((curr_asset-a.get('평가손익(7일전)',0))-prn)}'>{fmt((curr_asset-a.get('평가손익(7일전)',0))-prn, True)}</td><td class='{col((curr_asset-a.get('평가손익(15일전)',0))-prn)}'>{fmt((curr_asset-a.get('평가손익(15일전)',0))-prn, True)}</td><td class='{col((curr_asset-a.get('평가손익(30일전)',0))-prn)}'>{fmt((curr_asset-a.get('평가손익(30일전)',0))-prn, True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(prn)}</td></tr>")
+    cur, prn = a['총 자산'], a['원금']
+    h1.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(cur)}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col((cur-a.get('평가손익(7일전)',0))-prn)}'>{fmt((cur-a.get('평가손익(7일전)',0))-prn, True)}</td><td class='{col((cur-a.get('평가손익(15일전)',0))-prn)}'>{fmt((cur-a.get('평가손익(15일전)',0))-prn, True)}</td><td class='{col((cur-a.get('평가손익(30일전)',0))-prn)}'>{fmt((cur-a.get('평가손익(30일전)',0))-prn, True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(prn)}</td></tr>")
 h1.append("</table>")
 st.markdown("".join(h1), unsafe_allow_html=True)
 
 # --- [2] 매입금액 대비 자산 현황 ---
-ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
-ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 수익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(tot.get('총 자산'))}</span> / 총 수익 : <span class='summary-val {col(ta-tot.get('매입금액합'))}'>{fmt(ta-tot.get('매입금액합'), True)} ({fmt_p((ta-tot.get('매입금액합'))/tot.get('매입금액합',1)*100)})</span></div>", unsafe_allow_html=True)
 
 h2 = [unit_html, "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"]
-h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td>{fmt(tot.get('평가손익(1일전)',0), True)}</td><td>{fmt(tot.get('평가손익(7일전)',0), True)}</td><td>{fmt(tot.get('평가손익(30일전)',0), True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
+h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(ta-tot.get('매입금액합'))}'>{fmt(ta-tot.get('매입금액합'), True)}</td><td>{fmt(tot.get('평가손익(1일전)',0), True)}</td><td>{fmt(tot.get('평가손익(7일전)',0), True)}</td><td>{fmt(tot.get('평가손익(30일전)',0), True)}</td><td class='{col((ta-tot.get('매입금액합'))/tot.get('매입금액합',1)*100)}'>{fmt_p((ta-tot.get('매입금액합'))/tot.get('매입금액합',1)*100)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
 for k in keys_sorted:
     a = data[k]
     ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
     ap_acc = a.get('총 자산',0) - ag_acc
-    h2.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td>{fmt(a.get('평가손익(1일전)',0), True)}</td><td>{fmt(a.get('평가손익(7일전)',0), True)}</td><td>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col((ag_acc/ap_acc*100) if ap_acc>0 else 0)}'>{fmt_p((ag_acc/ap_acc*100) if ap_acc>0 else 0)}</td><td>{fmt(ap_acc)}</td></tr>")
+    h2.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(a['총 자산'])}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td>{fmt(a.get('평가손익(1일전)',0), True)}</td><td>{fmt(a.get('평가손익(7일전)',0), True)}</td><td>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(ag_acc/ap_acc*100 if ap_acc>0 else 0)}'>{fmt_p(ag_acc/ap_acc*100 if ap_acc>0 else 0)}</td><td>{fmt(ap_acc)}</td></tr>")
 h2.append("</table>")
 st.markdown("".join(h2), unsafe_allow_html=True)
 
-# --- [3] 계좌별 상세 내역 (ZAPPA 플로팅 메뉴) ---
+# --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
@@ -214,7 +213,7 @@ with b5:
 st.markdown("<br>", unsafe_allow_html=True)
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-# 중요: 상세 현황 섹션은 FIXED_ACCOUNT_ORDER를 사용하여 계좌 순서를 고정함
+# 중요: [3] 상세 현황 섹션은 FIXED_ACCOUNT_ORDER 순서로 고정 출력 (정렬과 무관)
 for k in FIXED_ACCOUNT_ORDER:
     if k not in data: continue
     a = data[k]
@@ -224,7 +223,8 @@ for k in FIXED_ACCOUNT_ORDER:
         st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a['총 자산'])}</span> / 총 수익 : <span class='summary-val {col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span></div><div style='font-size:14.5px; color:#555;'>[ 위험자산 : {100.0-safe_pct:.1f}% | 안전자산 : {safe_pct:.1f}% ]</div></div>", unsafe_allow_html=True)
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
-        h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"]
+        # 문법 에러 해결 ( line 227 )
+        h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
         if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
         elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
