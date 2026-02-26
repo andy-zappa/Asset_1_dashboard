@@ -45,68 +45,81 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [완벽 해결 5] 박스 제거 & 텍스트 형태의 플로팅 배너 (알약 디자인)
+   [완벽 해결 6] 줄맞춤 오류 완전 해결 & 검은색/회색 반응형 텍스트
    ========================================================= */
 
-/* 1. 배너 틀: 슬림하고 둥근 알약(Pill) 형태로 화면 하단 중앙 배치 */
+/* 1. 배너 틀: 직사각형에 모서리만 살짝 둥글게(8px) */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     left: 50% !important; 
     transform: translateX(-50%) !important; 
-    background: rgba(255, 255, 255, 0.95) !important;
-    padding: 8px 15px !important; /* 위아래 패딩을 확 줄여서 슬림하게 */
-    border-radius: 50px !important; /* 완전 둥근 알약 형태 */
+    background: rgba(255, 255, 255, 0.98) !important;
+    padding: 10px 15px !important; /* 상하 여백 밸런스 */
+    border-radius: 8px !important; /* 모서리 살짝 둥근 직사각형 */
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     justify-content: center !important; 
     align-items: center !important; 
-    gap: 0 !important; /* CSS 선으로 구분할 거라 gap은 0으로 */
+    gap: 0 !important; 
     width: max-content !important; 
 }
 
-/* 2. Streamlit 컬럼 분할 속성 전면 무력화 */
+/* 2. 유령 마커(초기화 드롭의 원인) 완벽히 소멸 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stMarkdownContainer"]:has(#zappa-floating-menu) {
+    display: none !important;
+    position: absolute !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 3. Streamlit 컬럼 분할 속성 강제 고정 (가운데 정렬) */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important; 
     width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
-/* 버튼 껍데기(컨테이너) 정렬 초기화 */
+/* 버튼 껍데기(컨테이너) 여백 초기화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] {
     margin: 0 !important;
     padding: 0 !important;
 }
 
-/* 3. 버튼 본체: 텍스트 링크처럼 보이도록 모든 껍데기 제거 + 우측 구분선(|) 추가 */
+/* 4. 버튼 본체: 텍스트 링크처럼 만들고 우측 파이프(|) 구분선 삽입 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
-    background: transparent !important; /* 배경 투명 */
-    border: none !important; /* 기본 테두리 제거 */
-    border-right: 1.5px solid #d1d5db !important; /* 파이프(|) 구분선 역할 */
-    border-radius: 0 !important; /* 각지게 만들어서 선이 똑바로 서게 함 */
-    padding: 0 16px !important; /* 텍스트 좌우 여백 */
-    height: 20px !important; /* 높이를 글자 크기에 맞춰 대폭 축소 */
-    min-height: 20px !important;
-    color: #6b7280 !important; /* 기본 회색 글씨 */
+    background: transparent !important; 
+    border: none !important; 
+    border-right: 1.5px solid #d1d5db !important; /* 파이프(|) 구분선 */
+    border-radius: 0 !important; 
+    padding: 0 18px !important; /* 글자 양옆으로 정확히 2칸 여백 */
+    height: 24px !important; /* 높이 고정으로 글씨 흔들림 방지 */
+    min-height: 24px !important;
+    color: #8c8c8c !important; /* 기본 컬러: 회색 */
     font-size: 15px !important; 
     font-weight: 600 !important; 
     white-space: nowrap !important; 
-    box-shadow: none !important; /* 버튼 그림자 완전 제거 */
-    transition: color 0.2s ease !important; /* 글씨 색만 부드럽게 변하도록 */
+    box-shadow: none !important; 
+    transition: color 0.1s ease !important; 
     display: flex !important;
     align-items: center !important;
 }
 
-/* 마지막 버튼은 파이프(|) 선 제거 */
+/* 마지막 '종목코드' 버튼은 우측 파이프(|) 선 제거 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button {
     border-right: none !important;
 }
 
-/* 4. 버튼 내부 텍스트(p) 요소 속성 동기화 */
+/* 5. 버튼 내부 텍스트(p) 요소 상속 속성 고정 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     color: inherit !important;
     font-size: 15px !important;
@@ -116,11 +129,24 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     line-height: 1 !important;
 }
 
-/* 5. 마우스 호버 효과: 버튼 배경색이 아닌 '글씨 색'만 파란색으로 변경 */
+/* 6. 호버(Hover) 시 검은색으로 변경 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    color: #007bff !important; 
+    color: #111111 !important; /* 마우스 올리면 검은색 */
     background: transparent !important; 
-    border-color: #d1d5db !important; /* 마우스 올려도 구분선 색상 유지 */
+}
+
+/* 7. 클릭된(Active) 상태의 버튼 디자인 (Streamlit primary 속성 우회 활용) */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primaryFormSubmit"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] {
+    background: transparent !important; /* Streamlit 기본 빨간색 배경 제거 */
+    border: none !important;
+    border-right: 1.5px solid #d1d5db !important; /* 파이프라인 유지 */
+    color: #111111 !important; /* 클릭된 글자 유지: 검은색 */
+}
+
+/* primary 버튼의 마지막 요소 파이프 제거 덮어쓰기 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"] {
+    border-right: none !important;
 }
 </style>
 """
@@ -293,18 +319,31 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
+# 투명 마커를 컬럼(b1) 바깥으로 완전히 빼내어 공간 왜곡을 원천 차단했습니다.
+st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
+
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
-    st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
-    if st.button("초기화 ▲" if st.session_state.sort_mode == 'init' else "초기화 △"): st.session_state.sort_mode = 'init'; st.rerun()
+    is_active = (st.session_state.sort_mode == 'init')
+    if st.button("초기화 ▲" if is_active else "초기화 △", type="primary" if is_active else "secondary"): 
+        st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
-    if st.button("총 자산 ▲" if st.session_state.sort_mode == 'asset' else "총 자산 △"): st.session_state.sort_mode = 'asset'; st.rerun()
+    is_active = (st.session_state.sort_mode == 'asset')
+    if st.button("총 자산 ▲" if is_active else "총 자산 △", type="primary" if is_active else "secondary"): 
+        st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
-    if st.button("평가손익 ▲" if st.session_state.sort_mode == 'profit' else "평가손익 △"): st.session_state.sort_mode = 'profit'; st.rerun()
+    is_active = (st.session_state.sort_mode == 'profit')
+    if st.button("평가손익 ▲" if is_active else "평가손익 △", type="primary" if is_active else "secondary"): 
+        st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
-    if st.button("수익률 ▲" if st.session_state.sort_mode == 'rate' else "수익률 △"): st.session_state.sort_mode = 'rate'; st.rerun()
+    is_active = (st.session_state.sort_mode == 'rate')
+    if st.button("수익률 ▲" if is_active else "수익률 △", type="primary" if is_active else "secondary"): 
+        st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
-    if st.button("종목코드 표시 ▼" if st.session_state.show_code else "종목코드 숨김 ▲"): st.session_state.show_code = not st.session_state.show_code; st.rerun()
+    is_active = st.session_state.show_code
+    lbl = "종목코드 [ - ]" if is_active else "종목코드 [ + ]"
+    if st.button(lbl, type="primary" if is_active else "secondary"): 
+        st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
