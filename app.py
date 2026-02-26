@@ -287,7 +287,26 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
-            st.markdown(f"**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span>**", unsafe_allow_html=True)
+            
+            # ==========================================
+            # [추가 요청 반영] DC 및 IRP 계좌의 안전/위험자산 비중 계산
+            # ==========================================
+            extra_info = ""
+            if k in ['DC', 'IRP']:
+                safe_pct = 0.0
+                for item in a.get('상세', []):
+                    if item.get('종목명') == "[ 합계 ]": 
+                        continue
+                    if k == 'DC' and item.get('종목명') in ['삼성화재 퇴직연금(3.05%/年)', '현금성자산']:
+                        safe_pct += item.get('비중', 0)
+                    elif k == 'IRP' and item.get('종목명') == '현금성자산':
+                        safe_pct += item.get('비중', 0)
+                
+                risky_pct = 100.0 - safe_pct
+                extra_info = f" / [위험자산 : {risky_pct:.1f}% | 안전자산 : {safe_pct:.1f}%]"
+            
+            # 총자산, 총수익 정보 뒤에 extra_info 병합
+            st.markdown(f"**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span>{extra_info}**", unsafe_allow_html=True)
             
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code: h3.append("<th>종목코드</th>")
