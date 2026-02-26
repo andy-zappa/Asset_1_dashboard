@@ -9,7 +9,7 @@ import re
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="Andy's Asset Dashboard")
 
-css = """
+css = ""
 <style>
 .block-container{padding-top:3rem!important;padding-bottom:5rem!important;}
 h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
@@ -116,3 +116,4 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
 /* 마지막 '종목코드' 버튼은 우측 파이프(|) 선 제거 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button {
     border-right
+
