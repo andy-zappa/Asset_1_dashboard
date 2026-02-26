@@ -160,7 +160,7 @@ def generate_asset_data():
             sub_info.append({
                 "종목명": title, "코드": code, "총 자산": asset, "평가손익": gain, 
                 "1일전": px['d1']*qty, "7일전": px['d7']*qty, "15일전": px['d15']*qty, "30일전": px['d30']*qty,
-                "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
+                "손익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
                 "수량": qty, "매입가": avg_p, "현재가": curr
             })
             
@@ -169,7 +169,7 @@ def generate_asset_data():
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sub_info.insert(0, {
             "종목명": "[ 합계 ]", "코드": "-", "비중": 100.0, "총 자산": a_asset, "평가손익": a_val_gain, 
-            "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, "수량": "-", "매입가": "-", "현재가": "-"
+            "손익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, "수량": "-", "매입가": "-", "현재가": "-"
         })
         
         t_asset += a_asset
@@ -181,7 +181,7 @@ def generate_asset_data():
         
         assets_json[acc_key] = {
             "label": acc_label, "총 자산": a_asset, "원금": p_val, 
-            "총 수익": a_asset - p_val, "수익률(%)": ((a_asset - p_val) / p_val * 100) if p_val > 0 else 0, 
+            "총 손익": a_asset - p_val, "손익률(%)": ((a_asset - p_val) / p_val * 100) if p_val > 0 else 0, 
             "평가손익(1일전)": a_diff_1, "평가손익(7일전)": a_diff_7, "평가손익(15일전)": a_diff_15, "평가손익(30일전)": a_diff_30, 
             "상세": sub_info
         }
@@ -189,7 +189,7 @@ def generate_asset_data():
     t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
     
     assets_json["_total"] = {
-        "총 자산": t_asset, "원금합": t_p_effective, "총 수익": t_asset-t_p_effective, "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
+        "총 자산": t_asset, "원금합": t_p_effective, "총 손익": t_asset-t_p_effective, "손익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
         "평가손익(1일전)": t_diff_1, "평가손익(7일전)": t_diff_7, "평가손익(15일전)": t_diff_15, "평가손익(30일전)": t_diff_30, 
         "매입금액합": t_avg_buy, "조회시간": fetch_time
     }
@@ -200,13 +200,13 @@ def generate_asset_data():
     try:
         t_buy_profit = t_asset - t_avg_buy
         t_buy_rate = (t_buy_profit / t_avg_buy * 100) if t_avg_buy > 0 else 0
-        t_prin_rate = assets_json['_total'].get('수익률(%)', 0)
+        t_prin_rate = assets_json['_total'].get('손익률(%)', 0)
         
         buy_rate_str = f"▲{t_buy_rate:.1f}%" if t_buy_rate > 0 else (f"▼{abs(t_buy_rate):.1f}%" if t_buy_rate < 0 else "0.0%")
         prin_rate_str = f"▲{t_prin_rate:.1f}%" if t_prin_rate > 0 else (f"▼{abs(t_prin_rate):.1f}%" if t_prin_rate < 0 else "0.0%")
-        b1 = f"• 현재 절세계좌 자산 총액은 {t_asset:,}원, 평가손익은 {t_buy_profit:,}원 / 전일비 ({t_diff_1:+,}원) 으로 매입금액比 {buy_rate_str} (투자원금比 {prin_rate_str}) 수익률을 나타내고 있습니다."
+        b1 = f"• 현재 절세계좌 자산 총액은 {t_asset:,}원, 평가손익은 {t_buy_profit:,}원 / 전일비 ({t_diff_1:+,}원) 으로 매입금액比 {buy_rate_str} (투자원금比 {prin_rate_str}) 손익률을 나타내고 있습니다."
 
-        acc_list = [{"name": assets_json[k]['label'].split(' (')[0], "rate": assets_json[k]['수익률(%)'], "profit": assets_json[k]['총 수익']} for k in ACC_MAP.values() if k in assets_json]
+        acc_list = [{"name": assets_json[k]['label'].split(' (')[0], "rate": assets_json[k]['손익률(%)'], "profit": assets_json[k]['총 손익']} for k in ACC_MAP.values() if k in assets_json]
         acc_list.sort(key=lambda x: x['rate'], reverse=True)
 
         b2_parts = []
@@ -215,7 +215,7 @@ def generate_asset_data():
             p_mil = round(x['profit'] / 1000000, 1)
             p_str = f"+{p_mil:.1f}백만" if p_mil > 0 else (f"{p_mil:.1f}백만" if p_mil < 0 else "0.0백만")
             b2_parts.append(f"{x['name']} {r_str}({p_str})")
-        b2 = "• 수익률은 " + " / ".join(b2_parts)
+        b2 = "• 손익률은 " + " / ".join(b2_parts)
 
         us_etfs = ['TIGER 미국S&P500', 'KODEX 미국나스닥100', 'TIGER 미국필라델피아반도체나스닥', 'TIGER 미국배당다우존스', 'KODEX 나스닥데일리', 'KODEX AI테크TOP']
         kr_etfs = ['KODEX 200', 'PLUS 고배당주', 'KODEX 200타겟위클리커버드콜', 'RISE 200위클리커버드콜']
@@ -234,7 +234,7 @@ def generate_asset_data():
                     stock_agg[name]['gain'] += item.get('평가손익', 0)
                     stock_agg[name]['d1'] += item.get('1일전', 0)
                     if name not in stock_acc_details: stock_acc_details[name] = []
-                    stock_acc_details[name].append((acc_clean_name, item.get('수익률(%)', 0), item.get('평가손익', 0)))
+                    stock_acc_details[name].append((acc_clean_name, item.get('손익률(%)', 0), item.get('평가손익', 0)))
 
         us_stats, kr_stats = [], []
         us_total_gain, kr_total_gain, us_d1, kr_d1 = 0, 0, 0, 0
