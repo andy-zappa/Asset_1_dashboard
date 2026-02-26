@@ -275,15 +275,79 @@ def generate_asset_data():
         "조회시간": fetch_time
     }
     
-    assets_json["_insight"] = [
-        f"조회 기준 시간: {fetch_time}", 
-        f"a) 단기 및 중장기 흐름: 1일 전 대비 {t_diff_1:+,d}원, 30일 전 대비 {t_diff_30:+,d}원의 자산 변동이 발생했습니다.", 
-        f"b) ETF 분석: 전체 손익률 {assets_json['_total']['손익률(%)']:+.2f}% 형성에 미국 지수형 ETF가 기여 중입니다.", 
-        "c) 종목 영향: 커버드콜 전략이 하방 경직성을 확보하고 있습니다.", 
-        f"d) 원인 파악: 총자본 대비 손익금 {t_asset-t_p_effective:,d}원은 시장 상황이 반영된 결과입니다.", 
-        f"e) 향후 전망: 현재 원금 대비 {assets_json['_total']['손익률(%)']:+.2f}% 성과를 유지하며 밸런스를 유지하십시오."
-    ]
-    
+    # [인사이트 분석 로직]
+    try:
+        acc_list = [{"name": assets_json[k]['label'].split(' (')[0], "rate": assets_json[k]['손익률(%)'], "profit": assets_json[k]['총 손익']} for k in ACC_MAP.values() if k in assets_json]
+        acc_list.sort(key=lambda x: x['rate'], reverse=True)
+
+        us_etfs = ['TIGER 미국S&P500', 'KODEX 미국나스닥100', 'TIGER 미국필라델피아반도체나스닥', 'TIGER 미국배당다우존스', 'KODEX 나스닥데일리', 'KODEX AI테크TOP']
+        kr_etfs = ['KODEX 200', 'PLUS 고배당주', 'KODEX 200타겟위클리커버드콜', 'RISE 200위클리커버드콜']
+
+        stock_agg = {}
+        stock_acc_details = {}
+
+        for k in ACC_MAP.values():
+            if k in assets_json:
+                acc_clean_name = assets_json[k]['label'].split(' (')[0]
+                for item in assets_json[k]['상세']:
+                    name = item.get('종목명', '')
+                    if name == '[ 합계 ]' or '현금' in name or '삼성화재' in name or 'MMF' in name: continue
+                    if name not in stock_agg: stock_agg[name] = {'buy': 0, 'gain': 0, 'd1': 0}
+                    stock_agg[name]['buy'] += (item.get('수량', 0) * item.get('매입가', 0))
+                    stock_agg[name]['gain'] += item.get('평가손익', 0)
+                    stock_agg[name]['d1'] += item.get('1일전', 0)
+                    if name not in stock_acc_details: stock_acc_details[name] = []
+                    stock_acc_details[name].append((acc_clean_name, item.get('손익률(%)', 0), item.get('평가손익', 0)))
+
+        us_stats, kr_stats = [], []
+        us_total_gain, kr_total_gain, us_d1, kr_d1 = 0, 0, 0, 0
+        
+        for name, data in stock_agg.items():
+            rate = (data['gain'] / data['buy'] * 100) if data['buy'] > 0 else 0
+            rate_str = f"▲{rate:.2f}%" if rate > 0 else (f"▼{abs(rate):.2f}%" if rate < 0 else "0.00%")
+            if name in us_etfs:
+                us_stats.append(f"{name} <span style='color:red;'>{rate_str}</span>" if rate > 0 else f"{name} <span style='color:blue;'>{rate_str}</span>"); us_total_gain += data['gain']; us_d1 += data['d1']
+            elif name in kr_etfs:
+                kr_stats.append(f"{name} <span style='color:red;'>{rate_str}</span>" if rate > 0 else f"{name} <span style='color:blue;'>{rate_str}</span>"); kr_total_gain += data['gain']; kr_d1 += data['d1']
+
+        b3 = f"• 미국 ETF 장기간 횡보 속에({', '.join(us_stats)}) 코스피 등 한국 ETF가 전체 평가 손익을 주도하고 있습니다."
+
+        sorted_stocks = sorted(stock_acc_details.keys(), key=lambda x: sum(p for a, r, p in stock_acc_details[x]), reverse=True)
+        circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+        b4_parts = []
+
+        for idx, name in enumerate(sorted_stocks):
+            if idx >= 5: break 
+            acc_strs = []
+            sorted_accs = sorted(stock_acc_details[name], key=lambda x: x[2], reverse=True)
+            for a_name, r, p in sorted_accs:
+                r_str = f"▲{r:.2f}%" if r > 0 else (f"▼{abs(r):.2f}%" if r < 0 else "0.00%")
+                p_mil = round(p / 1000000, 2)
+                p_str = f"+{p_mil:.2f}백만" if p_mil > 0 else (f"{p_mil:.2f}백만" if p_mil < 0 else "0.00백만")
+                colored_r_str = f"<span style='color:red;'>{r_str}</span>" if r > 0 else f"<span style='color:blue;'>{r_str}</span>"
+                acc_strs.append(f"{a_name} {colored_r_str}({p_str})")
+            num_char = circle_nums[idx] if idx < len(circle_nums) else str(idx+1)
+            eval_word = "우수하고" if idx < 3 else "부진합니다."
+            if idx == 2:
+                b4_parts.append(f"<br>&nbsp;&nbsp;&nbsp;&nbsp;{num_char} {name} : {', '.join(acc_strs)} 이 우수하고<br>&nbsp;&nbsp;&nbsp;&nbsp;상대적으로 ")
+            elif idx == 3:
+                b4_parts.append(f"{num_char} {name} : {', '.join(acc_strs)}<br>&nbsp;&nbsp;&nbsp;&nbsp;")
+            else:
+                b4_parts.append(f"{num_char} {name} : {', '.join(acc_strs)}")
+
+        b4 = f"• 종목별로는 " + "".join(b4_parts) + " 부진합니다."
+
+        if us_d1 > 0 and kr_d1 > 0: market_flow = "간밤 미국 기술주와 나스닥 지수가 상승세를 보인 훈풍이 한국 증시로 이어지며, 코스피 관련 ETF 역시 동반 상승하는 강세장을 기록 중입니다. 현재의 긍정적 흐름을 유지하되 많이 오른 종목의 부분 익절을 통한 리밸런싱을 고려해 볼 시점입니다."
+        elif us_d1 < 0 and kr_d1 > 0: market_flow = "간밤 미국 빅테크 및 나스닥 증시가 조정을 받으며 하락했으나, 투자 자금이 한국 등 신흥국으로 순환매되며 코스피 관련 종목은 오히려 상승 흐름을 주도하고 있습니다. 미국장 변동성에 대비하여 방어력을 점검할 필요가 있습니다."
+        elif us_d1 > 0 and kr_d1 < 0: market_flow = "미국 기술주와 나스닥은 견조한 상승 흐름을 유지하고 있으나, 외국인 수급 이탈 및 관망세로 인해 코스피가 다소 하락 및 쉬어가는 장세를 보이고 있습니다. 당분간 미국 위주의 포트폴리오 비중을 유지하며 국내 증시의 반등을 대기하는 것이 좋습니다."
+        else: market_flow = "고용지표 및 매크로 불확실성에 따른 글로벌 증시 변동성이 커진 상황으로, 미국 증시와 한국 코스피가 모두 조정을 겪으며 전반적인 하락세를 보이고 있습니다. 무리한 추격 매수보다는 현금 비중을 확보하며 보수적인 관리가 필요한 시점입니다."
+        b5 = f"• {market_flow}"
+
+        assets_json["_insight"] = [b3, b4, b5]
+
+    except Exception as e:
+        assets_json["_insight"] = [f"💡 데이터 요약 중 내부 오류가 발생했습니다. : {str(e)}"]
+
     with open("assets.json", "w", encoding="utf-8") as f: 
         json.dump(assets_json, f, ensure_ascii=False, indent=2)
         
