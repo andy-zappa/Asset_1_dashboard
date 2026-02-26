@@ -217,7 +217,8 @@ if not data: st.stop()
 tot = data.get("_total", {})
 
 c1, c2 = st.columns([8.5, 1.5])
-with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
+# 타이틀 수정 반영
+with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
@@ -225,7 +226,8 @@ with c2:
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
 if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현 요약</u></span>"]
+    # 인사이트 요약 텍스트 수정 및 <u> 태그 제거
+    ins = ["<div class='insight-box'><span class='box-title'>💡 '[절세계좌] 자산 현황 요약'</span>"]
     for line in data["_insight"]:
         if "조회 기준" not in line: ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
     ins.append("</div>")
@@ -270,16 +272,15 @@ td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
 
 h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
-# 요약표 정렬
-keys_sorted_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
+keys_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
 if st.session_state.sort_mode == 'asset':
-    keys_sorted_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
+    keys_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
 elif st.session_state.sort_mode == 'profit':
-    keys_sorted_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
+    keys_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
 elif st.session_state.sort_mode == 'rate':
-    keys_sorted_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
+    keys_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
 
-for k in keys_sorted_1:
+for k in keys_1:
     a = data[k]
     curr_asset = a['총 자산']
     principal = a['원금']
@@ -379,7 +380,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-# 상세 내역 계좌 순서 고정
 for k in FIXED_ACCOUNT_ORDER:
     if k not in data: continue
     a = data[k]
@@ -411,7 +411,6 @@ for k in FIXED_ACCOUNT_ORDER:
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
         
-        # Syntax Error 수정 완료: ')' 로 닫기
         h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
