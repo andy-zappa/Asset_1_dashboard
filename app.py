@@ -105,6 +105,12 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     border-right: none !important; 
 }
 
+/* 🚨 [추가 패치] 첫 번째 버튼(초기화)의 이모지로 인한 시각적 오차 미세 보정 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child {
+    margin-right: -6px !important; /* 미세하게 오른쪽으로 당김 */
+}
+
 /* 구분선(/)을 정확히 간격의 정중앙에 배치 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after {
@@ -118,6 +124,12 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     font-size: 15px !important;
     font-weight: 600 !important;
     pointer-events: none !important;
+}
+
+/* 첫 번째 구분선은 마진 보정에 맞춰 위치 살짝 조정 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child::after,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child::after {
+    right: -11px !important;
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
@@ -174,7 +186,6 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="prim
 st.markdown(css, unsafe_allow_html=True)
 
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
-# 초기 상태는 종목코드 숨김(False)
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
     with st.spinner("데이터 업데이트 중..."): Andy_pension_v2.generate_asset_data()
