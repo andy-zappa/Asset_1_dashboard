@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 완벽한 대칭 & 찌꺼기 선 원천 차단
+   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 좌측 정렬 (겹침 방지)
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -60,15 +60,16 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     right: 30px !important;
     left: auto !important;
     transform: none !important;
-    width: max-content !important;
+    width: 630px !important; /* Andy님 요청: 가로 폭 고정으로 겹침/깨짐 완벽 방지 */
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 8px 6px !important; 
+    padding: 10px 15px !important; 
     border-radius: 8px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
+    justify-content: flex-start !important; /* Andy님 인사이트: 좌측 정렬 */
     gap: 0 !important; 
 }
 
@@ -84,13 +85,13 @@ div.element-container:has(#zappa-floating-menu) {
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
     flex: 0 0 auto !important; 
-    width: auto !important; 
-    min-width: 0 !important; 
-    padding: 0 14px !important; 
+    width: max-content !important; 
+    min-width: max-content !important; /* 텍스트 찌그러짐 원천 차단 */
+    padding: 0 12px !important; 
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
-    justify-content: center !important; 
+    justify-content: flex-start !important; /* 내부 요소도 좌측 정렬 */
     position: relative !important; 
     border-right: none !important; 
 }
@@ -100,7 +101,7 @@ div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after {
     content: "/" !important;
     position: absolute !important;
-    right: -8px !important;
+    right: -4px !important;
     top: 50% !important;
     transform: translate(50%, -50%) !important;
     color: #d1d5db !important;
@@ -129,7 +130,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     transition: color 0.1s ease !important; 
     display: flex !important; 
     align-items: center !important; 
-    justify-content: center !important; 
+    justify-content: flex-start !important; 
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
@@ -140,7 +141,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     margin: 0 !important; 
     padding: 0 !important; 
     line-height: 1 !important; 
-    text-align: center !important; 
+    text-align: left !important; 
     width: max-content !important; 
 }
 
@@ -240,6 +241,10 @@ if "_insight" in data:
 
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
+# --- 계좌 노출 순서 절대 고정 (DC -> IRP -> PENSION -> ISA) ---
+# 계좌 순서는 정렬 버튼의 영향을 받지 않도록 고정합니다.
+FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
+
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
 
@@ -274,14 +279,8 @@ td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
 
 h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
-# 테이블 1 글로벌 정렬 및 순서 고정: DC - IRP - PENSION - ISA
-keys_1 = [k for k in ['DC', 'IRP', 'PENSION', 'ISA'] if k in data]
-if st.session_state.sort_mode == 'asset':
-    keys_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
-elif st.session_state.sort_mode == 'profit':
-    keys_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
-elif st.session_state.sort_mode == 'rate':
-    keys_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
+# 테이블 1 글로벌 정렬 적용 안함 (절대 순서 고정)
+keys_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
 
 for k in keys_1:
     a = data[k]
@@ -325,22 +324,15 @@ td30_tot = tot.get('평가손익(30일전)',0)
 
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td>{fmt(td1_tot, True)}</td><td>{fmt(td7_tot, True)}</td><td>{fmt(td30_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
-# 테이블 2 글로벌 정렬 및 순서 고정: DC - IRP - PENSION - ISA
+# 테이블 2 글로벌 정렬 적용 안함 (절대 순서 고정)
 sec2_items = []
-for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+for k in FIXED_ACCOUNT_ORDER:
     if k in data:
         a = data[k]
         ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
         ap_acc = a.get('총 자산',0) - ag_acc
         ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
         sec2_items.append({'k': k, 'a': a, 'ag_acc': ag_acc, 'ap_acc': ap_acc, 'ay_acc': ay_acc})
-
-if st.session_state.sort_mode == 'asset':
-    sec2_items.sort(key=lambda x: x['a'].get('총 자산', 0), reverse=True)
-elif st.session_state.sort_mode == 'profit':
-    sec2_items.sort(key=lambda x: x['ag_acc'], reverse=True)
-elif st.session_state.sort_mode == 'rate':
-    sec2_items.sort(key=lambda x: x['ay_acc'], reverse=True)
 
 for item in sec2_items:
     a = item['a']
@@ -383,7 +375,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-# 계좌 출력 순서도 플로팅 버튼의 정렬 값(keys_1)을 따라가도록 일원화
+# 계좌 출력 순서 절대 고정 적용 (keys_1)
 for k in keys_1:
     a = data[k]
     with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
@@ -415,6 +407,7 @@ for k in keys_1:
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
         h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         
+        # 정렬은 오직 '개별 종목' 단위로만 적용됩니다.
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
         if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: x.get('총 자산', 0), reverse=True)
         elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
