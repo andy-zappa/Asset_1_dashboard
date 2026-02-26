@@ -15,7 +15,6 @@ css = """
 h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .sub-title{font-size:22px!important;font-weight:bold;margin:25px 0 10px;}
 .main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;margin-bottom:10px;}
-/* 헤더 글씨가 위아래 정중앙에 오도록 vertical-align 적용 */
 .main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important; vertical-align:middle;}
 .main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
@@ -52,15 +51,15 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [문제 해결 3] 완벽한 플로팅 배너 (버튼 크기 & 간격 통일의 핵심 해법)
+   [문제 해결 3] 완벽한 플로팅 배너 (버튼 높낮이 정렬 및 텍스트 잘림 절대 방지)
    ========================================================= */
-/* 전체 배너를 감싸는 틀 (내용물 크기에 맞춰 자동 조절되도록 max-content 사용) */
+/* 플로팅 배너 전체 틀: 너비를 내용물에 맞춰 유연하게 확장 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
     right: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    padding: 8px 12px !important;
+    padding: 10px 14px !important;
     border-radius: 10px !important;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
@@ -68,61 +67,68 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important; /* 여기서 버튼 간격 6px로 강력 통일 */
-    width: auto !important; 
+    align-items: center !important; 
+    gap: 8px !important; 
+    width: auto !important;
+    max-width: none !important; /* Streamlit 제한 해제 */
 }
 
-/* Streamlit이 강제하는 20% 등분 속성(flex: 1 1 20%)을 완전히 무력화하고 글자 길이에 맞춤 */
+/* Streamlit의 st.columns 20% 분할 강제 무력화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important;
     width: auto !important;
-    min-width: max-content !important; /* 종목코드[+] 글씨가 찌그러지지 않도록 필수 */
+    min-width: max-content !important; /* 컬럼 자체가 텍스트 크기에 맞춰지도록 보호 */
     padding: 0 !important;
     margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
-/* Streamlit 버튼 내부 여백 초기화 */
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) .stButton {
+/* 버튼을 감싸는 내부 div 컨테이너 너비 제한 해제 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] {
+    width: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
-/* 각 개별 버튼의 높이, 글씨 크기, 마우스 효과 완벽 통일 */
+/* 버튼 본체: 높이 36px 통일 및 텍스트 안 잘리게 여백 확보 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     border-radius: 6px !important;
-    padding: 0 12px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    max-height: 34px !important;
-    font-size: 13px !important;
+    padding: 0 14px !important; 
+    height: 36px !important; 
+    min-height: 36px !important;
+    font-size: 14px !important;
     font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
-    white-space: nowrap !important;
+    white-space: nowrap !important; /* 텍스트 줄바꿈 절대 금지 */
+    width: auto !important;
+    min-width: max-content !important; /* 내용물 크기만큼 무조건 공간 확보 */
+    transition: background 0.2s ease !important; 
     display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    transition: background 0.2s ease !important; /* 배경색만 스무스하게 전환 */
+    justify-content: center !important; 
+    align-items: center !important; 
 }
 
-/* 마우스를 올렸을 때 테두리는 유지하고 배경만 회색으로 채움 */
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    background: #f0f2f5 !important;
-    border-color: #d1d5db !important; 
-    color: #374151 !important;
-}
-
-/* Streamlit이 자동으로 넣는 내부 p 태그 폰트 속성 강제 통일 */
+/* 버튼 내부 텍스트 태그(p) 여백 완전 초기화 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
-    font-size: 13px !important;
+    font-size: 14px !important;
     margin: 0 !important;
     padding: 0 !important;
-    line-height: normal !important;
+    line-height: 1 !important;
     white-space: nowrap !important;
+}
+
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
+    background: #f0f2f5 !important; 
+    border-color: #d1d5db !important; 
+    color: #374151 !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 </style>
 """
