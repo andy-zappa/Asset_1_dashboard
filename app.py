@@ -38,7 +38,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 /* =========================================================
-   플로팅 배너 좌측 정렬 및 상태 유지 디자인 ([+] / [-])
+   [Andy 가이드] 플로팅 배너 좌측 정렬 및 ○/● 상태 표시 디자인
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -48,7 +48,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     background: rgba(255, 255, 255, 0.98) !important;
     width: 800px !important; 
     height: 50px !important;
-    padding: 0 20px !important; 
+    padding: 0 10px !important; /* 좌측 정렬 시 균형을 위해 패딩 조정 */
     border-radius: 8px !important; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; 
     border: 1px solid #d1d5db !important; 
@@ -62,14 +62,15 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
 
 div.element-container:has(#zappa-floating-menu) { display: none !important; }
 
+/* 각 항목 슬롯 및 구분선(/) 처리 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
     flex: 0 0 auto !important; 
     width: max-content !important;
-    padding: 0 15px !important;
+    padding: 0 12px !important;
     display: flex !important; 
     align-items: center !important; 
-    border-right: 1px solid #d1d5db !important;
+    border-right: 1.5px solid #d1d5db !important; /* 구분선 / 역할의 border */
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
@@ -85,14 +86,19 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     color: #8c8c8c !important; 
     font-size: 15px !important; 
     padding: 0 !important;
+    transition: color 0.2s;
 }
 
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover { color: #111111 !important; }
+/* 마우스 호버 시 검은색 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover { 
+    color: #111111 !important; 
+}
 
+/* 선택된 상태(Primary) 유지 디자인 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     color: #111111 !important; 
-    font-weight: 500 !important; 
+    font-weight: bold !important; 
 }
 </style>
 """
@@ -143,7 +149,7 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
-# --- 대시보드 타이틀 ---
+# --- 대시보드 상단 ---
 c1, c2 = st.columns([8.5, 1.5])
 with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 절세계좌 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
@@ -151,15 +157,6 @@ with c2:
         Andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
-
-if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'><u>💡 절세 자산 현황 요약</u></span>"]
-    for line in data["_insight"]:
-        if "조회 기준" not in line: ins.append(f"<p style='margin-bottom:5px;'>• {line}</p>")
-    ins.append("</div>")
-    st.markdown("".join(ins), unsafe_allow_html=True)
-
-unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
 # --- [1] 투자원금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -187,7 +184,7 @@ for k in keys:
         h1.append(f"<tr><td>{clean_label(a['label'])}</td><td>{fmt(curr)}</td><td class='{col(a['총 수익'])}'>{fmt(a['총 수익'],True)}</td><td class='{col(d7)}'>{fmt(d7, True)}</td><td class='{col(d15)}'>{fmt(d15, True)}</td><td class='{col(d30)}'>{fmt(d30, True)}</td><td class='{col(a['수익률(%)'])}'>{fmt_p(a['수익률(%)'])}</td><td>{fmt(princ)}</td></tr>")
 st.markdown("".join(h1)+"</table>", unsafe_allow_html=True)
 
-# --- [2] 매입금액 대비 자산 현황 (복구 완료) ---
+# --- [2] 매입금액 대비 자산 현황 ---
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -196,7 +193,6 @@ st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-va
 h2 = [unit_html, "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"]
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td>{fmt(tot.get('평가손익(1일전)',0), True)}</td><td>{fmt(tot.get('평가손익(7일전)',0), True)}</td><td>{fmt(tot.get('평가손익(30일전)',0), True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
-# 테이블 2 정렬 적용
 sec2_items = []
 for k in ['DC', 'IRP', 'PENSION', 'ISA']:
     if k in data:
@@ -218,28 +214,33 @@ st.markdown("".join(h2)+"</table>", unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# --- 플로팅 메뉴 레이아웃 ---
+# --- [Andy 가이드 반영] 플로팅 메뉴 레이아웃 ---
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_sel = (st.session_state.sort_mode == 'init')
-    if st.button("초기화[+]" if is_sel else "초기화[-]", type="primary" if is_sel else "secondary"): 
+    lbl = "초기화[●]" if is_sel else "초기화[○]"
+    if st.button(lbl, type="primary" if is_sel else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_sel = (st.session_state.sort_mode == 'asset')
-    if st.button("총자산[+]" if is_sel else "총자산[-]", type="primary" if is_sel else "secondary"): 
+    lbl = "총자산[●]" if is_sel else "총자산[○]"
+    if st.button(lbl, type="primary" if is_sel else "secondary"): 
         st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
     is_sel = (st.session_state.sort_mode == 'profit')
-    if st.button("평가손익[+]" if is_sel else "평가손익[-]", type="primary" if is_sel else "secondary"): 
+    lbl = "평가손익[●]" if is_sel else "평가손익[○]"
+    if st.button(lbl, type="primary" if is_sel else "secondary"): 
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_sel = (st.session_state.sort_mode == 'rate')
-    if st.button("수익률[+]" if is_sel else "수익률[-]", type="primary" if is_sel else "secondary"): 
+    lbl = "수익률[●]" if is_sel else "수익률[○]"
+    if st.button(lbl, type="primary" if is_sel else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_sel = st.session_state.show_code
-    if st.button("종목코드[+]" if is_sel else "종목코드[-]", type="primary" if is_sel else "secondary"): 
+    lbl = "종목코드[+]" if is_sel else "종목코드[-]"
+    if st.button(lbl, type="primary" if is_sel else "secondary"): 
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -251,8 +252,6 @@ for k in keys:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
-            
-            # 위험자산 / 안전자산 로직 복구
             extra_info_html = ""
             if k in ['DC', 'IRP']:
                 safe_pct = 0.0
