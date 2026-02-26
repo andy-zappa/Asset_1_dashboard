@@ -239,34 +239,60 @@ st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10p
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [핵심 수정부] 자파의 자산 인사이트 생성 로직 (원본 코드에 안전하게 끼워넣음)
+# 💡 [핵심 수정부] 자파의 자산 인사이트 생성 로직
 # =====================================================================
 if "_insight" in data:
-    ins = ["<div class='insight-box'><span class='box-title'>💡 자파의 자산 인사이트</span>"]
+    ins = ["<div class='insight-box'><span class='box-title'>💡 자파의 [절세계좌] 자산 현황 보고</span>"]
     
     ag_tot = tot.get('총 자산', 0) - tot.get('매입금액합', 0)
     ay_tot = (ag_tot / tot.get('매입금액합', 1) * 100) if tot.get('매입금액합', 1) > 0 else 0
     origin_yield = tot.get('수익률(%)', 0)
-    daily_eval = tot.get('평가손익(1일전)', 0)
+
+    # 볼드 및 16px 스타일 함수 적용
+    def bold_16(text):
+        return f"<span style='font-weight:bold; font-size:16px;'>{text}</span>"
 
     # [문단 1] 자산 총액
-    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; font-weight:bold;'>• 절세계좌 자산 총액은 {fmt(tot.get('총 자산',0))}원, 평가손익은 {get_html_val(ag_tot)}원 / 전일비 ({get_html_val(daily_eval)}원) 으로 매입금액比 {get_html_val(ay_tot, True)} (투자원금比 {get_html_val(origin_yield, True)}) 수익률을 나타내고 있습니다.</p>")
+    p1_v1 = f"{fmt(tot.get('총 자산',0))}원"
+    p1_v2 = f"{get_html_val(tot.get('총 수익',0), False)}원 ({get_html_val(origin_yield, True)})"
+    p1_v3 = f"{get_html_val(ag_tot, False)}원({get_html_val(ay_tot, True)})"
+    
+    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 현재 총 자산 '{bold_16(p1_v1)}' |  투자원금比 총 수익 '{bold_16(p1_v2)}' | 매입금액比 총 수익 '{bold_16(p1_v3)}'</p>")
 
     # [문단 2] 수익률 높은 순서
-    acc_ranks = []
-    for k in FIXED_ACCOUNT_ORDER:
+    # 백만원 단위 및 소수점 자리 자동 조절 함수
+    def format_mil(v):
+        abs_v = abs(v)
+        if abs_v >= 10000000:
+            res = round(v / 1000000, 1)
+            txt = f"+{res:.1f}백만" if v > 0 else f"{res:.1f}백만"
+        else:
+            res = round(v / 1000000, 2)
+            txt = f"+{res:.2f}백만" if v > 0 else f"{res:.2f}백만"
+        return txt
+
+    order_str = []
+    # DC, IRP, CMA, ISA 고정 순서로 나열
+    for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         if k in data:
             a = data[k]
             ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
             ap_acc = a.get('총 자산',0) - ag_acc
             ay_acc = (ag_acc/ap_acc*100) if ap_acc > 0 else 0
             
-            lbl = '연금저축(CMA)계좌' if k == 'PENSION' else ('ISA(중개형)계좌' if k == 'ISA' else f'퇴직연금({k})계좌')
-            acc_ranks.append({'lbl': lbl, 'y': ay_acc, 'p': ag_acc})
-    
-    acc_ranks.sort(key=lambda x: x['y'], reverse=True)
-    rank_str = " / ".join([f"{r['lbl']} {get_html_val(r['y'], True)}({get_html_val(r['p']/1000000)}백만)" for r in acc_ranks])
-    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; font-weight:bold;'>• 수익률 높은 순서 : {rank_str} 순입니다.</p>")
+            acc_name = '연금저축(CMA)' if k == 'PENSION' else ('ISA(중개형)' if k == 'ISA' else f'퇴직연금({k})')
+            
+            val_txt = format_mil(ag_acc)
+            rate_txt = fmt_p(ay_acc)
+            combined_txt = f"{val_txt}({rate_txt})"
+            
+            color_cls = col(ag_acc)
+            colored_txt = f"<span class='{color_cls}'>{combined_txt}</span>" if color_cls else combined_txt
+            
+            order_str.append(f"{acc_name} '{bold_16(colored_txt)}'")
+
+    rank_str = ", ".join(order_str)
+    ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 계좌별 평가손익 : {rank_str}</p>")
 
     # [문단 3, 4] 미국/한국 분류 및 종목 순위
     us_kws = ['미국', '나스닥', '다우', 's&p', '필라델피아', '테크']
@@ -291,13 +317,13 @@ if "_insight" in data:
 
     us_str = ", ".join([f"{x['name']} {get_html_val(x['y'], True)}" for x in us_etfs])
     if us_str:
-        ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; font-weight:bold;'>• 미국 ETF 장기간 횡보 속에({us_str}) 코스피 등 한국 ETF가 전체 평가 손익을 주도하고 있습니다.</p>")
+        ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 미국 ETF 장기간 횡보 속에({us_str}) 코스피 등 한국 ETF가 전체 평가 손익을 주도하고 있습니다.</p>")
 
     sorted_stocks = sorted(stock_dict.items(), key=lambda x: max([info['y'] for info in x[1]]), reverse=True)
     
     def format_stock_info(stock_name, acc_list):
         sorted_accs = sorted(acc_list, key=lambda x: x['y'], reverse=True)
-        acc_strs = [f"{info['acc']} {get_html_val(info['y'], True)}({get_html_val(info['p']/1000000)}백만)" for info in sorted_accs]
+        acc_strs = [f"{info['acc']} {get_html_val(info['y'], True)}({format_mil(info['p'])})" for info in sorted_accs]
         return f"{stock_name} : {', '.join(acc_strs)}"
 
     if len(sorted_stocks) >= 5:
@@ -307,11 +333,11 @@ if "_insight" in data:
         bot1 = format_stock_info(sorted_stocks[-2][0], sorted_stocks[-2][1])
         bot2 = format_stock_info(sorted_stocks[-1][0], sorted_stocks[-1][1])
         
-        ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; font-weight:bold; line-height:1.6;'>• 종목별로는 ① {top1}<br>&nbsp;&nbsp;&nbsp;&nbsp;② {top2}<br>&nbsp;&nbsp;&nbsp;&nbsp;③ {top3} 이 우수하고<br>&nbsp;&nbsp;&nbsp;&nbsp;상대적으로 ④ {bot1}<br>&nbsp;&nbsp;&nbsp;&nbsp;⑤ {bot2} 부진합니다.</p>")
+        ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; line-height:1.6;'>• 종목별로는 ① {top1}<br>&nbsp;&nbsp;&nbsp;&nbsp;② {top2}<br>&nbsp;&nbsp;&nbsp;&nbsp;③ {top3} 이 우수하고<br>&nbsp;&nbsp;&nbsp;&nbsp;상대적으로 ④ {bot1}<br>&nbsp;&nbsp;&nbsp;&nbsp;⑤ {bot2} 부진합니다.</p>")
 
     # [문단 5] 정적 분석 코멘트
     fast_ai_text = "• 간밤 미국 기술주와 나스닥 지수가 상승세를 보인 훈풍이 한국 증시로 이어지며, 코스피 관련 ETF 역시 동반 상승하는 강세장을 기록 중입니다. 현재의 긍정적 흐름을 유지하되 많이 오른 종목의 부분 익절을 통한 리밸런싱을 고려해 볼 시점입니다."
-    ins.append(f"<p style='margin-bottom:0px; font-size:15.5px; font-weight:bold;'>{fast_ai_text}</p>")
+    ins.append(f"<p style='margin-bottom:0px; font-size:15.5px;'>{fast_ai_text}</p>")
     
     ins.append("</div>")
     st.markdown("".join(ins), unsafe_allow_html=True)
