@@ -24,6 +24,16 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .box-title{font-size:20px!important;font-weight:bold;margin-bottom:15px;display:block;color:#333;}
 
 /* =========================================================
+   [추가 CSS] 요약 텍스트 전용 클래스 (절세 현황과 폰트 크기 20px 통일)
+   ========================================================= */
+.summary-header {
+    font-size: 20px !important;
+    font-weight: bold !important;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+/* =========================================================
    [문제 해결 1] 평가손익 & 기간비용 엑셀 스타일 병합 (역 L자 테두리 제거)
    ========================================================= */
 .main-table th.th-eval { border-right: none !important; }
@@ -172,7 +182,7 @@ unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-botto
 
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"**총 자산 : {fmt(tot.get('총 자산',0))} / 총 수익 : <span class='{col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span>**", unsafe_allow_html=True)
+st.markdown(f"<div class='summary-header'>● 총 자산 : {fmt(tot.get('총 자산',0))} / 총 수익 : <span class='{col(tot.get('총 수익',0))}'>{fmt(tot.get('총 수익',0), True)} ({fmt_p(tot.get('수익률(%)',0))})</span></div>", unsafe_allow_html=True)
 
 # [1]표 엑셀 스타일 역 L자 헤더 적용 (7일전, 15일전, 30일전 - 3칸 병합)
 h1 = [unit_html, """
@@ -221,7 +231,7 @@ st.markdown("".join(h1), unsafe_allow_html=True)
 ag_tot = tot.get('총 자산',0) - tot.get('매입금액합',0)
 ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-st.markdown(f"**총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span>**", unsafe_allow_html=True)
+st.markdown(f"<div class='summary-header'>● 총 자산 : {fmt(tot.get('총 자산'))} / 총 수익 : <span class='{col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
 # [2]표 엑셀 스타일 역 L자 헤더 (전일비, 전주비, 전월비 - 3칸 병합)
 h2 = [unit_html, """
@@ -289,7 +299,7 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
             s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
             
             # ==========================================
-            # [추가 요청 반영] DC 및 IRP 계좌의 안전/위험자산 비중 계산
+            # [추가 요청 반영] DC 및 IRP 계좌의 안전/위험자산 비중 형태 및 기호 변경
             # ==========================================
             extra_info = ""
             if k in ['DC', 'IRP']:
@@ -303,10 +313,11 @@ for k in ['DC', 'IRP', 'PENSION', 'ISA']:
                         safe_pct += item.get('비중', 0)
                 
                 risky_pct = 100.0 - safe_pct
-                extra_info = f" / [위험자산 : {risky_pct:.1f}% | 안전자산 : {safe_pct:.1f}%]"
+                # [위험자산... ] 대신, 띄어쓰기 후 "● 위험자산 : ... / 안전자산 : ..." 로 반영
+                extra_info = f" &nbsp;&nbsp;&nbsp; ● 위험자산 : {risky_pct:.1f}% / 안전자산 : {safe_pct:.1f}%"
             
-            # 총자산, 총수익 정보 뒤에 extra_info 병합
-            st.markdown(f"**총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span>{extra_info}**", unsafe_allow_html=True)
+            # summary-header 클래스를 적용하여 통일된 크기, 둥근 점 기호(●) 사용
+            st.markdown(f"<div class='summary-header'>● 총 자산 : {fmt(a['총 자산'])} / 총 수익 : <span class='{col(s_data.get('평가손익'))}'>{fmt(s_data.get('평가손익'), True)} ({fmt_p(s_data.get('수익률(%)'))})</span>{extra_info}</div>", unsafe_allow_html=True)
             
             h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
             if st.session_state.show_code: h3.append("<th>종목코드</th>")
