@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 간격 축소 및 활성 상태(Black) 디자인 고정
+   [ZAPPA 플로팅 배너 CSS] 완벽한 대칭, 활성 상태 고정, 찌꺼기 선 제거
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -62,14 +62,14 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: none !important;
     width: max-content !important;
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 8px 18px !important; /* 좌우 테두리 여백을 넉넉하게 주어 대칭 확보 */
+    padding: 8px 16px !important; /* 배너의 좌우 끝단 여백을 대칭으로 설정 */
     border-radius: 8px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
-    gap: 0 !important; /* 요소 간 기본 간격 제거 */
+    gap: 0 !important; 
 }
 
 div.element-container:has(#zappa-floating-menu) { 
@@ -105,13 +105,13 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     width: auto !important; 
     background: transparent !important; 
     border: none !important; 
-    border-right: 1.5px solid #d1d5db !important; 
+    border-right: 1.5px solid #d1d5db !important; /* 구분선 */
     border-radius: 0 !important; 
-    padding: 0 10px !important; /* 버튼 내부 간격을 10px로 좁혀 밀착력 향상 */
+    padding: 0 14px !important; /* 글자와 파이프(|) 사이의 여백을 14px로 완벽히 동일하게 부여 */
     height: 24px !important; 
     min-height: 24px !important; 
-    color: #9ca3af !important; /* 비활성화 기본 색상 (연한 회색) */
-    font-size: 14.5px !important; 
+    color: #9ca3af !important; /* 기본 회색 */
+    font-size: 15px !important; 
     font-weight: 600 !important; 
     white-space: nowrap !important; 
     box-shadow: none !important; 
@@ -121,7 +121,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     justify-content: center !important; 
 }
 
-/* 5번째(마지막) 버튼의 오른쪽 세로선 완벽 제거 */
+/* 5번째(마지막) 버튼의 오른쪽 세로선 완벽 제거 (찌꺼기 선 삭제) */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button,
@@ -138,6 +138,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     padding: 0 !important; 
     line-height: 1 !important; 
     text-align: center !important; 
+    width: max-content !important; /* 텍스트 너비에 맞춰 정렬 고정 */
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover,
@@ -146,7 +147,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
     background: transparent !important; 
 }
 
-/* 활성화 상태 (Primary 버튼) 색상 고정 */
+/* 활성화 상태 (Primary 버튼) 검은색 및 굵기 고정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     background: transparent !important; 
@@ -275,8 +276,8 @@ td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
 
 h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
-# 순서 고정: DC - 연금 - ISA - IRP
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
+# 순서 변경: DC - IRP - 연금 - ISA
+for k in ['DC', 'IRP', 'PENSION', 'ISA']:
     if k in data:
         a = data[k]
         curr_asset = a['총 자산']
@@ -319,8 +320,8 @@ td30_tot = tot.get('평가손익(30일전)',0)
 
 h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(tot.get('총 자산'))}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td>{fmt(td1_tot, True)}</td><td>{fmt(td7_tot, True)}</td><td>{fmt(td30_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합'))}</td></tr>")
 
-# 순서 고정: DC - 연금 - ISA - IRP
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
+# 순서 변경: DC - IRP - 연금 - ISA
+for k in ['DC', 'IRP', 'PENSION', 'ISA']:
     if k in data:
         a = data[k]
         ag_acc = sum(i.get('평가손익',0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
@@ -338,36 +339,36 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (활성화 시 검은색 유지 로직 추가)
+# ZAPPA 메뉴 버튼들 (활성화 상태 Black 컬러 유지 완벽 연동)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_init = (st.session_state.sort_mode == 'init')
-    if st.button("초기화 ▲" if is_init else "초기화 △", type="primary" if is_init else "secondary"): 
+    if st.button("초기화 △" if not is_init else "초기화 ▲", type="primary" if is_init else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_asset = (st.session_state.sort_mode == 'asset')
-    if st.button("총 자산 ▲" if is_asset else "총 자산 △", type="primary" if is_asset else "secondary"): 
+    if st.button("총 자산 △" if not is_asset else "총 자산 ▲", type="primary" if is_asset else "secondary"): 
         st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
     is_profit = (st.session_state.sort_mode == 'profit')
-    if st.button("평가손익 ▲" if is_profit else "평가손익 △", type="primary" if is_profit else "secondary"): 
+    if st.button("평가손익 △" if not is_profit else "평가손익 ▲", type="primary" if is_profit else "secondary"): 
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_rate = (st.session_state.sort_mode == 'rate')
-    if st.button("수익률 ▲" if is_rate else "수익률 △", type="primary" if is_rate else "secondary"): 
+    if st.button("수익률 △" if not is_rate else "수익률 ▲", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_code = st.session_state.show_code
-    if st.button("종목코드 [ + ]" if is_code else "종목코드 [ - ]", type="primary" if is_code else "secondary"): 
+    if st.button("종목코드 [ - ]" if not is_code else "종목코드 [ + ]", type="primary" if is_code else "secondary"): 
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-# 순서 고정: DC - 연금 - ISA - IRP
-for k in ['DC', 'PENSION', 'ISA', 'IRP']:
+# 순서 변경: DC - IRP - 연금 - ISA
+for k in ['DC', 'IRP', 'PENSION', 'ISA']:
     if k in data:
         a = data[k]
         with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
