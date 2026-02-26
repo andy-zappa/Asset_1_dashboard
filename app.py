@@ -15,6 +15,7 @@ css = """
 h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .sub-title{font-size:22px!important;font-weight:bold;margin:25px 0 10px;}
 .main-table{width:100%;border-collapse:collapse;font-size:15px;text-align:center;margin-bottom:10px;}
+/* 헤더 글씨가 위아래 정중앙에 오도록 vertical-align 적용 */
 .main-table th{background-color:#f2f2f2;padding:10px;border:1px solid #ddd;font-weight:bold!important; vertical-align:middle;}
 .main-table td{padding:8px;border:1px solid #ddd;vertical-align:middle;}
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
@@ -51,8 +52,9 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [문제 해결 3] 완벽한 플로팅 배너 (버튼 높낮이, 간격, 글씨, hover 효과 전면 수정)
+   [문제 해결 3] 완벽한 플로팅 배너 (버튼 크기 & 간격 통일의 핵심 해법)
    ========================================================= */
+/* 전체 배너를 감싸는 틀 (내용물 크기에 맞춰 자동 조절되도록 max-content 사용) */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     position: fixed !important;
     bottom: 30px !important;
@@ -66,52 +68,61 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    align-items: center !important; /* 내부 요소 세로 중앙 정렬 */
-    gap: 6px !important; /* 버튼 간격 촘촘하고 균일하게 */
-    width: max-content !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important; /* 여기서 버튼 간격 6px로 강력 통일 */
+    width: auto !important; 
 }
 
+/* Streamlit이 강제하는 20% 등분 속성(flex: 1 1 20%)을 완전히 무력화하고 글자 길이에 맞춤 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important;
     width: auto !important;
-    min-width: 0 !important;
+    min-width: max-content !important; /* 종목코드[+] 글씨가 찌그러지지 않도록 필수 */
     padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
+    margin: 0 !important;
 }
 
+/* Streamlit 버튼 내부 여백 초기화 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) .stButton {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* 각 개별 버튼의 높이, 글씨 크기, 마우스 효과 완벽 통일 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     border-radius: 6px !important;
     padding: 0 12px !important;
-    height: 34px !important; /* 높이 완벽 일치 */
-    font-size: 13px !important; /* 글씨 사이즈 축소 통일 */
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    font-size: 13px !important;
     font-weight: bold !important;
     background: white !important;
     border: 1px solid #d1d5db !important;
     color: #374151 !important;
     margin: 0 !important;
     white-space: nowrap !important;
-    transition: background 0.2s ease !important; /* 배경색만 바뀌도록 수정 */
     display: flex !important;
-    justify-content: center !important; /* 가로 중앙 정렬 */
-    align-items: center !important; /* 세로 중앙 정렬 */
-    line-height: 1 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    transition: background 0.2s ease !important; /* 배경색만 스무스하게 전환 */
 }
 
-/* Streamlit이 자동 생성하는 내부 p 태그 폰트 강제 초기화 */
+/* 마우스를 올렸을 때 테두리는 유지하고 배경만 회색으로 채움 */
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
+    background: #f0f2f5 !important;
+    border-color: #d1d5db !important; 
+    color: #374151 !important;
+}
+
+/* Streamlit이 자동으로 넣는 내부 p 태그 폰트 속성 강제 통일 */
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     font-size: 13px !important;
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1 !important;
-}
-
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
-    background: #f0f2f5 !important; /* 마우스 올리면 회색 채우기 */
-    border-color: #d1d5db !important; /* 테두리색 유지 (까맣게 안 변함) */
-    color: #374151 !important;
-    transform: none !important; /* 튀어오르는 효과 제거 */
-    box-shadow: none !important; /* 그림자 효과 제거 */
+    line-height: normal !important;
+    white-space: nowrap !important;
 }
 </style>
 """
