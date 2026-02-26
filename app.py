@@ -203,7 +203,6 @@ def col(v):
         return "red" if val > 0 else ("blue" if val < 0 else "")
     except: return ""
 
-# [신규] 인사이트 문단용 색상/기호 HTML 포맷 함수
 def get_html_val(v, is_percent=False):
     color_class = col(v)
     if is_percent:
@@ -235,11 +234,10 @@ with c2:
 
 st.markdown(f"<div style='text-align:right;font-size:14px;color:#555;margin:-10px 0 10px;'>[{tot.get('조회시간')}]</div>", unsafe_allow_html=True)
 
-# --- 계좌 노출 순서 기본값 ---
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [핵심 수정부] 자파의 자산 인사이트 생성 로직
+# 자파의 자산 인사이트 생성 (키값 모두 "손익"으로 통일 완료)
 # =====================================================================
 if "_insight" in data:
     ins = ["<div class='insight-box'><span class='box-title'>💡 자파의 [절세계좌] 자산 현황 보고</span>"]
@@ -248,19 +246,15 @@ if "_insight" in data:
     ay_tot = (ag_tot / tot.get('매입금액합', 1) * 100) if tot.get('매입금액합', 1) > 0 else 0
     origin_yield = tot.get('손익률(%)', 0)
 
-    # 볼드 및 16px 스타일 함수 적용
     def bold_16(text):
         return f"<span style='font-weight:bold; font-size:16px;'>{text}</span>"
 
-    # [문단 1] 자산 총액
     p1_v1 = f"{fmt(tot.get('총 자산',0))}원"
     p1_v2 = f"{get_html_val(tot.get('총 손익',0), False)}원 ({get_html_val(origin_yield, True)})"
     p1_v3 = f"{get_html_val(ag_tot, False)}원({get_html_val(ay_tot, True)})"
     
-    # 텍스트 수정: '총 수익' -> '총 손익'
     ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 현재 총 자산 '{bold_16(p1_v1)}' |  투자원금比 총 손익 '{bold_16(p1_v2)}' | 매입금액比 총 손익 '{bold_16(p1_v3)}'</p>")
 
-    # [문단 2] 손익률 높은 순서
     def format_mil(v):
         abs_v = abs(v)
         if abs_v >= 10000000:
@@ -272,7 +266,6 @@ if "_insight" in data:
         return txt
 
     order_str = []
-    # DC, IRP, CMA, ISA 고정 순서로 나열
     for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         if k in data:
             a = data[k]
@@ -294,7 +287,6 @@ if "_insight" in data:
     rank_str = ", ".join(order_str)
     ins.append(f"<p style='margin-bottom:6px; font-size:15.5px;'>• 계좌별 평가손익 : {rank_str}</p>")
 
-    # [문단 3, 4] 미국/한국 분류 및 종목 순위
     us_kws = ['미국', '나스닥', '다우', 's&p', '필라델피아', '테크']
     us_etfs = []
     stock_dict = {}
@@ -335,19 +327,13 @@ if "_insight" in data:
         
         ins.append(f"<p style='margin-bottom:6px; font-size:15.5px; line-height:1.6;'>• 종목별로는 ① {top1}<br>&nbsp;&nbsp;&nbsp;&nbsp;② {top2}<br>&nbsp;&nbsp;&nbsp;&nbsp;③ {top3} 이 우수하고<br>&nbsp;&nbsp;&nbsp;&nbsp;상대적으로 ④ {bot1}<br>&nbsp;&nbsp;&nbsp;&nbsp;⑤ {bot2} 부진합니다.</p>")
 
-    # [문단 5] 정적 분석 코멘트
     fast_ai_text = "• 간밤 미국 기술주와 나스닥 지수가 상승세를 보인 훈풍이 한국 증시로 이어지며, 코스피 관련 ETF 역시 동반 상승하는 강세장을 기록 중입니다. 현재의 긍정적 흐름을 유지하되 많이 오른 종목의 부분 익절을 통한 리밸런싱을 고려해 볼 시점입니다."
     ins.append(f"<p style='margin-bottom:0px; font-size:15.5px;'>{fast_ai_text}</p>")
     
     ins.append("</div>")
     st.markdown("".join(ins), unsafe_allow_html=True)
 
-
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
-
-# =====================================================================
-# (이하 Andy님 원본 1, 2, 3 테이블 출력 로직 100% 동일 보존)
-# =====================================================================
 
 # --- [1] 투자금 대비 자산 현황 ---
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -462,7 +448,6 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
