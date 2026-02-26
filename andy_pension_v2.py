@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import json
+import os
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
@@ -23,6 +24,9 @@ ACC_MAP = {
     'ISA(중개형)계좌 (25.8월)': 'ISA', 
     '퇴직연금(IRP)계좌 (25.8월)': 'IRP'
 }
+
+# KIS 토큰 캐시 파일 (일일 한도 초과 및 통신 딜레이 방지용)
+TOKEN_CACHE_FILE = "kis_token_cache.json"
 
 def calc_samsungfire_principal():
     기준일 = datetime(2026, 2, 25)
@@ -70,12 +74,30 @@ PORTFOLIO = {
 }
 
 def get_access_token():
+    now = datetime.now()
+    
+    # [안전장치 1] 캐시된 토큰 확인 (토큰 유효기간 24시간이므로 20시간 이내면 재사용)
+    if os.path.exists(TOKEN_CACHE_FILE):
+        try:
+            with open(TOKEN_CACHE_FILE, 'r') as f:
+                cache = json.load(f)
+                cache_time = datetime.fromisoformat(cache['time'])
+                if now - cache_time < timedelta(hours=20):
+                    return cache['token']
+        except: pass
+            
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
-        # 무한 지연을 막기 위한 timeout 설정
-        return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5).json().get("access_token")
-    except: 
-        return None
+        res = requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5)
+        if res.status_code == 200:
+            token = res.json().get("access_token")
+            if token:
+                with open(TOKEN_CACHE_FILE, 'w') as f:
+                    json.dump({'token': token, 'time': now.isoformat()}, f)
+                return token
+    except: pass
+    
+    return None
 
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
@@ -85,44 +107,74 @@ def get_current_price(code, token, avg_p):
     
     curr = int(avg_p)
     diff_1, diff_7, diff_15, diff_30 = 0, 0, 0, 0
+    is_kis_success = False
     
-    headers_curr = {
-        "authorization": f"Bearer {token}", 
-        "appkey": APP_KEY, "appsecret": APP_SECRET, 
-        "tr_id": "FHKST01010100"
-    }
-    try:
-        res = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
-                           headers=headers_curr, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}, timeout=3)
-        out = res.json().get('output', {})
-        curr = int(float(out.get('stck_prpr', avg_p)))
-        diff_1 = int(float(out.get('prdy_vrss', 0)))
-    except: pass
+    # [1] KIS API 우선 시도
+    if token and token != "dummy_token_for_fallback":
+        headers_curr = {
+            "authorization": f"Bearer {token}", 
+            "appkey": APP_KEY, "appsecret": APP_SECRET, 
+            "tr_id": "FHKST01010100"
+        }
+        try:
+            res = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
+                               headers=headers_curr, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}, timeout=3)
+            if res.status_code == 200:
+                out = res.json().get('output', {})
+                if 'stck_prpr' in out and out['stck_prpr']:
+                    curr = int(float(out.get('stck_prpr')))
+                    diff_1 = int(float(out.get('prdy_vrss', 0)))
+                    is_kis_success = True
+        except: pass
 
-    headers_hist = {
-        "authorization": f"Bearer {token}", 
-        "appkey": APP_KEY, "appsecret": APP_SECRET, 
-        "tr_id": "FHKST01010400"
-    }
-    try:
-        res_hist = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
-                                headers=headers_hist, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6), "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"}, timeout=3)
-        out_hist = res_hist.json().get('output', [])
-        now_dt = datetime.now()
-        t_7, t_15, t_30 = (now_dt - timedelta(days=7)).strftime("%Y%m%d"), (now_dt - timedelta(days=15)).strftime("%Y%m%d"), (now_dt - timedelta(days=30)).strftime("%Y%m%d")
-        
-        p_7, p_15, p_30 = curr, curr, curr
-        found_7, found_15, found_30 = False, False, False
-        
-        for item in out_hist:
-            dt = item.get('stck_bsop_date', '99999999')
-            pr = int(float(item.get('stck_clpr', curr)))
-            if not found_7 and dt <= t_7: p_7 = pr; found_7 = True
-            if not found_15 and dt <= t_15: p_15 = pr; found_15 = True
-            if not found_30 and dt <= t_30: p_30 = pr; found_30 = True
+    # [2] KIS API 차단/에러 시 네이버페이 증권 모바일 API 강력 우회 (0원 표기 완벽 방지)
+    if not is_kis_success:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+            n_res = requests.get(url, headers=headers, timeout=3).json()
+            
+            # 쉼표(,) 제거 후 현재가 추출
+            curr_str = str(n_res.get('closePrice', str(avg_p))).replace(',', '')
+            curr = int(curr_str)
+            
+            # 전일비 추출
+            diff_str = str(n_res.get('compareToPreviousPrice', {}).get('text', '0')).replace(',', '')
+            diff_1 = int(diff_str)
+            # 5번 코드면 하락을 의미
+            if str(n_res.get('compareToPreviousPrice', {}).get('code')) == '5': 
+                diff_1 = -diff_1
+        except: pass
+
+    # [3] 과거 데이터 (KIS 전용 - 네이버 우회 시 과거 이력은 생략)
+    if is_kis_success:
+        headers_hist = {
+            "authorization": f"Bearer {token}", 
+            "appkey": APP_KEY, "appsecret": APP_SECRET, 
+            "tr_id": "FHKST01010400"
+        }
+        try:
+            res_hist = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
+                                    headers=headers_hist, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6), "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"}, timeout=3)
+            if res_hist.status_code == 200:
+                out_hist = res_hist.json().get('output', [])
+                now_dt = datetime.now()
+                t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
+                t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
+                t_30 = (now_dt - timedelta(days=30)).strftime("%Y%m%d")
                 
-        diff_7, diff_15, diff_30 = curr - p_7, curr - p_15, curr - p_30
-    except: pass
+                p_7, p_15, p_30 = curr, curr, curr
+                found_7, found_15, found_30 = False, False, False
+                
+                for item in out_hist:
+                    dt = item.get('stck_bsop_date', '99999999')
+                    pr = int(float(item.get('stck_clpr', curr)))
+                    if not found_7 and dt <= t_7: p_7 = pr; found_7 = True
+                    if not found_15 and dt <= t_15: p_15 = pr; found_15 = True
+                    if not found_30 and dt <= t_30: p_30 = pr; found_30 = True
+                        
+                diff_7, diff_15, diff_30 = curr - p_7, curr - p_15, curr - p_30
+        except: pass
 
     return {"c": curr, "d1": diff_1, "d7": diff_7, "d15": diff_15, "d30": diff_30}
 
@@ -133,7 +185,6 @@ def generate_asset_data():
     fetch_time = now_kst.strftime(f"%Y/%m/%d({days_kr[now_kst.weekday()]}) / %H:%M:%S")
     
     token = get_access_token()
-    # 🔥 에러가 터졌던 부분: 통신 실패 시 죽지 않고 매입가 기준으로라도 강제 실행하도록 조치 완료
     if not token: token = "dummy_token_for_fallback"
 
     t_asset, t_p_effective, t_diff_1, t_diff_7, t_diff_15, t_diff_30 = 0, 0, 0, 0, 0, 0
