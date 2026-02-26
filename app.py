@@ -87,7 +87,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     flex: 0 0 auto !important; 
     width: max-content !important; 
     min-width: max-content !important;
-    padding: 0 12px !important; /* Andy님 요청: 겹침 방지를 위해 좌우 간격 살짝 넓힘 (8px -> 12px) */
+    padding: 0 12px !important; 
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
@@ -359,12 +359,12 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (Andy님 요청: 텍스트와 괄호 사이 스페이스바 추가)
+# ZAPPA 메뉴 버튼들 (Andy님 아이디어 반영: 초기화 버튼 앞에 아이콘 추가)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_init = (st.session_state.sort_mode == 'init')
-    if st.button("초기화 [ ● ]" if is_init else "초기화 [ ○ ]", type="primary" if is_init else "secondary"): 
+    if st.button("🔄 초기화 [ ● ]" if is_init else "🔄 초기화 [ ○ ]", type="primary" if is_init else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_asset = (st.session_state.sort_mode == 'asset')
