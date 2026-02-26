@@ -1,14 +1,20 @@
 import pandas as pd
 import requests
 import json
+import urllib.request
+import xml.etree.ElementTree as ET
+import google.generativeai as genai
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# 1. 설정 및 고정 데이터 (핵심 계산 로직) - 원본 그대로 유지
+# 1. 설정 및 고정 데이터 (핵심 계산 로직)
 # ==========================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
 URL_BASE = "https://openapi.koreainvestment.com:9443"
+
+# 전달해주신 Gemini API Key 적용 완료
+GEMINI_API_KEY = "AIzaSyBEgT8p1ypXC92YUH_rsrYOlAVwvyaCrT8"
 
 ORIGINAL_CAPITAL = {
     '퇴직연금(DC)계좌 (25.8월)': 254782039, 
@@ -70,6 +76,9 @@ PORTFOLIO = {
     ]
 }
 
+# ------------------------------------------------------------------
+# ★ 여기부터 Andy님이 처음에 주셨던 원본 그대로 복구 완료 (sleep, timeout 일체 없음) ★
+# ------------------------------------------------------------------
 def get_access_token():
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
@@ -89,6 +98,7 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
+    # 1. 현재가 및 전일비 조회
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -107,6 +117,7 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
+    # 2. 과거 종가 조회 (최대 30영업일)를 통한 7일, 15일, 30일 전 계산
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -126,6 +137,7 @@ def get_current_price(code, token, avg_p):
         )
         out_hist = res_hist.json().get('output', [])
         
+        # 달력일 기준 목표일자 세팅
         now_dt = datetime.now()
         t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
         t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
@@ -134,6 +146,7 @@ def get_current_price(code, token, avg_p):
         p_7, p_15, p_30 = curr, curr, curr
         found_7, found_15, found_30 = False, False, False
         
+        # 날짜 내림차순(최신순) 리스트에서 각 기준일 이하의 가장 가까운 종가 확보
         for item in out_hist:
             dt = item.get('stck_bsop_date', '99999999')
             pr = int(float(item.get('stck_clpr', curr)))
@@ -152,6 +165,8 @@ def get_current_price(code, token, avg_p):
         pass
 
     return {"c": curr, "d1": diff_1, "d7": diff_7, "d15": diff_15, "d30": diff_30}
+# ------------------------------------------------------------------
+
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9))
@@ -271,7 +286,7 @@ def generate_asset_data():
     }
     
     # ==========================================
-    # [수정] ZAPPA 인사이트 5꼭지 맞춤형 요약 로직 
+    # ZAPPA 인사이트 5꼭지 맞춤형 요약 로직 
     # ==========================================
     try:
         t_buy_profit = t_asset - t_avg_buy
@@ -340,7 +355,7 @@ def generate_asset_data():
 
         us_str = ", ".join(us_stats)
         kr_str = ", ".join(kr_stats)
-        leader = "코스피 둥 한국" if kr_total_gain >= us_total_gain else "미국"
+        leader = "코스피 등 한국" if kr_total_gain >= us_total_gain else "미국"
 
         b3 = f"종목별 흐름: 미국 ETF 장기간 횡보 속에({us_str}), 한국 ETF({kr_str})를 기록 중이며, {leader} ETF가 전체 평가 손익을 주도하고 있습니다."
 
@@ -363,19 +378,34 @@ def generate_asset_data():
 
         b4 = f"주요 종목 상세: " + " / ".join(b4_parts)
 
-        us_d1 = sum(data['d1'] for name, data in stock_agg.items() if name in us_etfs)
-        kr_d1 = sum(data['d1'] for name, data in stock_agg.items() if name in kr_etfs)
-
-        if us_d1 < 0 and kr_d1 > 0:
-            market_flow = "미국 빅테크 및 기술주가 전반적으로 하락한 가운데 투자자들이 한국으로 투자처 방향 전환과 함께 코스피 지수 상승을 주도하고 있습니다."
-        elif us_d1 > 0 and kr_d1 < 0:
-            market_flow = "미국 빅테크 및 기술주가 견조한 상승세를 이어가는 가운데 한국 증시는 다소 쉬어가는 흐름을 보이고 있습니다."
-        elif us_d1 > 0 and kr_d1 > 0:
-            market_flow = "고용지표 등 대외 변수 속에서도 미국 기술주와 한국 코스피 종목 모두 동반 상승하며 양호한 시장 흐름을 기록 중입니다."
-        else:
-            market_flow = "미국과 한국 증시 모두 전반적인 조정을 겪고 있으며, 변동성 확대에 대비한 리스크 관리가 필요한 시점입니다."
-
-        b5 = f"전망 및 분석: {market_flow} 한국형 추세 흐름과 동시에 수익이 큰 종목의 현금화 및 리밸런싱 등 주의하여 관리 필요합니다."
+        # [5] 진짜 실시간 시황 분석 (Google News RSS + Gemini AI 연동)
+        b5 = ""
+        try:
+            url = "https://news.google.com/rss/search?q=미국증시+OR+나스닥+OR+코스피&hl=ko&gl=KR&ceid=KR:ko"
+            # 구글 뉴스 RSS 응답 지연으로 인한 앱 프리징을 막기 위해 3초 타임아웃
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            xml_data = urllib.request.urlopen(req, timeout=3).read()
+            root = ET.fromstring(xml_data)
+            
+            news_titles = [item.find('title').text for item in root.findall('.//item')[:10]]
+            news_text = "\n".join(news_titles)
+            
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"""
+            다음은 현재 실시간 경제 뉴스 헤드라인 10개입니다:
+            {news_text}
+            
+            이 뉴스들을 바탕으로 지난 밤 미국 증시(나스닥, S&P500 등)의 흐름을 읽고, 
+            이것이 한국 증시(코스피 등)에 미치는 영향과 향후 전망을 분석해주세요.
+            반드시 딱 2줄(문장)로 핵심만 요약해주세요.
+            """
+            # AI 서버 응답 대기로 인한 무한 로딩 방지용 타임아웃 5초 설정
+            res = model.generate_content(prompt, request_options={'timeout': 5.0})
+            b5 = f"전망 및 분석: {res.text.strip().replace('**', '')}"
+        except Exception as e:
+            # AI 통신에 실패해도 앱이 죽지 않고 오류 메시지만 표시되도록 예외 처리
+            b5 = f"전망 및 분석: 일시적인 통신 지연으로 실시간 시황 정보를 가져오지 못했습니다."
 
         assets_json["_insight"] = [b1, b2, b3, b4, b5]
 
