@@ -62,7 +62,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: none !important;
     
     /* 🛠️ [ 배너 크기 조절 포인트 ]: 여기서 760px 수치를 직접 조절해 보세요! */
-    width: 650px !important; 
+    width: 600px !important; 
     
     background: rgba(255, 255, 255, 0.98) !important;
     padding: 10px 15px !important; 
@@ -440,6 +440,7 @@ for k in keys_1:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
