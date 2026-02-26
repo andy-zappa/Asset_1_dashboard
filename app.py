@@ -75,8 +75,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     align-items: center !important; 
     justify-content: center !important; 
     
-    /* 🛠️ 간격을 대폭 축소 (24px -> 14px) */
-    gap: 14px !important; 
+    gap: 14px !important; /* 기본 간격 */
 }
 
 div.element-container:has(#zappa-floating-menu) { 
@@ -88,14 +87,12 @@ div.element-container:has(#zappa-floating-menu) {
     padding: 0 !important; 
 }
 
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
-    /* Streamlit의 내부 비율 계산을 완전히 차단하고 텍스트 길이에 맞춰 박스 크기 고정 */
+/* 🚨 버그 수정: column -> stColumn 으로 변경하여 완벽 인식! */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { 
     flex: 0 0 auto !important; 
     width: auto !important; 
     min-width: 0 !important; 
-    
-    /* 내부 패딩을 0으로 만들어 부모의 gap만으로 간격이 렌더링되도록 함 */
     padding: 0 !important; 
     margin: 0 !important; 
     display: flex !important; 
@@ -105,18 +102,40 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     border-right: none !important; 
 }
 
-/* 구분선(/)을 정확히 축소된 간격(14px)의 정중앙에 배치 (-9px) */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after {
+/* 🚨 [Andy님 매의 눈 패치] 개별 항목 마진(간격) 커스텀 조정 */
+/* 1. 초기화(1번) - 총자산(2번) 사이 미세하게 줄이기 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(1),
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(1) {
+    margin-right: -4px !important; 
+}
+/* 2. 평가손익(3번) - 수익률(4번) 사이 미세하게 늘리기 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(3),
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(3) {
+    margin-right: 6px !important; 
+}
+
+/* 드디어 나타나는 구분선(/) 위치 (기본 간격 14px의 절반 위치) */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:not(:last-child)::after,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:not(:last-child)::after {
     content: "/" !important;
     position: absolute !important;
-    right: -9px !important; 
+    right: -7px !important; 
     top: 50% !important;
     transform: translateY(-50%) !important;
     color: #d1d5db !important;
     font-size: 15px !important;
     font-weight: 600 !important;
     pointer-events: none !important;
+}
+
+/* 🚨 간격이 변한 곳은 구분선 위치도 따로 픽셀 계산해서 정중앙에 맞춤 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(1)::after,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(1)::after {
+    right: -5px !important; /* 좁아진 공간의 중앙 */
+}
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(3)::after,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"]:nth-child(3)::after {
+    right: -10px !important; /* 넓어진 공간의 중앙 */
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
@@ -173,7 +192,6 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="prim
 st.markdown(css, unsafe_allow_html=True)
 
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
-# 초기 상태는 종목코드 숨김(False)
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
     with st.spinner("데이터 업데이트 중..."): Andy_pension_v2.generate_asset_data()
@@ -370,7 +388,7 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (모든 버튼에 이모지 추가 반영)
+# ZAPPA 메뉴 버튼들
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
