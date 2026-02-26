@@ -29,17 +29,18 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 .zappa-icon {font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif !important;font-size: 32px !important;}
 
 /* =========================================================
-   플로팅 배너 완전판 (에러 없는 완벽한 CSS 구조)
+   [완벽 복구] 플로팅 배너 CSS 타겟팅 강화 & 레이아웃 붕괴 원천 차단
    ========================================================= */
 
-/* 1. 배너 틀: 직사각형 + 둥근 모서리(8px) + 하단 중앙 정렬 */
+/* 1. 배너 틀: 하단 중앙 고정 및 직사각형 + 둥근 모서리(8px) 구현 */
+div[data-testid="stColumns"]:has(#zappa-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) {
     position: fixed !important;
     bottom: 30px !important;
     left: 50% !important; 
     transform: translateX(-50%) !important; 
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 10px 15px !important; 
+    padding: 8px 0px !important; /* 상하 여백만 부여, 좌우는 버튼 여백으로 커버 */
     border-radius: 8px !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
@@ -51,7 +52,8 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-menu) {
     width: max-content !important; 
 }
 
-/* 2. 숨겨진 마커 공간 소멸시켜 줄맞춤 붕괴 방지 */
+/* 2. 유령 공간 완전 소멸: 
+   Streamlit이 마커 생성 시 만드는 빈 컨테이너를 완벽히 숨겨서, 버튼들이 아래로 밀리거나 틀어지는 현상 차단 */
 div.element-container:has(#zappa-menu) {
     display: none !important;
     position: absolute !important;
@@ -61,32 +63,33 @@ div.element-container:has(#zappa-menu) {
     padding: 0 !important;
 }
 
-/* 3. Streamlit 컬럼 분할 무력화 */
+/* 3. Streamlit 내부 컬럼 분할 속성 무력화 */
+div[data-testid="stColumns"]:has(#zappa-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) > div[data-testid="column"] {
     flex: 0 0 auto !important; 
     width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
 }
 
+/* 내부 요소의 여백 일괄 제거 */
+div[data-testid="stColumns"]:has(#zappa-menu) div[data-testid="stButton"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) div[data-testid="stButton"] {
     margin: 0 !important;
     padding: 0 !important;
 }
 
-/* 4. 버튼 본체: 투명 배경, 파이프 구분선(|), 좌우 18px 여백 */
+/* 4. 버튼 본체: 투명화 후 텍스트 링크처럼 디자인 */
+div[data-testid="stColumns"]:has(#zappa-menu) button,
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button {
     background: transparent !important; 
     border: none !important; 
-    border-right: 1.5px solid #d1d5db !important; 
+    border-right: 1.5px solid #d1d5db !important; /* 파이프(|) 구분선 */
     border-radius: 0 !important; 
-    padding: 0 18px !important; 
-    height: 24px !important; 
-    min-height: 24px !important;
+    padding: 0 16px !important; /* 앞뒤 2칸 여백 */
+    height: 22px !important; 
+    min-height: 22px !important;
     color: #8c8c8c !important; /* 기본 회색 */
     font-size: 15px !important; 
     font-weight: 600 !important; 
@@ -96,14 +99,17 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    line-height: 1 !important;
 }
 
-/* 마지막 버튼 우측 선 제거 */
+/* 마지막 버튼(종목코드) 우측 파이프 선 제거 */
+div[data-testid="stColumns"]:has(#zappa-menu) > div[data-testid="column"]:last-child button,
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) > div[data-testid="column"]:last-child button {
     border-right: none !important;
 }
 
-/* 5. 내부 텍스트 완전 종속 */
+/* 버튼 내부 p 태그 속성 강제 상속 */
+div[data-testid="stColumns"]:has(#zappa-menu) button p,
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button p {
     color: inherit !important;
     font-size: 15px !important;
@@ -113,13 +119,15 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button p {
     line-height: 1 !important;
 }
 
-/* 6. 호버 시 검은색 */
+/* 5. 마우스 호버(Hover) 시 텍스트 검은색 변경 */
+div[data-testid="stColumns"]:has(#zappa-menu) button:hover,
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button:hover {
     color: #111111 !important; 
     background: transparent !important; 
 }
 
-/* 7. 클릭 활성화 상태(primary) 처리 */
+/* 6. 활성화(클릭된 상태)된 메뉴 검은색 유지 (빨간 버튼 덮어쓰기) */
+div[data-testid="stColumns"]:has(#zappa-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button[kind="primary"] {
     background: transparent !important; 
     border: none !important;
@@ -127,6 +135,8 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-menu) button[kind="primary"] {
     color: #111111 !important; /* 클릭된 글자는 검은색 고정 */
 }
 
+/* 마지막 활성화 버튼의 파이프 선 덮어쓰기 방지 */
+div[data-testid="stColumns"]:has(#zappa-menu) > div[data-testid="column"]:last-child button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-menu) > div[data-testid="column"]:last-child button[kind="primary"] {
     border-right: none !important;
 }
@@ -301,11 +311,10 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# 마커를 밖으로 빼되 CSS에서 완벽히 display:none 처리하여 공간 삭제 완료
-st.markdown("<span id='zappa-menu'></span>", unsafe_allow_html=True)
-
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
+    # ✨ 타겟팅 오류 수정 완료: 마커가 안전하게 버튼들과 함께 묶입니다.
+    st.markdown("<span id='zappa-menu'></span>", unsafe_allow_html=True)
     is_active = (st.session_state.sort_mode == 'init')
     if st.button("초기화 ▲" if is_active else "초기화 △", type="primary" if is_active else "secondary"): 
         st.session_state.sort_mode = 'init'; st.rerun()
@@ -323,7 +332,7 @@ with b4:
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_active = st.session_state.show_code
-    lbl = "종목코드 [ - ]" if is_active else "종목코드 [ + ]"
+    lbl = "종목코드[ - ]" if is_active else "종목코드[ + ]"
     if st.button(lbl, type="primary" if is_active else "secondary"): 
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
