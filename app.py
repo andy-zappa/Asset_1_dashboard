@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 좌측 정렬 (겹침 방지)
+   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 밸런스 조정
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -60,7 +60,10 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     right: 30px !important;
     left: auto !important;
     transform: none !important;
-    width: fit-content !important; 
+    
+    /* 🛠️ [ 배너 크기 조절 포인트 ]: 여기서 760px 수치를 직접 조절해 보세요! */
+    width: 760px !important; 
+    
     background: rgba(255, 255, 255, 0.98) !important;
     padding: 10px 15px !important; 
     border-radius: 8px !important; 
@@ -69,7 +72,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
-    justify-content: flex-start !important;
+    justify-content: center !important; /* 늘어난 공간 중앙 정렬 */
     gap: 0 !important; 
 }
 
@@ -87,7 +90,10 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     flex: 0 0 auto !important; 
     width: max-content !important; 
     min-width: max-content !important;
-    padding: 0 12px !important; 
+    
+    /* 글자들 사이 여백 조절 (공간이 넓어졌으므로 살짝 키움) */
+    padding: 0 16px !important; 
+    
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
@@ -359,7 +365,7 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (Andy님 아이디어 반영: 초기화 버튼 앞에 아이콘 추가)
+# ZAPPA 메뉴 버튼들
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
