@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 완벽한 픽셀 단위 간격 통일 🔥
+   [ZAPPA 플로팅 배너 CSS] 완벽한 픽셀 단위 간격 통일 🔥 (Andy님 원본 코드 100% 복구)
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -270,15 +270,16 @@ td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
 
 h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
 
-keys_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
+# 요약표 정렬
+keys_sorted_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
 if st.session_state.sort_mode == 'asset':
-    keys_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
+    keys_sorted_1.sort(key=lambda k: data[k].get('총 자산', 0), reverse=True)
 elif st.session_state.sort_mode == 'profit':
-    keys_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
+    keys_sorted_1.sort(key=lambda k: data[k].get('총 수익', 0), reverse=True)
 elif st.session_state.sort_mode == 'rate':
-    keys_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
+    keys_sorted_1.sort(key=lambda k: data[k].get('수익률(%)', 0), reverse=True)
 
-for k in keys_1:
+for k in keys_sorted_1:
     a = data[k]
     curr_asset = a['총 자산']
     principal = a['원금']
@@ -349,7 +350,7 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (공백 및 슬래시 완벽히 제거)
+# ZAPPA 메뉴 버튼들
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -378,7 +379,9 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
 
-for k in keys_1:
+# 상세 내역 계좌 순서 고정
+for k in FIXED_ACCOUNT_ORDER:
+    if k not in data: continue
     a = data[k]
     with st.expander(f"📂 [ {t3_lbl.get(k, a['label'])} ] 종목별 현황", expanded=False):
         s_data = next(i for i in a['상세'] if i['종목명'] == "[ 합계 ]")
@@ -407,6 +410,8 @@ for k in keys_1:
         
         h3 = [unit_html, "<table class='main-table'><tr><th>종목명</th>"]
         if st.session_state.show_code: h3.append("<th>종목코드</th>")
+        
+        # Syntax Error 수정 완료: ')' 로 닫기
         h3.append("<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>")
         
         items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
@@ -423,4 +428,3 @@ for k in keys_1:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
-
