@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 밸런스 조정
+   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 가운데 정렬 밸런스
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -61,8 +61,8 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     left: auto !important;
     transform: none !important;
     
-    /* 🛠️ [ 배너 크기 조절 포인트 ]: 여기서 760px 수치를 직접 조절해 보세요! */
-    width: 600px !important; 
+    /* 🛠️ [ 배너 크기 조절 포인트 ]: 700px, 650px 등 자유롭게 조절해 보세요 */
+    width: 680px !important; 
     
     background: rgba(255, 255, 255, 0.98) !important;
     padding: 10px 15px !important; 
@@ -72,7 +72,9 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
-    justify-content: center !important; /* 늘어난 공간 중앙 정렬 */
+    
+    /* [Andy님 피드백] 배너 크기가 커져도 항목 전체가 항상 가운데 위치하도록 고정 */
+    justify-content: center !important; 
     gap: 0 !important; 
 }
 
@@ -87,17 +89,20 @@ div.element-container:has(#zappa-floating-menu) {
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
+    /* [Andy님 피드백] 컬럼이 남는 공간을 나눠가지지 못하도록 비율 0으로 고정 */
     flex: 0 0 auto !important; 
     width: max-content !important; 
     min-width: max-content !important;
     
-    /* 글자들 사이 여백 조절 (공간이 넓어졌으므로 살짝 키움) */
-    padding: 0 16px !important; 
+    /* 🛠️ [ 글자 간격 조절 포인트 ]: 배너 크기와 무관하게 여기서 지정한 여백만 유지됨 */
+    padding: 0 14px !important; 
     
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
-    justify-content: flex-start !important; 
+    
+    /* 컬럼 내부 요소들도 가운데 정렬 */
+    justify-content: center !important; 
     position: relative !important; 
     border-right: none !important; 
 }
@@ -136,7 +141,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button {
     transition: color 0.1s ease !important; 
     display: flex !important; 
     align-items: center !important; 
-    justify-content: flex-start !important; 
+    justify-content: center !important; 
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
@@ -147,7 +152,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p {
     margin: 0 !important; 
     padding: 0 !important; 
     line-height: 1 !important; 
-    text-align: left !important; 
+    text-align: center !important; 
     width: max-content !important; 
 }
 
@@ -440,7 +445,3 @@ for k in keys_1:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
