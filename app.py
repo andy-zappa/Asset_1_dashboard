@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 고정 사이즈 및 가운데 정렬 밸런스
+   [ZAPPA 플로팅 배너 CSS] 내용물 밀착(Shrink-wrap) 및 완벽한 중앙 정렬
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -61,8 +61,8 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     left: auto !important;
     transform: none !important;
     
-    /* 🛠️ [ 배너 크기 조절 포인트 ]: 700px, 650px 등 자유롭게 조절해 보세요 */
-    width: 500px !important; 
+    /* [Andy님 피드백 반영] 픽셀 고정 대신 내부 내용물 길이에 딱 맞게 자동 밀착 */
+    width: max-content !important; 
     
     background: rgba(255, 255, 255, 0.98) !important;
     padding: 10px 15px !important; 
@@ -72,8 +72,6 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     z-index: 999999 !important;
     display: flex !important;
     align-items: center !important; 
-    
-    /* [Andy님 피드백] 배너 크기가 커져도 항목 전체가 항상 가운데 위치하도록 고정 */
     justify-content: center !important; 
     gap: 0 !important; 
 }
@@ -89,19 +87,16 @@ div.element-container:has(#zappa-floating-menu) {
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
-    /* [Andy님 피드백] 컬럼이 남는 공간을 나눠가지지 못하도록 비율 0으로 고정 */
     flex: 0 0 auto !important; 
     width: max-content !important; 
     min-width: max-content !important;
     
-    /* 🛠️ [ 글자 간격 조절 포인트 ]: 배너 크기와 무관하게 여기서 지정한 여백만 유지됨 */
+    /* 🛠️ 버튼들 사이의 간격(여백)을 조정하고 싶다면 이 14px 수치만 바꾸시면 됩니다! */
     padding: 0 14px !important; 
     
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
-    
-    /* 컬럼 내부 요소들도 가운데 정렬 */
     justify-content: center !important; 
     position: relative !important; 
     border-right: none !important; 
@@ -390,8 +385,10 @@ with b4:
     if st.button("수익률 [ ● ]" if is_rate else "수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
+    # [Andy님 피드백 반영] 종목코드 텍스트가 상태에 따라 토글되도록 수정
     is_code = st.session_state.show_code
-    if st.button("종목코드 [ - ]", type="primary" if is_code else "secondary"):
+    code_btn_label = "종목코드 [ - ]" if is_code else "종목코드 [ + ]"
+    if st.button(code_btn_label, type="primary" if is_code else "secondary"):
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -445,5 +442,3 @@ for k in keys_1:
             h3.append(row)
         h3.append("</table>")
         st.markdown("".join(h3), unsafe_allow_html=True)
-
-
