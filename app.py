@@ -51,7 +51,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:10px;}
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 첨부 이미지와 완벽하게 동일한 텍스트형 디자인 구현
+   [ZAPPA 플로팅 배너 CSS] 완벽한 대칭 & 테두리 회색화 & Bold 제거
    ========================================================= */
 div[data-testid="stColumns"]:has(#zappa-floating-menu),
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
@@ -62,12 +62,13 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     transform: none !important;
     width: max-content !important;
     background: rgba(255, 255, 255, 0.98) !important;
-    padding: 6px 4px !important; /* 배너 겉 테두리 여유 공간을 이미지 비율에 맞춤 */
-    border-radius: 6px !important; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
-    border: 1.5px solid #999 !important; /* 진한 회색 테두리 반영 */
+    padding: 8px 6px !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; /* 그림자도 부드럽게 조정 */
+    border: 1px solid #d1d5db !important; /* [수정] 진한 검은색 대신 연한 회색으로 변경 */
     z-index: 999999 !important;
     display: flex !important;
+    flex-direction: row !important;
     align-items: center !important; 
     gap: 0 !important; 
 }
@@ -81,58 +82,53 @@ div.element-container:has(#zappa-floating-menu) {
     padding: 0 !important; 
 }
 
-/* 컬럼은 모든 여백/선을 지우고 껍데기 역할만 하도록 수정 */
+/* [핵심] 버튼을 감싸는 방(Column) 자체에 완벽히 동일한 여백과 우측 구분선을 강제 고정 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"] { 
     flex: 0 0 auto !important; 
-    width: auto !important; 
+    width: max-content !important; /* 빈 공간 생기지 않도록 내용물에 딱 맞춤 */
     min-width: 0 !important; 
-    padding: 0 !important; 
+    padding: 0 14px !important; /* 단어 양옆의 여백을 14px로 동일하게 강제 고정 */
     margin: 0 !important; 
     display: flex !important; 
     align-items: center !important; 
     justify-content: center !important; 
-    border: none !important; 
+    border-right: 1px solid #b0b0b0 !important; /* 방의 우측 벽에 선을 그음 */
 }
 
-div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"] { 
-    margin: 0 !important; 
-    padding: 0 !important; 
-    width: auto !important; 
-}
-
-/* 버튼 본체에 테두리를 주되 높이를 글자크기(16px)와 맞춰 짧은 '선' 형태 구현 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
-    width: auto !important; 
-    background: transparent !important; 
-    border: none !important; 
-    border-right: 1.5px solid #a3a3a3 !important; /* 텍스트형 파이프(|) 효과 */
-    border-radius: 0 !important; 
-    padding: 0 12px !important; /* 좌우 완벽 대칭 여백 */
-    height: 16px !important; /* 높이를 확 줄여서 텍스트처럼 보이게 만듦 */
-    min-height: 16px !important; 
-    color: #8c8c8c !important; 
-    font-size: 15px !important; 
-    font-weight: 500 !important; 
-    white-space: nowrap !important; 
-    box-shadow: none !important; 
-    transition: color 0.1s ease !important; 
-    display: flex !important; 
-    align-items: center !important; 
-    justify-content: center !important; 
-}
-
-/* 마지막 버튼 우측 선은 무조건 삭제 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button,
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button { 
+/* 마지막 방(5번째 열)의 오른쪽 선은 철저하게 삭제하여 찌꺼기 선 원천 봉쇄 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5),
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child,
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-of-type,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-of-type { 
     border-right: none !important; 
 }
 
-/* Streamlit 내부 텍스트(p) 정렬 보정 */
+/* 버튼 본체는 테두리 일절 없이 투명하게 껍데기 역할만 수행 */
+div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"],
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
+div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
+    margin: 0 !important; 
+    padding: 0 !important; 
+    width: max-content !important; 
+    background: transparent !important; 
+    border: none !important; 
+    border-radius: 0 !important; 
+    height: 16px !important; 
+    min-height: 16px !important; 
+    color: #8c8c8c !important; 
+    font-size: 15px !important; 
+    font-weight: 500 !important; /* 기본 굵기 */
+    white-space: nowrap !important; 
+    box-shadow: none !important; 
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important; 
+}
+
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p { 
     color: inherit !important; 
@@ -151,22 +147,13 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover {
     background: transparent !important; 
 }
 
-/* 클릭(활성화) 시 진한 검은색 유지, 우측 구분선은 그대로 유지 */
+/* [수정] 클릭(활성화) 시 Bold 해제. 오직 색상만 검은색 유지 */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
     background: transparent !important; 
     border: none !important; 
-    border-right: 1.5px solid #a3a3a3 !important; 
     color: #111111 !important; 
-    font-weight: 800 !important; 
-}
-
-/* 마지막 버튼의 활성화 시 구분선 역시 삭제 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:nth-child(5) button[kind="primary"],
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:last-child button[kind="primary"] { 
-    border-right: none !important; 
+    font-weight: 500 !important; /* Bold체 삭제. 기본 굵기 유지 */
 }
 </style>
 """
@@ -366,7 +353,7 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들 (텍스트 띄어쓰기 완전 제거하여 이미지와 동일하게)
+# ZAPPA 메뉴 버튼들
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
