@@ -75,8 +75,8 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     align-items: center !important; 
     justify-content: center !important; 
     
-    /* 🛠️ 오직 이 gap 속성 하나로 전체 버튼 사이의 간격을 동일하게 강제 제어합니다 */
-    gap: 24px !important; 
+    /* 🛠️ 간격을 대폭 축소 (24px -> 14px) */
+    gap: 14px !important; 
 }
 
 div.element-container:has(#zappa-floating-menu) { 
@@ -105,31 +105,18 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid
     border-right: none !important; 
 }
 
-/* 🚨 [추가 패치] 첫 번째 버튼(초기화)의 이모지로 인한 시각적 오차 미세 보정 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child {
-    margin-right: -6px !important; /* 미세하게 오른쪽으로 당김 */
-}
-
-/* 구분선(/)을 정확히 간격의 정중앙에 배치 */
+/* 구분선(/)을 정확히 축소된 간격(14px)의 정중앙에 배치 (-9px) */
 div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after,
 div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:not(:last-child)::after {
     content: "/" !important;
     position: absolute !important;
-    /* gap이 24px이므로 절반인 12px에 시각적 텍스트 중심 보정(-2px)을 더해 -14px로 세팅 */
-    right: -14px !important; 
+    right: -9px !important; 
     top: 50% !important;
     transform: translateY(-50%) !important;
     color: #d1d5db !important;
     font-size: 15px !important;
     font-weight: 600 !important;
     pointer-events: none !important;
-}
-
-/* 첫 번째 구분선은 마진 보정에 맞춰 위치 살짝 조정 */
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child::after,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="column"]:first-child::after {
-    right: -11px !important;
 }
 
 div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
@@ -186,6 +173,7 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="prim
 st.markdown(css, unsafe_allow_html=True)
 
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
+# 초기 상태는 종목코드 숨김(False)
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'init' not in st.session_state:
     with st.spinner("데이터 업데이트 중..."): Andy_pension_v2.generate_asset_data()
@@ -382,7 +370,7 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 # --- [3] 계좌별 상세 내역 ---
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
-# ZAPPA 메뉴 버튼들
+# ZAPPA 메뉴 버튼들 (모든 버튼에 이모지 추가 반영)
 b1, b2, b3, b4, b5 = st.columns(5)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -391,20 +379,19 @@ with b1:
         st.session_state.sort_mode = 'init'; st.rerun()
 with b2:
     is_asset = (st.session_state.sort_mode == 'asset')
-    if st.button("총 자산 [ ● ]" if is_asset else "총 자산 [ ○ ]", type="primary" if is_asset else "secondary"):  
+    if st.button("💰 총 자산 [ ● ]" if is_asset else "💰 총 자산 [ ○ ]", type="primary" if is_asset else "secondary"):  
         st.session_state.sort_mode = 'asset'; st.rerun()
 with b3:
     is_profit = (st.session_state.sort_mode == 'profit')
-    if st.button("평가손익 [ ● ]" if is_profit else "평가손익 [ ○ ]", type="primary" if is_profit else "secondary"): 
+    if st.button("📊 평가손익 [ ● ]" if is_profit else "📊 평가손익 [ ○ ]", type="primary" if is_profit else "secondary"): 
         st.session_state.sort_mode = 'profit'; st.rerun()
 with b4:
     is_rate = (st.session_state.sort_mode == 'rate')
-    if st.button("수익률 [ ● ]" if is_rate else "수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
+    if st.button("📈 수익률 [ ● ]" if is_rate else "📈 수익률 [ ○ ]", type="primary" if is_rate else "secondary"): 
         st.session_state.sort_mode = 'rate'; st.rerun()
 with b5:
     is_code = st.session_state.show_code
-    # 숨김(False)일 때는 [ - ], 노출(True)일 때는 [ + ] 표시
-    code_btn_label = "종목코드 [ + ]" if is_code else "종목코드 [ - ]"
+    code_btn_label = "💻 종목코드 [ + ]" if is_code else "💻 종목코드 [ - ]"
     if st.button(code_btn_label, type="primary" if is_code else "secondary"):
         st.session_state.show_code = not st.session_state.show_code; st.rerun()
 
