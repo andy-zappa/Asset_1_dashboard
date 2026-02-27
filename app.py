@@ -193,8 +193,16 @@ if "_insight" in data:
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
     def render_bar(p, color):
-        if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%; margin-bottom: 4px;'></div>"
-        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: normal; color: #333; margin-bottom: 4px;'>{p:.0f}%</div>"
+        # [수정] 5% 미만 작은 세그먼트(IRP 1% 등)에 리더선(Leader Line) 추가
+        if p > 0 and p < 5:
+            return f"""
+            <div style='width: {p}%; background-color: {color}; height: 100%; position: relative;'>
+                <div style='position: absolute; top: 100%; left: 50%; width: 1px; height: 11px; background-color: #888; transform: translateX(-50%);'></div>
+                <div style='position: absolute; top: 110%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #555; white-space: nowrap;'>{p:.0f}%</div>
+            </div>
+            """
+        if p == 0: return ""
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: normal; color: #333;'>{p:.0f}%</div>"
 
     insight_texts = data.get("_insight", [])
     bottom_html = ""
@@ -208,10 +216,11 @@ if "_insight" in data:
     stop2 = p_cash + p_ovs
     donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
+    # [수정] 현금성자산 텍스트를 위로 조금 더 올림 (top: 3%)
     donut_html = f"""
     <div style='position: relative; width: 130px; height: 130px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; margin-left: 5px; flex-shrink: 0;'>
         <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
-        <div style='position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div>
+        <div style='position: absolute; top: 3%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div>
         <div style='position: absolute; top: 35%; right: -12%; font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
         <div style='position: absolute; bottom: 8%; left: 12%; font-size: 13px; color: #fff; font-weight: bold; text-align: center; line-height: 1.2; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div>
     </div>
@@ -228,7 +237,6 @@ if "_insight" in data:
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
-    # [수정] 메인 카드 원금: font-weight bold 제거
     html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
@@ -247,22 +255,25 @@ if "_insight" in data:
     html_parts.append("</div>")
 
     html_parts.append("<div>")
-    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
+    # [수정] 리더선 표기를 위해 overflow를 visible로 변경하고 하단 여백 확보
+    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 25px; position: relative;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
     html_parts.append(render_bar(p_pension, '#a9d18e'))
     html_parts.append(render_bar(p_isa, '#ffd966'))
     html_parts.append("</div>")
+    
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 24px;'>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
+    
     html_parts.append("<div style='padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
     html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억 달성률</span>")
-    html_parts.append(f"<span style='font-size: 15px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span>")
+    html_parts.append(f<span style='font-size: 15px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span>")
     html_parts.append("</div>")
     html_parts.append("<div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'>")
     html_parts.append(f"<div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #8eaadb, #4a90e2);'></div>")
@@ -282,19 +293,23 @@ if "_insight" in data:
             acc_principal = a.get('원금', 0)
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
+            
             html_parts.append("<div class='card-sub' style='padding: 12px 18px;'>")
-            html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: bold; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
+            # [수정] 날짜 텍스트 bold 제거 (font-weight: normal)
+            html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: normal; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
             html_parts.append(f"<div style='font-size: 20px; font-weight: bold; color: #111; margin-bottom: 2px; margin-top: -3px;'>{acc_name}</div>")
             html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 10px;'></div>")
+            
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
             html_parts.append(f"<span style='font-size: 16.5px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
+            
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
             html_parts.append(f"<div style='text-align: right; line-height: 1.25;'><div class='{col(acc_profit)}' style='font-size: 16.5px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 15px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
-            # [수정] 서브 카드 원금: font-weight bold 제거
+            
             principal_label = "* 원금"
             html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
             html_parts.append("</div>")
