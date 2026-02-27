@@ -225,7 +225,6 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # [수정] 아래쪽 여백(margin-bottom: auto;)을 주어 여기서 발생하는 빈 공간을 모두 아래로 밀어냄
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
@@ -234,25 +233,24 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # [수정] 아래쪽 막대그래프와의 간격은 20px 정도로 일정하게 유지되도록 설정
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;'>")
     html_parts.append(donut_html)
     
-    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
+    # [수정 완벽 보정] line-height를 통일하여 어떤 브라우저에서도 줄이 틀어지지 않도록 강제 정렬
+    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: start; width: 100%;'>")
     
-    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right;'>{fmt(t_asset - cash_total)}</div>")
+    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>평가금액</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
     
-    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right;'>{fmt(cash_total)}</div>")
+    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>현금성자산</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
     
-    html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right;'>총 손익</div>")
-    html_parts.append(f"<div style='text-align: right; line-height: 1.15;'><div style='font-size: 22px; font-weight: 900;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 18px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
+    html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
+    html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: 900; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
 
-    # [수정] margin-top: auto; 제거 (공간 분배를 위쪽 상단 블록으로 넘김)
     html_parts.append("<div>")
     
     html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
