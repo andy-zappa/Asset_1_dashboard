@@ -228,8 +228,6 @@ if "_insight" in data:
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
-    # [수정] 메인 카드 원금: font-weight bold 제거
-    html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
@@ -282,21 +280,25 @@ if "_insight" in data:
             acc_principal = a.get('원금', 0)
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
+            
             html_parts.append("<div class='card-sub' style='padding: 12px 18px;'>")
-            html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: bold; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
+            # --- 수정된 부분: font-weight: normal 적용 (날짜 부분 볼드 제거) ---
+            html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: normal; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
             html_parts.append(f"<div style='font-size: 20px; font-weight: bold; color: #111; margin-bottom: 2px; margin-top: -3px;'>{acc_name}</div>")
             html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 10px;'></div>")
+            
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
             html_parts.append(f"<span style='font-size: 16.5px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
+            
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
             html_parts.append(f"<div style='text-align: right; line-height: 1.25;'><div class='{col(acc_profit)}' style='font-size: 16.5px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 15px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
-            # [수정] 서브 카드 원금: font-weight bold 제거
+            
             principal_label = "* 원금"
-            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
+            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: bold; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") 
     html_parts.append("</div>") 
