@@ -32,7 +32,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 
 /* 서브 카드 */
-.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; }
+.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
 
 /* 하단 텍스트 인사이트 박스 */
 .insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
@@ -133,8 +133,8 @@ with c2:
 st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
-# [추가] 개설일자 매핑
-OPEN_DATES = {'DC': '25.8월', 'IRP': '25.8월', 'PENSION': '25.11월', 'ISA': '25.8월'}
+# [수정] PPT 시안에 맞춘 개설일자 텍스트 매핑
+OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
 # =====================================================================
 # 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링
@@ -202,7 +202,6 @@ if "_insight" in data:
         if "조회 기준 시간" in text: continue
         bottom_html += f"<p>{text}</p>"
 
-    # [수정] 메인 타이틀을 원상복구하여 깔끔하게 배치 (부연 설명 삭제)
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
     stop1 = p_cash
@@ -220,9 +219,7 @@ if "_insight" in data:
 
     html_parts = []
     
-    # [수정] 우측 상단 단위 표기 원상복구
     html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
-    
     html_parts.append("<div class='insight-container'>")
     
     # ---------------- 좌측 영역 (메인 카드) ----------------
@@ -240,7 +237,6 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>")
     html_parts.append(donut_html)
     
-    # [수정] 평가금액, 현금성자산, 총 손익 간격을 더 타이트하게 (row-gap: 2px)
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 2px; column-gap: 15px; justify-content: end; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
@@ -285,7 +281,7 @@ if "_insight" in data:
     html_parts.append("</div>") # card-main end
     html_parts.append("</div>") # insight-left end
     
-    # ---------------- 우측 영역 (4분할 계좌 카드 - 원금/개설일자 추가) ----------------
+    # ---------------- 우측 영역 (4분할 계좌 카드 - PPT 시안 완벽 반영) ----------------
     html_parts.append("<div class='insight-right'>")
     html_parts.append("<div class='grid-2x2'>")
     for k in FIXED_ACCOUNT_ORDER:
@@ -297,32 +293,33 @@ if "_insight" in data:
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
             
-            html_parts.append("<div class='card-sub'>")
-            html_parts.append(f"<div style='font-size: 18px; font-weight: 900; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>{acc_name}</div>")
+            # 레이아웃을 위해 flex 속성 부여, 상하 균형을 맞추도록 구성
+            html_parts.append("<div class='card-sub' style='padding: 16px 22px;'>")
             
-            # [추가] 개설일자
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
-            html_parts.append("<span style='font-size: 13px; color: #777; font-weight: normal;'>개설일자</span>")
-            html_parts.append(f"<span style='font-size: 13px; color: #111; font-weight: normal;'>{OPEN_DATES.get(k, '')}</span>")
-            html_parts.append("</div>")
+            # 우측 상단: 개설일자
+            html_parts.append(f"<div style='text-align: right; font-size: 15px; color: #555; font-weight: bold; margin-bottom: 2px;'>{OPEN_DATES.get(k, '')}</div>")
             
-            # [추가] 투자원금
+            # 좌측: 계좌명 (크게)
+            html_parts.append(f"<div style='font-size: 21px; font-weight: 900; color: #111; margin-bottom: 12px;'>{acc_name}</div>")
+            
+            # 구분선
+            html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 14px;'></div>")
+            
+            # 총 자산
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>")
-            html_parts.append("<span style='font-size: 13px; color: #777; font-weight: normal;'>투자원금</span>")
-            html_parts.append(f"<span style='font-size: 14px; color: #111; font-weight: normal;'>{fmt(acc_principal)}</span>")
-            html_parts.append("</div>")
-
-            # 기존: 총 자산
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
-            html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
+            html_parts.append(f"<span style='font-size: 16.5px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
             
-            # 기존: 총 손익
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start;'>")
+            # 총 손익 (우측에 금액과 퍼센트 상하 배치)
+            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
-            html_parts.append(f"<div style='text-align: right; line-height: 1.15;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 16px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
+            html_parts.append(f"<div style='text-align: right; line-height: 1.25;'><div class='{col(acc_profit)}' style='font-size: 16.5px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 15px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
+            
+            # 하단: 원금 / 투자금 명시 (flex-grow를 통해 최하단으로 밀어냄)
+            principal_label = "* 투자" if k == 'IRP' else "* 원금"
+            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: bold; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
             
             html_parts.append("</div>")
     html_parts.append("</div>") # grid end
