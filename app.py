@@ -21,7 +21,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
 
 /* =========================================================
-   [NEW] 자파의 대시보드 디자인 (좌우 대칭 및 높낮이 일치)
+   [ZAPPA] 대시보드 디자인 (Baseline 정렬 및 Squeeze 최적화)
    ========================================================= */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
@@ -32,13 +32,13 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 
 /* 서브 카드 (Squeeze 적용) */
-.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 12px 16px; }
+.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 10px 15px; }
 
 /* 하단 텍스트 인사이트 박스 */
 .insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
 .insight-bottom-box p { margin-bottom: 12px; }
 
-/* 요약 텍스트 정밀 디자인 */
+/* 요약 텍스트 디자인 */
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
 
@@ -48,7 +48,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 원본 100% 보존
+   [ZAPPA 플로팅 배너 CSS] 
    ========================================================= */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
@@ -136,7 +136,7 @@ FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
 # =====================================================================
-# 💡 자파의 자산 카드뷰 템플릿 렌더링
+# 💡 ZAPPA 자산 카드뷰 템플릿 렌더링
 # =====================================================================
 if "_insight" in data:
     
@@ -182,7 +182,6 @@ if "_insight" in data:
     worst_5 = all_items[::-1][:5]
 
     dom_total = t_asset - cash_total - ovs_total
-
     p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
     p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
     p_dom = (dom_total / t_asset * 100) if t_asset > 0 else 0
@@ -208,10 +207,9 @@ if "_insight" in data:
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>"
 
     # =====================================================================
-    # [NEW] 자파의 동적 시황 분석 알고리즘 (Japa Dynamic Market Analysis)
+    # 🧠 ZAPPA 동적 시황 분석 알고리즘 (가독성 및 컬러링 패치)
     # =====================================================================
     try:
-        # 1. 최고 수익률 계좌 찾기
         acc_rates = []
         for k in FIXED_ACCOUNT_ORDER:
             if k in data:
@@ -221,33 +219,32 @@ if "_insight" in data:
         acc_rates.sort(key=lambda x: x[1], reverse=True)
         best_acc_name, best_acc_rate = acc_rates[0] if acc_rates else ("전체", 0)
 
-        # 2. 특징 종목 추출
         b1_name = best_5[0]['종목명'] if len(best_5) > 0 else "국내 주도 ETF"
         b1_rate = best_5[0].get('수익률(%)', 0) if len(best_5) > 0 else 0
         w1_name = worst_5[0]['종목명'] if len(worst_5) > 0 else "해외 변동성 ETF"
         w1_rate = worst_5[0].get('수익률(%)', 0) if len(worst_5) > 0 else 0
 
-        # 3. 비중에 따른 문구 동적 생성
-        market_lead_txt = "한국 주식형 ETF의 견조한 상승세가 미국 ETF 실적을 상회하며" if p_dom >= p_ovs else "미국 기술주 및 지수 추종 ETF가 든든하게 시장을 견인하며"
+        market_lead_txt = "한국 주식형 ETF의 견조한 상승세가 미국 ETF 실적을 상회하며" if p_dom >= p_ovs else "미국 기술주 및 지수 추종 ETF가 시장을 견인하며"
 
-        japa_html = f"<div style='font-size: 14.5px; line-height: 1.65; color: #444; letter-spacing: -0.3px;'>"
+        # 가독성 스타일 (행간 1.85, 좌측 여백 축소)
+        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; letter-spacing: -0.2px; padding-left: 5px;'>"
+        t_style = "color:#111; font-size:15px; font-weight:bold; display:block; margin-bottom:6px;"
         
-        # 꼭지 1: 포트폴리오 분석
-        japa_html += f"<p style='margin-bottom: 12px;'><strong style='color:#111; font-size:15px;'>• 계좌 현황 분석:</strong><br>최근 코스피의 꾸준한 반등 흐름 속에 <strong>{market_lead_txt}</strong> 전체 평가 손익을 주도하고 있습니다. 특히 관련 비중이 높은 <strong>{best_acc_name} 계좌가 전체 수익률({best_acc_rate:.2f}%) 1위</strong>를 기록하며 포트폴리오의 실적을 훌륭하게 방어하고 있습니다.</p>"
+        # 수익률 컬러링 스팬 생성 함수
+        def rate_span(v):
+            return f"<span class='{col(v)}' style='font-weight:bold;'>{fmt_p(v)}</span>"
 
-        # 꼭지 2: 특징주 추론 분석
-        japa_html += f"<p style='margin-bottom: 12px;'><strong style='color:#111; font-size:15px;'>• BEST / WORST 종목 점검:</strong><br>손익률 최상위인 <strong>{b1_name} (▲{b1_rate:.2f}%)</strong>는 최근 주가 상승 분을 오롯이 누리면서도 배당/인컴 등 특유의 방어적 매력까지 더해져 완벽한 효자 종목으로 활약 중입니다. 반면 <strong>{w1_name} (▼{abs(w1_rate):.2f}%)</strong>를 비롯한 일부 해외/채권형 종목은 최근 부각된 미국 관세 인상 우려 및 금리 인하 지연 분위기의 직격탄을 맞아 상대적으로 부진한 흐름입니다.</p>"
+        zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>• 계좌 현황 분석:</span>최근 코스피의 꾸준한 반등 흐름 속에 <strong>{market_lead_txt}</strong> 전체 평가 손익을 주도하고 있습니다. 특히 관련 비중이 높은 <strong>{best_acc_name} 계좌가 전체 수익률({rate_span(best_acc_rate)}) 1위</strong>를 기록하며 포트폴리오의 실적을 훌륭하게 방어하고 있습니다.</div>"
 
-        # 꼭지 3: 거시 경제 요약 및 액션 플랜
-        japa_html += f"<p style='margin-bottom: 0px;'><strong style='color:#111; font-size:15px;'>• 거시 경제 및 향후 대응 전략:</strong><br>간밤 미국은 예상보다 높은 고용지표로 인해 금리 인하 기대감이 한풀 꺾였고, 트럼프 행정부의 추가 관세 압박까지 겹쳐 빅테크 중심의 하락세가 연출되었습니다. 반면 투자처를 잃은 자금이 한국으로 눈을 돌리며 코스피는 연일 상승 랠리를 이어가고 있습니다. <strong>수익이 단기 급등한 우량 종목은 일부 익절을 통해 현금({p_cash:.0f}%) 비중을 다져두고, 소외된 저평가 자산으로 스마트하게 리밸런싱</strong>하며 변동성 장세에 대비할 것을 권장합니다.</p>"
+        zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>• BEST / WORST 종목 점검:</span>손익률 최상위인 <strong>{b1_name} ({rate_span(b1_rate)})</strong>는 최근 주가 상승 분을 오롯이 누리면서도 배당/인컴 등 특유의 방어적 매력까지 더해져 완벽한 효자 종목으로 활약 중입니다. 반면 <strong>{w1_name} ({rate_span(w1_rate)})</strong>를 비롯한 일부 해외 종목은 최근 부각된 미국 관세 우려 및 금리 인하 지연 분위기의 영향으로 상대적으로 부진한 흐름입니다.</div>"
 
-        japa_html += "</div>"
+        zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>• 거시 경제 및 향후 대응 전략:</span>간밤 미국은 예상보다 높은 고용지표로 인해 금리 인하 기대감이 한풀 꺾였고, 트럼프 행정부의 추가 관세 압박까지 겹쳐 빅테크 중심의 하락세가 연출되었습니다. 반면 투자처를 잃은 자금이 한국으로 눈을 돌리며 코스피는 상승 랠리를 이어가고 있습니다. <strong>수익이 급등한 종목은 일부 익절을 통해 현금({p_cash:.0f}%) 비중을 다져두고, 소외된 저평가 자산으로 스마트하게 리밸런싱</strong>하며 변동성에 대비할 것을 권장합니다.</div>"
 
-    except Exception as e:
-        japa_html = "<p>자파 엔진 데이터를 분석하는 중입니다...</p>"
-    # =====================================================================
+        zappa_html += "</div>"
+    except Exception:
+        zappa_html = "<p>ZAPPA 엔진 데이터를 분석하는 중입니다...</p>"
 
-    st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
+    # -----------------------------------------------------------------
 
     stop1 = p_cash
     stop2 = p_cash + p_ovs
@@ -345,7 +342,6 @@ if "_insight" in data:
     html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 30px; align-items: stretch;'>")
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
-    
     html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 BEST 5</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
@@ -359,14 +355,11 @@ if "_insight" in data:
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
-    
     html_parts.append("</div>")
     
-    html_parts.append("<div style='flex: 1; padding-left: 15px;'>")
-    # [수정] 타이틀 변경 및 좌측 BEST 5 와 동일한 19px 적용
+    html_parts.append("<div style='flex: 1; padding-left: 10px;'>")
     html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
-    # [수정] 자파의 알고리즘 HTML 삽입
-    html_parts.append(japa_html)
+    html_parts.append(zappa_html)
     html_parts.append("</div>")
     
     html_parts.append("</div>") 
@@ -382,13 +375,8 @@ st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='
 h1_table = """<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"""
 h1_table = re.sub(r'\n\s*', '', h1_table)
 
-ty = tot.get('수익률(%)', tot.get('손익률(%)', 0))
-tg = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
-ta = tot.get('총 자산', tot.get('총자산', 0))
-to = tot.get('원금합', 0)
-td7_tot_1 = (ta - tot.get('평가손익(7일전)', 0)) - to
-td15_tot_1 = (ta - tot.get('평가손익(15일전)', 0)) - to
-td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
+ty = tot.get('수익률(%)', tot.get('손익률(%)', 0)); tg = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0))); ta = tot.get('총 자산', tot.get('총자산', 0)); to = tot.get('원금합', 0)
+td7_tot_1 = (ta - tot.get('평가손익(7일전)', 0)) - to; td15_tot_1 = (ta - tot.get('평가손익(15일전)', 0)) - to; td30_tot_1 = (ta - tot.get('평가손익(30일전)', 0)) - to
 
 h1 = [unit_html, h1_table]
 h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(ta)}</td><td class='{col(tg)}'>{fmt(tg, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(ty)}'>{fmt_p(ty)}</td><td>{fmt(to)}</td></tr>")
@@ -399,18 +387,12 @@ elif st.session_state.sort_mode == 'profit': keys_1.sort(key=lambda k: data.get(
 elif st.session_state.sort_mode == 'rate': keys_1.sort(key=lambda k: data.get(k, {}).get('수익률(%)', 0), reverse=True)
 
 for k in keys_1:
-    a = data.get(k, {})
-    curr_asset = a.get('총 자산', 0); principal = a.get('원금', 0)
-    a_prof = a.get('총 수익', 0); a_rate = a.get('수익률(%)', 0)
-    ad7_acc_1 = (curr_asset - a.get('평가손익(7일전)', 0)) - principal
-    ad15_acc_1 = (curr_asset - a.get('평가손익(15일전)', 0)) - principal
-    ad30_acc_1 = (curr_asset - a.get('평가손익(30일전)', 0)) - principal
+    a = data.get(k, {}); curr_asset = a.get('총 자산', 0); principal = a.get('원금', 0); a_prof = a.get('총 수익', 0); a_rate = a.get('수익률(%)', 0)
+    ad7_acc_1 = (curr_asset - a.get('평가손익(7일전)', 0)) - principal; ad15_acc_1 = (curr_asset - a.get('평가손익(15일전)', 0)) - principal; ad30_acc_1 = (curr_asset - a.get('평가손익(30일전)', 0)) - principal
     h1.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(curr_asset)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(ad7_acc_1)}'>{fmt(ad7_acc_1, True)}</td><td class='{col(ad15_acc_1)}'>{fmt(ad15_acc_1, True)}</td><td class='{col(ad30_acc_1)}'>{fmt(ad30_acc_1, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(principal)}</td></tr>")
-h1.append("</table>")
-st.markdown("".join(h1), unsafe_allow_html=True)
+h1.append("</table>"); st.markdown("".join(h1), unsafe_allow_html=True)
 
-ag_tot = ta - tot.get('매입금액합',0)
-ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
+ag_tot = ta - tot.get('매입금액합',0); ay_tot = (ag_tot / tot.get('매입금액합',1) * 100) if tot.get('매입금액합',1) > 0 else 0
 st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
 st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(ta)}</span> / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
@@ -435,8 +417,7 @@ elif st.session_state.sort_mode == 'rate': sec2_items.sort(key=lambda x: x['ay_a
 for item in sec2_items:
     a = item['a']; ad1_acc = a.get('평가손익(1일전)', 0); ad7_acc = a.get('평가손익(7일전)', 0); ad30_acc = a.get('평가손익(30일전)', 0)
     h2.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(a.get('총 자산', 0))}</td><td class='{col(item['ag_acc'])}'>{fmt(item['ag_acc'], True)}</td><td class='{col(ad1_acc)}'>{fmt(ad1_acc, True)}</td><td class='{col(ad7_acc)}'>{fmt(ad7_acc, True)}</td><td class='{col(ad30_acc)}'>{fmt(ad30_acc, True)}</td><td class='{col(item['ay_acc'])}'>{fmt_p(item['ay_acc'])}</td><td>{fmt(item['ap_acc'])}</td></tr>")
-h2.append("</table>")
-st.markdown("".join(h2), unsafe_allow_html=True)
+h2.append("</table>"); st.markdown("".join(h2), unsafe_allow_html=True)
 
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 b1, b2, b3, b4, b5 = st.columns(5)
