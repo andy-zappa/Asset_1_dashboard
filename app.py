@@ -192,8 +192,9 @@ if "_insight" in data:
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
     def render_bar(p, color):
+        # [수정] font-weight: bold; 제거 (normal로 렌더링)
         if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%; margin-bottom: 4px;'></div>"
-        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: bold; color: #333; margin-bottom: 4px;'>{p:.0f}%</div>"
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: normal; color: #333; margin-bottom: 4px;'>{p:.0f}%</div>"
 
     insight_texts = data.get("_insight", [])
     bottom_html = ""
@@ -207,7 +208,6 @@ if "_insight" in data:
     stop2 = p_cash + p_ovs
     donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
-    # [수정] 현금성자산 텍스트를 위로 올림 (top: 6%)
     donut_html = f"""
     <div style='position: relative; width: 130px; height: 130px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; margin-left: 5px; flex-shrink: 0;'>
         <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
@@ -237,7 +237,6 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;'>")
     html_parts.append(donut_html)
     
-    # [수정 완벽 보정] align-items: baseline; 을 적용하여 임의의 padding 없이 텍스트 밑줄을 구조적으로 완벽하게 맞춤.
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
@@ -269,9 +268,12 @@ if "_insight" in data:
     html_parts.append("</div>")
     
     html_parts.append("<div style='padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: bold; color: #555; margin-bottom: 6px;'>")
-    html_parts.append("<span>🎯 은퇴 자산 목표 10억 달성률</span>")
-    html_parts.append(f"<span style='color: #4a90e2;'>{progress_pct:.1f}%</span>")
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
+    
+    # [수정] 은퇴 자산 목표 달성률 글자를 우측 카드의 '총 자산' 스타일과 동일하게 변경 (font-size: 15px; color: #777; font-weight: normal;)
+    html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억 달성률</span>")
+    html_parts.append(f"<span style='font-size: 15px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span>")
+    
     html_parts.append("</div>")
     html_parts.append("<div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'>")
     html_parts.append(f"<div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #8eaadb, #4a90e2);'></div>")
