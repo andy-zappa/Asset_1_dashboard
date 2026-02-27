@@ -250,8 +250,8 @@ if "_insight" in data:
     html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 22px; padding-left: 15px;'>")
     html_parts.append(donut_html)
     
-    # [수정] Grid 컨테이너에 align-items: baseline; 적용하여 라벨과 숫자의 하단(바닥선)을 완벽하게 일치시킴
-    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
+    # [수정] Grid 컨테이너의 상단 마진을 추가하여 전체 블록을 아래로 미세하게 이동 (10px -> 18px)
+    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
     html_parts.append("<div style='color: #777; font-size: 15px; text-align: right; line-height: 22px;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
     html_parts.append("<div style='color: #777; font-size: 15px; text-align: right; line-height: 22px;'>현금성자산</div>")
@@ -303,7 +303,6 @@ if "_insight" in data:
             html_parts.append(f"<div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
             html_parts.append(f"<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 2px;'>{acc_name}</div>")
             html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div>")
-            # [수정] 우측 카드들도 완벽한 baseline 정렬 적용
             html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span></div>")
             html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(acc_rate)}</div></div></div>")
             html_parts.append("</div>")
