@@ -21,15 +21,17 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
 
 /* =========================================================
-   [NEW] 자파의 카드뷰 대시보드 디자인
+   [NEW] 자파의 카드뷰 대시보드 구조 (좌우 나란히 + 하단 텍스트)
    ========================================================= */
-.insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 30px; }
-.insight-left { flex: 0 0 45%; display: flex; flex-direction: column; gap: 15px; }
-.insight-right { flex: 1; padding: 10px 0 10px 20px; border-left: 2px solid #eaeaea; font-size: 15.5px; line-height: 1.8; color: #333; display: flex; flex-direction: column; justify-content: center; }
-.insight-right p { margin-bottom: 12px; }
+.insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
+.insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
+.insight-right { flex: 0 0 52%; display: flex; flex-direction: column; flex-grow: 1; }
 
-.card-main { background-color: #fffdf2; border: 1.5px solid #e8dbad; border-radius: 18px; padding: 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
-.grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.insight-bottom { font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; padding: 0 5px; }
+.insight-bottom p { margin-bottom: 12px; }
+
+.card-main { background-color: #fffdf2; border: 1.5px solid #e8dbad; border-radius: 18px; padding: 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; height: 100%; }
 .card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
 
 /* 요약 텍스트 정밀 디자인 */
@@ -146,7 +148,7 @@ st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weig
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (구조 완전 개편 + 에러 원천 차단)
 # =====================================================================
 if "_insight" in data:
     
@@ -163,7 +165,6 @@ if "_insight" in data:
                 if any(x in name for x in ['현금', 'MMF', '삼성화재']):
                     cash_total += item.get('총 자산', item.get('총자산', 0))
 
-    # [막대 그래프를 위한 4계좌 비중 계산]
     a_dc = data.get('DC', {}).get('총 자산', data.get('DC', {}).get('총자산', 0))
     a_irp = data.get('IRP', {}).get('총 자산', data.get('IRP', {}).get('총자산', 0))
     a_pension = data.get('PENSION', {}).get('총 자산', data.get('PENSION', {}).get('총자산', 0))
@@ -182,60 +183,63 @@ if "_insight" in data:
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
 
     insight_texts = data.get("_insight", [])
-    right_html = ""
+    bottom_html = ""
     for text in insight_texts:
         if "조회 기준 시간" in text: continue
-        right_html += f"<p style='margin-bottom:12px;'>{text}</p>"
+        bottom_html += f"<p>{text}</p>"
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
     html_parts = []
+    # 전체를 감싸는 컨테이너 시작 (좌우 배치)
     html_parts.append("<div class='insight-container'>")
-    html_parts.append("<div class='insight-left'>")
     
-    # [메인 카드]
+    # ---------------- 좌측 영역 (메인 카드) ----------------
+    html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # 1행: 총 자산 Title & Value
+    # Top Row: 총 자산 Title & Value
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;'>")
     html_parts.append("<div style='font-size: 26px; font-weight: 900; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right;'>")
-    html_parts.append(f"<div style='font-size: 28px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
-    # 전일비 값 색상 매핑 및 부착
+    html_parts.append(f"<div style='font-size: 26px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
+    # 전일비 값 (색상 적용)
     html_parts.append(f"<div style='font-size: 13px; color: #888; font-weight: 600; margin-top: 2px;'>(전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}원</span>)</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # 2행: 평가금액, 현금성자산, 총 손익, 수익률 (테이블 선 제거 & 좁은 간격 Grid 레이아웃 적용)
+    # 선을 없애고 텍스트 간격을 바짝 붙인 Grid 레이아웃 (18px)
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 2px; column-gap: 15px; justify-content: end; margin-bottom: 25px;'>")
     
-    # 평가금액
+    # 1. 평가금액
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(t_asset - cash_total)}원</div>")
     
-    # 현금성자산 (괄호 제거)
+    # 2. 현금성자산 (괄호 제거)
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}원</div>")
     
-    # 총 손익 (회색, 일반 폰트 굵기)
+    # 3. 총 손익 (회색, 일반 폰트 굵기 반영)
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right;'>총 손익</div>")
     html_parts.append(f"<div style='font-size: 18px; font-weight: bold; text-align: right;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
     
-    # 수익률
+    # 4. 수익률
     html_parts.append("<div></div>")
     html_parts.append(f"<div style='font-size: 18px; font-weight: bold; text-align: right;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
-    
     html_parts.append("</div>")
 
-    # 3행: 누적 막대 그래프
-    html_parts.append("<div style='display: flex; height: 22px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
+    # Bar chart를 하단으로 밀어냄
+    html_parts.append("<div style='margin-top: auto;'>")
+    
+    # 누적 막대 그래프
+    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 3px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
     html_parts.append(render_bar(p_pension, '#a9d18e'))
     html_parts.append(render_bar(p_isa, '#ffd966'))
     html_parts.append("</div>")
     
-    # 4행: 범례(Legend)
+    # 범례(Legend)
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #777; padding: 0 4px;'>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
@@ -243,9 +247,12 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
     
+    html_parts.append("</div>") # push to bottom end
     html_parts.append("</div>") # card-main end
+    html_parts.append("</div>") # insight-left end
     
-    # [하단 4분할 계좌 카드]
+    # ---------------- 우측 영역 (4분할 계좌 카드) ----------------
+    html_parts.append("<div class='insight-right'>")
     html_parts.append("<div class='grid-2x2'>")
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
@@ -266,24 +273,27 @@ if "_insight" in data:
             html_parts.append(f"<span class='{col(acc_profit)}' style='font-size: 16px; font-weight: 600;'>{fmt(acc_profit, True)}</span>")
             html_parts.append("</div>")
             html_parts.append("<div style='text-align: right; margin-top: 2px;'>")
-            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 16px; font-weight: 800;'>{fmt_p(acc_rate)}</span>")
+            # 수익률의 BOLD(굵기)를 일반(normal)으로 제거 반영
+            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 15px; font-weight: normal;'>{fmt_p(acc_rate)}</span>")
             html_parts.append("</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") # grid end
-    html_parts.append("</div>") # left end
-    
-    # [우측 인사이트 영역]
-    html_parts.append("<div class='insight-right'>")
-    html_parts.append(right_html)
-    html_parts.append("</div>")
+    html_parts.append("</div>") # insight-right end
     html_parts.append("</div>") # container end
     
-    st.markdown("".join(html_parts), unsafe_allow_html=True)
+    # ---------------- 하단 영역 (인사이트 텍스트) ----------------
+    html_parts.append("<div class='insight-bottom'>")
+    html_parts.append(bottom_html)
+    html_parts.append("</div>")
+    
+    # 조립된 HTML을 한 줄로 만들어 에러 없이 렌더링
+    html_str = "".join(html_parts).replace("\n", "")
+    st.markdown(html_str, unsafe_allow_html=True)
 
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
 # =====================================================================
-# (이하 Andy님 원본 테이블 출력 로직 절대 유지)
+# (이하 Andy님 원본 1, 2, 3 테이블 출력 로직 유지)
 # =====================================================================
 
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
