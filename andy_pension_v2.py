@@ -37,7 +37,6 @@ def calc_samsungfire_principal():
         return 기준금액
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
-# MMF 종목명 및 고정가 적용 완료
 PORTFOLIO = {
     'DC': [
         ['069500', 635, 49602, 'KODEX 200'], 
@@ -81,7 +80,6 @@ def get_access_token():
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
         return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
-    # MMF 지정 현재가 적용
     if code == 'MMF00004':
         return {"c": 1445430, "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     if code.startswith('CASH') or code == 'PENSION_CASH': 
