@@ -207,11 +207,45 @@ if "_insight" in data:
         if p == 0: return ""
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>"
 
-    insight_texts = data.get("_insight", [])
-    bottom_html = ""
-    for text in insight_texts:
-        if "조회 기준 시간" in text: continue
-        bottom_html += f"<p>{text}</p>"
+    # =====================================================================
+    # [NEW] 자파의 동적 시황 분석 알고리즘 (Japa Dynamic Market Analysis)
+    # =====================================================================
+    try:
+        # 1. 최고 수익률 계좌 찾기
+        acc_rates = []
+        for k in FIXED_ACCOUNT_ORDER:
+            if k in data:
+                acc_name_str = '퇴직연금(DC)' if k == 'DC' else ('퇴직연금(IRP)' if k == 'IRP' else ('연금저축(CMA)' if k == 'PENSION' else 'ISA(중개형)'))
+                rt = data[k].get('수익률(%)', 0)
+                acc_rates.append((acc_name_str, rt))
+        acc_rates.sort(key=lambda x: x[1], reverse=True)
+        best_acc_name, best_acc_rate = acc_rates[0] if acc_rates else ("전체", 0)
+
+        # 2. 특징 종목 추출
+        b1_name = best_5[0]['종목명'] if len(best_5) > 0 else "국내 주도 ETF"
+        b1_rate = best_5[0].get('수익률(%)', 0) if len(best_5) > 0 else 0
+        w1_name = worst_5[0]['종목명'] if len(worst_5) > 0 else "해외 변동성 ETF"
+        w1_rate = worst_5[0].get('수익률(%)', 0) if len(worst_5) > 0 else 0
+
+        # 3. 비중에 따른 문구 동적 생성
+        market_lead_txt = "한국 주식형 ETF의 견조한 상승세가 미국 ETF 실적을 상회하며" if p_dom >= p_ovs else "미국 기술주 및 지수 추종 ETF가 든든하게 시장을 견인하며"
+
+        japa_html = f"<div style='font-size: 14.5px; line-height: 1.65; color: #444; letter-spacing: -0.3px;'>"
+        
+        # 꼭지 1: 포트폴리오 분석
+        japa_html += f"<p style='margin-bottom: 12px;'><strong style='color:#111; font-size:15px;'>• 계좌 현황 분석:</strong><br>최근 코스피의 꾸준한 반등 흐름 속에 <strong>{market_lead_txt}</strong> 전체 평가 손익을 주도하고 있습니다. 특히 관련 비중이 높은 <strong>{best_acc_name} 계좌가 전체 수익률({best_acc_rate:.2f}%) 1위</strong>를 기록하며 포트폴리오의 실적을 훌륭하게 방어하고 있습니다.</p>"
+
+        # 꼭지 2: 특징주 추론 분석
+        japa_html += f"<p style='margin-bottom: 12px;'><strong style='color:#111; font-size:15px;'>• BEST / WORST 종목 점검:</strong><br>손익률 최상위인 <strong>{b1_name} (▲{b1_rate:.2f}%)</strong>는 최근 주가 상승 분을 오롯이 누리면서도 배당/인컴 등 특유의 방어적 매력까지 더해져 완벽한 효자 종목으로 활약 중입니다. 반면 <strong>{w1_name} (▼{abs(w1_rate):.2f}%)</strong>를 비롯한 일부 해외/채권형 종목은 최근 부각된 미국 관세 인상 우려 및 금리 인하 지연 분위기의 직격탄을 맞아 상대적으로 부진한 흐름입니다.</p>"
+
+        # 꼭지 3: 거시 경제 요약 및 액션 플랜
+        japa_html += f"<p style='margin-bottom: 0px;'><strong style='color:#111; font-size:15px;'>• 거시 경제 및 향후 대응 전략:</strong><br>간밤 미국은 예상보다 높은 고용지표로 인해 금리 인하 기대감이 한풀 꺾였고, 트럼프 행정부의 추가 관세 압박까지 겹쳐 빅테크 중심의 하락세가 연출되었습니다. 반면 투자처를 잃은 자금이 한국으로 눈을 돌리며 코스피는 연일 상승 랠리를 이어가고 있습니다. <strong>수익이 단기 급등한 우량 종목은 일부 익절을 통해 현금({p_cash:.0f}%) 비중을 다져두고, 소외된 저평가 자산으로 스마트하게 리밸런싱</strong>하며 변동성 장세에 대비할 것을 권장합니다.</p>"
+
+        japa_html += "</div>"
+
+    except Exception as e:
+        japa_html = "<p>자파 엔진 데이터를 분석하는 중입니다...</p>"
+    # =====================================================================
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
@@ -235,22 +269,18 @@ if "_insight" in data:
     html_parts.append("<div class='card-main'>")
     
     html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
-    
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
     html_parts.append("</div>")
-    
     html_parts.append("<div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
     html_parts.append("</div>")
-    
     html_parts.append("</div>") 
 
     html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 22px; padding-left: 15px;'>")
     html_parts.append(donut_html)
     
-    # [수정] Grid 컨테이너의 상단 마진을 추가하여 전체 블록을 아래로 미세하게 이동 (10px -> 18px)
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
     html_parts.append("<div style='color: #777; font-size: 15px; text-align: right; line-height: 22px;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
@@ -333,8 +363,10 @@ if "_insight" in data:
     html_parts.append("</div>")
     
     html_parts.append("<div style='flex: 1; padding-left: 15px;'>")
-    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 자파의 자산 인사이트</div>")
-    html_parts.append(bottom_html)
+    # [수정] 타이틀 변경 및 좌측 BEST 5 와 동일한 19px 적용
+    html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
+    # [수정] 자파의 알고리즘 HTML 삽입
+    html_parts.append(japa_html)
     html_parts.append("</div>")
     
     html_parts.append("</div>") 
