@@ -27,7 +27,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 0 0 52%; display: flex; flex-direction: column; flex-grow: 1; }
 
-.card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 25px 25px 20px 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; height: 100%; }
 .card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
 
@@ -45,23 +45,23 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 원본 100% 보존
+   [ZAPPA 플로팅 배너 CSS] 원본 강력 복구 🔥
    ========================================================= */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
-div[data-testid="stColumns"]:has(#zappa-floating-menu),
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
+div[data-testid="column"]:has(span#zappa-floating-menu) {
     position: fixed !important; bottom: 30px !important; right: 30px !important; left: auto !important; transform: none !important;
     width: max-content !important; background: rgba(255, 255, 255, 0.98) !important; padding: 10px 25px !important; 
     border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important;
     z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 14px !important; 
 }
-div.element-container:has(#zappa-floating-menu) { display: none !important; position: absolute !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border-right: none !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button { margin: 0 !important; padding: 0 !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 15px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; transition: color 0.1s ease !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button p { color: inherit !important; font-size: 14.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; width: max-content !important; white-space: nowrap !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover { color: #111111 !important; background: transparent !important; }
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
+div.element-container:has(span#zappa-floating-menu) { display: none !important; position: absolute !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div[data-testid="column"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border-right: none !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 15px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; transition: color 0.1s ease !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 14.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; width: max-content !important; white-space: nowrap !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background: transparent !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
@@ -154,7 +154,7 @@ if "_insight" in data:
                 val = item.get('총 자산', item.get('총자산', 0))
                 name_lower = name.lower()
                 
-                if name in ['현금성자산', '현금잔고']:
+                if name in ['현금성자산', '현금잔고', '삼성화재 퇴직연금(3.05%/年)', '삼성신종MMF']:
                     cash_total += val
                 elif any(kw in name_lower for kw in ovs_kws):
                     ovs_total += val
@@ -196,17 +196,18 @@ if "_insight" in data:
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-    # 원형(도넛) 그래프 CSS (Conic Gradient)
+    # 원형(도넛) 그래프 CSS (Conic Gradient) - 색상 매핑 명확히
     stop1 = p_cash
     stop2 = p_cash + p_ovs
-    donut_css = f"background: conic-gradient(#f9f9f9 0% {stop1}%, #d0d4db {stop1}% {stop2}%, #a6a6a6 {stop2}% 100%);"
+    # 흰색(현금), 옅은회색(해외), 짙은회색(국내)
+    donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
     donut_html = f"""
-    <div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 5px rgba(0,0,0,0.05); margin-left: 10px;'>
-        <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55%; height: 55%; background-color: #fffdf2; border-radius: 50%;'></div>
-        <div style='position: absolute; top: 0%; left: 60%; font-size: 10px; color: #555; white-space: nowrap;'>{p_cash:.0f}% 현금성자산</div>
-        <div style='position: absolute; top: 30%; left: 5%; font-size: 11px; color: #333; text-align: center; line-height: 1.2;'>{p_ovs:.0f}%<br>해외투자</div>
-        <div style='position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); font-size: 12px; color: #111; font-weight: bold; text-align: center; line-height: 1.2;'>{p_dom:.0f}%<br>국내투자</div>
+    <div style='position: relative; width: 135px; height: 135px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #e0e0e0; margin-left: 5px; flex-shrink: 0;'>
+        <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55%; height: 55%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
+        <div style='position: absolute; top: -3%; left: 50%; transform: translateX(-50%); font-size: 10.5px; color: #333; white-space: nowrap; font-weight: bold;'>{p_cash:.0f}% 현금성자산</div>
+        <div style='position: absolute; top: 35%; right: 0%; transform: translateX(10%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
+        <div style='position: absolute; bottom: 20%; left: 20%; font-size: 13px; color: #fff; font-weight: bold; text-align: center; line-height: 1.2; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div>
     </div>
     """
 
@@ -217,36 +218,38 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # 1. 상단: 총 자산 Title & Value
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;'>")
+    # 1. 상단: 총 자산 Title & 단위 원화
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;'>")
     html_parts.append("<div style='font-size: 26px; font-weight: 900; color: #111;'>총 자산</div>")
-    html_parts.append("<div style='text-align: right;'>")
-    html_parts.append(f"<div style='font-size: 28px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
-    # 전일비: [] 기호, 12px, BOLD 제거, 색상 적용
-    html_parts.append(f"<div style='font-size: 12px; color: #777; font-weight: normal; margin-top: 2px;'>[전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}원</span>]</div>")
-    html_parts.append("</div>")
+    html_parts.append("<div style='font-size: 12.5px; color: #777; font-weight: 600; padding-top: 5px;'>단위 : 원화(KRW)</div>")
     html_parts.append("</div>")
 
-    # 2. 중간: 도넛 그래프 + 우측 텍스트 (그리드 레이아웃, 선 제거, 간격 축소)
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;'>")
+    # 총자산 값 및 전일비 (우측 정렬)
+    html_parts.append("<div style='text-align: right; margin-bottom: 25px;'>")
+    html_parts.append(f"<div style='font-size: 28px; font-weight: 900; color: #111;'>{fmt(t_asset)}</div>")
+    html_parts.append(f"<div style='font-size: 12px; color: #777; font-weight: normal; margin-top: 2px;'>[전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span>]</div>")
+    html_parts.append("</div>")
+
+    # 2. 중간: 도넛 그래프 + 우측 텍스트 (그리드 레이아웃, 선 제거, 간격 바짝 붙임, 18px 통일)
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;'>")
     
     # 도넛 그래프
     html_parts.append(donut_html)
     
-    # 우측 텍스트 (간격 바짝 붙임, 선 없음, 18px 통일, ()제거, BOLD 해제)
-    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 3px; column-gap: 15px; justify-content: end;'>")
+    # 우측 텍스트 (간격 바짝 붙임, 선 없음, 18px 통일, '원' 및 '()' 제거, 총손익 BOLD 해제)
+    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(t_asset - cash_total)}원</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(t_asset - cash_total)}</div>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}원</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}</div>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right;'>총 손익</div>")
-    html_parts.append(f"<div style='font-size: 18px; font-weight: normal; text-align: right;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
+    html_parts.append(f"<div style='font-size: 18px; font-weight: normal; text-align: right;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
     
     html_parts.append("<div></div>")
-    html_parts.append(f"<div style='font-size: 18px; font-weight: bold; text-align: right;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
+    html_parts.append(f"<div style='font-size: 18px; font-weight: normal; text-align: right;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
     
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
@@ -261,7 +264,7 @@ if "_insight" in data:
     html_parts.append("</div>")
     
     # 범례(Legend)
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #777; padding: 0 2px;'>")
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #777; padding: 0 2px;'>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
@@ -286,16 +289,16 @@ if "_insight" in data:
             html_parts.append("<div class='card-sub'>")
             html_parts.append(f"<div style='font-size: 18px; font-weight: 900; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>{acc_name}</div>")
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
+            html_parts.append("<span style='font-size: 16px; color: #777; font-weight: normal;'>총 자산</span>")
             html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
-            # 하단 카드의 총 손익 및 수익률 BOLD 제거 (정상 굵기로 적용)
+            html_parts.append("<span style='font-size: 16px; color: #777; font-weight: normal;'>총 손익</span>")
             html_parts.append(f"<span class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</span>")
             html_parts.append("</div>")
             html_parts.append("<div style='text-align: right; margin-top: 4px;'>")
-            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 16px; font-weight: bold;'>{fmt_p(acc_rate)}</span>")
+            # 하단 카드의 수익률(▲00.00%) BOLD 제거 (정상 굵기로 적용)
+            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 16px; font-weight: normal;'>{fmt_p(acc_rate)}</span>")
             html_parts.append("</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") # grid end
@@ -438,6 +441,8 @@ st.markdown("".join(h2), unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
 
 b1, b2, b3, b4, b5 = st.columns(5)
+
+# ZAPPA 메뉴 버튼들 (id 삽입)
 with b1:
     st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
     is_init = (st.session_state.sort_mode == 'init')
