@@ -228,7 +228,8 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
-    html_parts.append(f"<div style='font-size: 30px; font-weight: 900; color: #111;'>{fmt(t_asset)}</div>")
+    # [수정] 좌측 메인 자산 숫자도 900에서 bold(700)로 낮춰 디자인 밸런스 조정
+    html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
@@ -236,7 +237,6 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;'>")
     html_parts.append(donut_html)
     
-    # [수정 완벽 보정] line-height를 통일하여 어떤 브라우저에서도 줄이 틀어지지 않도록 강제 정렬
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: start; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>평가금액</div>")
@@ -246,7 +246,8 @@ if "_insight" in data:
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
-    html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: 900; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
+    # [수정] 좌측 총 손익 숫자도 900에서 bold(700)로 낮춤
+    html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: bold; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
@@ -298,7 +299,7 @@ if "_insight" in data:
             html_parts.append("<div class='card-sub' style='padding: 12px 18px;'>")
             
             html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: bold; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
-            html_parts.append(f"<div style='font-size: 20px; font-weight: 900; color: #111; margin-bottom: 2px; margin-top: -3px;'>{acc_name}</div>")
+            html_parts.append(f"<div style='font-size: 20px; font-weight: bold; color: #111; margin-bottom: 2px; margin-top: -3px;'>{acc_name}</div>")
             html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 10px;'></div>")
             
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
