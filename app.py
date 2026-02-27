@@ -21,18 +21,19 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:1px;}
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
 
 /* =========================================================
-   [NEW] 자파의 카드뷰 대시보드 구조 (좌우 나란히 + 하단 텍스트)
+   [NEW] 자파의 대시보드 디자인 (좌우 카드 + 하단 박스)
    ========================================================= */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 0 0 52%; display: flex; flex-direction: column; flex-grow: 1; }
 
-.insight-bottom { font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; padding: 0 5px; }
-.insight-bottom p { margin-bottom: 12px; }
-
-.card-main { background-color: #fffdf2; border: 1.5px solid #e8dbad; border-radius: 18px; padding: 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 25px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; height: 100%; }
 .card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); }
+
+/* 하단 텍스트 인사이트 박스 */
+.insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
+.insight-bottom-box p { margin-bottom: 12px; }
 
 /* 요약 텍스트 정밀 디자인 */
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
@@ -55,31 +56,12 @@ div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) {
     border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important;
     z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 14px !important; 
 }
-div.element-container:has(#zappa-floating-menu) { 
-    display: none !important; position: absolute !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; 
-}
-div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { 
-    flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border-right: none !important; 
-}
-div[data-testid="stColumns"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) div[data-testid="stButton"],
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button { 
-    margin: 0 !important; padding: 0 !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 15px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; transition: color 0.1s ease !important; display: flex !important; align-items: center !important; justify-content: center !important; 
-}
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button p,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button p { 
-    color: inherit !important; font-size: 14.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; width: max-content !important; white-space: nowrap !important;
-}
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover,
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button:hover { 
-    color: #111111 !important; background: transparent !important; 
-}
-div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"],
-div[data-testid="stHorizontalBlock"]:has(#zappa-floating-menu) button[kind="primary"] { 
-    background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; 
-}
+div.element-container:has(#zappa-floating-menu) { display: none !important; position: absolute !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
+div[data-testid="stColumns"]:has(#zappa-floating-menu) > div[data-testid="stColumn"] { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; border-right: none !important; }
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button { margin: 0 !important; padding: 0 !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 15px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; transition: color 0.1s ease !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button p { color: inherit !important; font-size: 14.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; width: max-content !important; white-space: nowrap !important; }
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button:hover { color: #111111 !important; background: transparent !important; }
+div[data-testid="stColumns"]:has(#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
@@ -148,7 +130,7 @@ st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weig
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (구조 완전 개편 + 에러 원천 차단)
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (원형 그래프 및 레이아웃 반영)
 # =====================================================================
 if "_insight" in data:
     
@@ -157,14 +139,37 @@ if "_insight" in data:
     t_diff = tot.get('평가손익(1일전)', tot.get('1일전', 0))
     t_rate = tot.get('수익률(%)', tot.get('손익률(%)', 0))
     
+    # 1. 현금성 자산 합계 및 자산 비중 계산 (원형/막대 그래프용)
     cash_total = 0
+    ovs_total = 0
+    dom_total = 0
+    ovs_kws = ['tiger', 's&p', '나스닥', '필라델피아', '다우존스', 'ai테크']
+    
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
             for item in data[k].get('상세', []):
                 name = item.get('종목명', '')
-                if any(x in name for x in ['현금', 'MMF', '삼성화재']):
-                    cash_total += item.get('총 자산', item.get('총자산', 0))
+                if name == '[ 합계 ]': continue
+                
+                val = item.get('총 자산', item.get('총자산', 0))
+                name_lower = name.lower()
+                
+                if name in ['현금성자산', '현금잔고']:
+                    cash_total += val
+                elif any(kw in name_lower for kw in ovs_kws):
+                    ovs_total += val
+                else:
+                    dom_total += val
 
+    # 총합 오차 방지를 위해 국내 자산은 역산으로 맞춤
+    dom_total = t_asset - cash_total - ovs_total
+
+    # 원형(도넛) 그래프용 비중 계산 (%)
+    p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
+    p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
+    p_dom = (dom_total / t_asset * 100) if t_asset > 0 else 0
+
+    # 막대 그래프용 계좌별 비중 계산
     a_dc = data.get('DC', {}).get('총 자산', data.get('DC', {}).get('총자산', 0))
     a_irp = data.get('IRP', {}).get('총 자산', data.get('IRP', {}).get('총자산', 0))
     a_pension = data.get('PENSION', {}).get('총 자산', data.get('PENSION', {}).get('총자산', 0))
@@ -180,8 +185,9 @@ if "_insight" in data:
 
     def render_bar(p, color):
         if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>"
-        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
 
+    # 우측 하단 인사이트 텍스트 파싱
     insight_texts = data.get("_insight", [])
     bottom_html = ""
     for text in insight_texts:
@@ -190,49 +196,64 @@ if "_insight" in data:
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
+    # 원형(도넛) 그래프 CSS (Conic Gradient)
+    stop1 = p_cash
+    stop2 = p_cash + p_ovs
+    donut_css = f"background: conic-gradient(#f9f9f9 0% {stop1}%, #d0d4db {stop1}% {stop2}%, #a6a6a6 {stop2}% 100%);"
+    
+    donut_html = f"""
+    <div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 5px rgba(0,0,0,0.05); margin-left: 10px;'>
+        <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 55%; height: 55%; background-color: #fffdf2; border-radius: 50%;'></div>
+        <div style='position: absolute; top: 0%; left: 60%; font-size: 10px; color: #555; white-space: nowrap;'>{p_cash:.0f}% 현금성자산</div>
+        <div style='position: absolute; top: 30%; left: 5%; font-size: 11px; color: #333; text-align: center; line-height: 1.2;'>{p_ovs:.0f}%<br>해외투자</div>
+        <div style='position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); font-size: 12px; color: #111; font-weight: bold; text-align: center; line-height: 1.2;'>{p_dom:.0f}%<br>국내투자</div>
+    </div>
+    """
+
     html_parts = []
-    # 전체를 감싸는 컨테이너 시작 (좌우 배치)
     html_parts.append("<div class='insight-container'>")
     
     # ---------------- 좌측 영역 (메인 카드) ----------------
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # Top Row: 총 자산 Title & Value
+    # 1. 상단: 총 자산 Title & Value
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;'>")
     html_parts.append("<div style='font-size: 26px; font-weight: 900; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right;'>")
-    html_parts.append(f"<div style='font-size: 26px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
-    # 전일비 값 (색상 적용)
-    html_parts.append(f"<div style='font-size: 13px; color: #888; font-weight: 600; margin-top: 2px;'>(전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}원</span>)</div>")
+    html_parts.append(f"<div style='font-size: 28px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
+    # 전일비: [] 기호, 12px, BOLD 제거, 색상 적용
+    html_parts.append(f"<div style='font-size: 12px; color: #777; font-weight: normal; margin-top: 2px;'>[전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}원</span>]</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # 선을 없애고 텍스트 간격을 바짝 붙인 Grid 레이아웃 (18px)
-    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 2px; column-gap: 15px; justify-content: end; margin-bottom: 25px;'>")
+    # 2. 중간: 도넛 그래프 + 우측 텍스트 (그리드 레이아웃, 선 제거, 간격 축소)
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;'>")
     
-    # 1. 평가금액
+    # 도넛 그래프
+    html_parts.append(donut_html)
+    
+    # 우측 텍스트 (간격 바짝 붙임, 선 없음, 18px 통일, ()제거, BOLD 해제)
+    html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 3px; column-gap: 15px; justify-content: end;'>")
+    
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(t_asset - cash_total)}원</div>")
     
-    # 2. 현금성자산 (괄호 제거)
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}원</div>")
     
-    # 3. 총 손익 (회색, 일반 폰트 굵기 반영)
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right;'>총 손익</div>")
-    html_parts.append(f"<div style='font-size: 18px; font-weight: bold; text-align: right;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
+    html_parts.append(f"<div style='font-size: 18px; font-weight: normal; text-align: right;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
     
-    # 4. 수익률
     html_parts.append("<div></div>")
     html_parts.append(f"<div style='font-size: 18px; font-weight: bold; text-align: right;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
-    html_parts.append("</div>")
-
-    # Bar chart를 하단으로 밀어냄
-    html_parts.append("<div style='margin-top: auto;'>")
     
+    html_parts.append("</div>") # grid end
+    html_parts.append("</div>") # flex end
+
+    html_parts.append("<div style='margin-top: auto;'>")
     # 누적 막대 그래프
-    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 3px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
+    html_parts.append("<div style='display: flex; height: 18px; width: 100%; border-radius: 2px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 6px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
     html_parts.append(render_bar(p_pension, '#a9d18e'))
@@ -240,14 +261,14 @@ if "_insight" in data:
     html_parts.append("</div>")
     
     # 범례(Legend)
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #777; padding: 0 4px;'>")
-    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
-    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
-    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
-    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #777; padding: 0 2px;'>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:10px; height:10px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
     
-    html_parts.append("</div>") # push to bottom end
+    html_parts.append("</div>") # bottom push end
     html_parts.append("</div>") # card-main end
     html_parts.append("</div>") # insight-left end
     
@@ -263,30 +284,30 @@ if "_insight" in data:
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
             
             html_parts.append("<div class='card-sub'>")
-            html_parts.append(f"<div style='font-size: 18px; font-weight: 900; color: #111; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px;'>{acc_name}</div>")
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: 500;'>총 자산</span>")
-            html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: 500;'>{fmt(acc_asset)}</span>")
+            html_parts.append(f"<div style='font-size: 18px; font-weight: 900; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>{acc_name}</div>")
+            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
+            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
+            html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: 500;'>총 손익</span>")
-            html_parts.append(f"<span class='{col(acc_profit)}' style='font-size: 16px; font-weight: 600;'>{fmt(acc_profit, True)}</span>")
+            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
+            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
+            # 하단 카드의 총 손익 및 수익률 BOLD 제거 (정상 굵기로 적용)
+            html_parts.append(f"<span class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</span>")
             html_parts.append("</div>")
-            html_parts.append("<div style='text-align: right; margin-top: 2px;'>")
-            # 수익률의 BOLD(굵기)를 일반(normal)으로 제거 반영
-            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 15px; font-weight: normal;'>{fmt_p(acc_rate)}</span>")
+            html_parts.append("<div style='text-align: right; margin-top: 4px;'>")
+            html_parts.append(f"<span class='{col(acc_rate)}' style='font-size: 16px; font-weight: bold;'>{fmt_p(acc_rate)}</span>")
             html_parts.append("</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # insight-right end
     html_parts.append("</div>") # container end
     
-    # ---------------- 하단 영역 (인사이트 텍스트) ----------------
-    html_parts.append("<div class='insight-bottom'>")
+    # ---------------- 하단 영역 (인사이트 흰색 둥근 박스) ----------------
+    html_parts.append("<div class='insight-bottom-box'>")
     html_parts.append(bottom_html)
     html_parts.append("</div>")
     
-    # 조립된 HTML을 한 줄로 만들어 에러 없이 렌더링
+    # HTML 줄바꿈 렌더링 에러 차단
     html_str = "".join(html_parts).replace("\n", "")
     st.markdown(html_str, unsafe_allow_html=True)
 
