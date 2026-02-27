@@ -122,9 +122,12 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
+# [수정] 업데이트 버튼을 타이틀 하단 라인과 맞추기 위해 상단 여백(margin-top) 부여
 c1, c2 = st.columns([8.5, 1.5])
-with c1: st.markdown("<h3>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+with c1: 
+    st.markdown("<h3>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 with c2:
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
@@ -188,9 +191,6 @@ if "_insight" in data:
     # 목표 달성률 계산 (10억 기준)
     goal_amount = 1000000000
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
-    
-    # YTD 수익률 (전체 수익률 활용)
-    ytd_rate = t_rate
 
     def render_bar(p, color):
         if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>"
@@ -227,7 +227,6 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # 1. 상단: 총 자산 Title & Value (22px & 20px BOLD 적용 완벽 반영)
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
@@ -236,30 +235,20 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # [NEW] 1.5. 진행률(Progress to Goal) 및 YTD 영역 (빈 공간 활용)
+    # [수정] YTD를 삭제하고 10억 달성률(Progress) 바만 슬림하게 남김
     html_parts.append("<div style='margin-bottom: 15px; padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
-    
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: bold; color: #555; margin-bottom: 6px;'>")
     html_parts.append("<span>🎯 은퇴 자산 목표 10억 달성률</span>")
     html_parts.append(f"<span style='color: #4a90e2;'>{progress_pct:.1f}%</span>")
     html_parts.append("</div>")
-    
-    html_parts.append("<div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden; margin-bottom: 12px;'>")
+    html_parts.append("<div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'>")
     html_parts.append(f"<div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #8eaadb, #4a90e2);'></div>")
     html_parts.append("</div>")
-
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: bold; color: #555;'>")
-    html_parts.append("<span>📈 올해 누적 수익률 (YTD)</span>")
-    html_parts.append(f"<span class='{col(ytd_rate)}' style='font-size: 14.5px;'>{fmt_p(ytd_rate)}</span>")
-    html_parts.append("</div>")
-    
     html_parts.append("</div>")
 
-    # 2. 중간: 도넛 그래프 + 텍스트 한 덩어리 묶음
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>")
     html_parts.append(donut_html)
     
-    # 텍스트 간격 바짝 붙이기
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 6px; column-gap: 15px; justify-content: end; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
@@ -274,7 +263,6 @@ if "_insight" in data:
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
 
-    # 3. 하단 누적 막대 그래프
     html_parts.append("<div style='margin-top: auto;'>")
     html_parts.append("<div style='display: flex; height: 24px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
