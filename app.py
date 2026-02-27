@@ -20,25 +20,36 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
 
+/* =========================================================
+   [NEW] 자파의 대시보드 디자인 (좌우 대칭 및 높낮이 일치)
+   ========================================================= */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 1; display: flex; flex-direction: column; }
 
+/* 메인 카드 */
 .card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 18px 22px 15px 22px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 
+/* 서브 카드 */
 .card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
 
+/* 하단 텍스트 인사이트 박스 */
 .insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
 .insight-bottom-box p { margin-bottom: 12px; }
 
+/* 요약 텍스트 정밀 디자인 */
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
 
+/* 엑셀 스타일 병합 */
 .main-table th.th-eval { border-right: none !important; }
 .main-table th.th-blank { border-left: none !important; border-bottom: none !important; padding: 0 !important; }
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
+/* =========================================================
+   [ZAPPA 플로팅 배너 CSS] 원본 100% 보존
+   ========================================================= */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
@@ -124,12 +135,17 @@ st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weig
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
+# =====================================================================
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링
+# =====================================================================
 if "_insight" in data:
+    
     t_asset = tot.get('총 자산', tot.get('총자산', 0))
     t_profit = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
     t_diff = tot.get('평가손익(1일전)', tot.get('1일전', 0))
     t_diff_7 = tot.get('평가손익(7일전)', 0)
     t_rate = tot.get('수익률(%)', tot.get('손익률(%)', 0))
+    t_original_sum = tot.get('원금합', 0)
     
     cash_total = 0
     ovs_total = 0
@@ -143,8 +159,10 @@ if "_insight" in data:
             for item in data[k].get('상세', []):
                 name = item.get('종목명', '')
                 if name == '[ 합계 ]': continue
+                
                 val = item.get('총 자산', item.get('총자산', 0))
                 name_lower = name.lower()
+                
                 if any(kw in name_lower for kw in cash_kws):
                     cash_total += val
                 elif any(kw in name_lower for kw in ovs_kws):
@@ -153,6 +171,7 @@ if "_insight" in data:
                     dom_total += val
 
     dom_total = t_asset - cash_total - ovs_total
+
     p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
     p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
     p_dom = (dom_total / t_asset * 100) if t_asset > 0 else 0
@@ -204,11 +223,14 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
+    # [수정] 좌측 카드 상단: 총자산 -> 변동폭 -> 원금(추가) 순으로 레이아웃 구성
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
+    # 원금 정보 추가 (우측 카드와 위계 통일)
+    html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: bold; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
@@ -221,7 +243,6 @@ if "_insight" in data:
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
-    # [수정] 총 손익 숫자도 900에서 bold(700)로 낮춰 통일감 부여
     html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: bold; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
