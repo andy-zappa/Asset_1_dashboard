@@ -89,7 +89,6 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
-    # 1. 현재가 및 전일비 조회 (부호 로직 완벽 적용)
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -108,7 +107,7 @@ def get_current_price(code, token, avg_p):
             if 'stck_prpr' in out:
                 curr = int(float(out.get('stck_prpr', avg_p)))
                 diff_abs = int(float(out.get('prdy_vrss', 0)))
-                # 부호 판별: '4'(하한), '5'(하락)이면 마이너스 처리
+                # 전일비 부호 판별: 4(하한), 5(하락)은 마이너스 처리
                 sign = str(out.get('prdy_vrss_sign', '3'))
                 if sign in ['4', '5']:
                     diff_1 = -diff_abs
@@ -117,7 +116,6 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
-    # 2. 과거 종가 조회 (최대 30영업일)
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
