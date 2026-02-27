@@ -192,7 +192,6 @@ if "_insight" in data:
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
     def render_bar(p, color):
-        # [수정] font-weight: bold; 제거 (normal로 렌더링)
         if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%; margin-bottom: 4px;'></div>"
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: normal; color: #333; margin-bottom: 4px;'>{p:.0f}%</div>"
 
@@ -226,7 +225,8 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'>")
+    # [수정] 아래쪽 여백(margin-bottom: auto;)을 주어 여기서 발생하는 빈 공간을 모두 아래로 밀어냄
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: 900; color: #111;'>{fmt(t_asset)}</div>")
@@ -234,7 +234,8 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;'>")
+    # [수정] 아래쪽 막대그래프와의 간격은 20px 정도로 일정하게 유지되도록 설정
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;'>")
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
@@ -251,7 +252,8 @@ if "_insight" in data:
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
 
-    html_parts.append("<div style='margin-top: auto;'>")
+    # [수정] margin-top: auto; 제거 (공간 분배를 위쪽 상단 블록으로 넘김)
+    html_parts.append("<div>")
     
     html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
@@ -270,7 +272,6 @@ if "_insight" in data:
     html_parts.append("<div style='padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
     
-    # [수정] 은퇴 자산 목표 달성률 글자를 우측 카드의 '총 자산' 스타일과 동일하게 변경 (font-size: 15px; color: #777; font-weight: normal;)
     html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억 달성률</span>")
     html_parts.append(f"<span style='font-size: 15px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span>")
     
