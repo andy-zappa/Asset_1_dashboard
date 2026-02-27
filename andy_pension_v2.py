@@ -37,6 +37,20 @@ def calc_samsungfire_principal():
         return 기준금액
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
+# [NEW] 삼성신종종류형MMF 일할 계산 로직 추가
+def calc_mmf_principal():
+    기준일 = datetime(2026, 2, 25)
+    기준금액 = 1445430  # 기준일 당시의 평가금액
+    원금 = 1444949      # 매입 원금
+    연이율 = 0.0226     # 연 2.26%
+    today_n = datetime.now().replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+    기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+    
+    n_days = (today_n - 기준일_n).days
+    if n_days <= 0:
+        return 기준금액
+    return int(기준금액 + (원금 * 연이율 * n_days / 365))
+
 PORTFOLIO = {
     'DC': [
         ['069500', 635, 49602, 'KODEX 200'], 
@@ -80,8 +94,9 @@ def get_access_token():
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
         return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
+    # [NEW] 하드코딩 제거 및 MMF 계산 함수 적용
     if code == 'MMF00004':
-        return {"c": 1445430, "d1": 0, "d7": 0, "d15": 0, "d30": 0}
+        return {"c": calc_mmf_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     if code.startswith('CASH') or code == 'PENSION_CASH': 
         return {"c": int(avg_p), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     
