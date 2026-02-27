@@ -37,6 +37,7 @@ def calc_samsungfire_principal():
         return 기준금액
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
+# 삼성신종MMF 업데이트 적용 완료 및 통일된 명칭 적용
 PORTFOLIO = {
     'DC': [
         ['069500', 635, 49602, 'KODEX 200'], 
@@ -49,7 +50,7 @@ PORTFOLIO = {
         ['CASH_ETC', 1, 652933, '현금성자산']
     ],
     'PENSION': [
-        ['MMF00004', 1, 97708, "삼성신종MMF"], 
+        ['MMF00004', 1, 1444949, "삼성신종종류형MMF제4호(2.26%/年)"], 
         ['069500', 427, 56911, 'KODEX 200'], 
         ['360750', 361, 25193, 'TIGER 미국S&P500'], 
         ['379810', 341, 25105, 'KODEX 미국나스닥100'], 
@@ -80,7 +81,10 @@ def get_access_token():
 def get_current_price(code, token, avg_p):
     if code == 'CASH_INS': 
         return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
-    if code.startswith('CASH') or code == 'PENSION_CASH' or code == 'MMF00004': 
+    # MMF 지정가 적용
+    if code == 'MMF00004':
+        return {"c": 1445430, "d1": 0, "d7": 0, "d15": 0, "d30": 0}
+    if code.startswith('CASH') or code == 'PENSION_CASH': 
         return {"c": int(avg_p), "d1": 0, "d7": 0, "d15": 0, "d30": 0}
     
     curr = int(avg_p)
@@ -89,7 +93,6 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
-    # 1. 현재가 및 전일비 조회 (부호 로직 추가 완비)
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -108,7 +111,6 @@ def get_current_price(code, token, avg_p):
             if 'stck_prpr' in out:
                 curr = int(float(out.get('stck_prpr', avg_p)))
                 diff_abs = int(float(out.get('prdy_vrss', 0)))
-                # 부호 판별: '4'(하한), '5'(하락)이면 마이너스 처리
                 sign = str(out.get('prdy_vrss_sign', '3'))
                 if sign in ['4', '5']:
                     diff_1 = -diff_abs
@@ -117,7 +119,6 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
-    # 2. 과거 종가 조회 (최대 30영업일)
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
