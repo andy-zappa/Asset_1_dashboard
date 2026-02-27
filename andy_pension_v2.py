@@ -10,18 +10,20 @@ APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp".strip()
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns=".strip()
 URL_BASE = "https://openapi.koreainvestment.com:9443"
 
+# [수정] 원금 키에서 날짜 정보 삭제
 ORIGINAL_CAPITAL = {
-    '퇴직연금(DC)계좌 (25.8월)': 254782039, 
-    '연금저축(CMA)계좌 (25.11월)': 78787722, 
-    'ISA(중개형)계좌 (25.8월)': 33000000, 
-    '퇴직연금(IRP)계좌 (25.8월)': 3000000
+    '퇴직연금(DC)계좌': 254782039, 
+    '연금저축(CMA)계좌': 78787722, 
+    'ISA(중개형)계좌': 33000000, 
+    '퇴직연금(IRP)계좌': 3000000
 }
 
+# [수정] 매핑 키에서 날짜 정보 삭제
 ACC_MAP = {
-    '퇴직연금(DC)계좌 (25.8월)': 'DC', 
-    '연금저축(CMA)계좌 (25.11월)': 'PENSION', 
-    'ISA(중개형)계좌 (25.8월)': 'ISA', 
-    '퇴직연금(IRP)계좌 (25.8월)': 'IRP'
+    '퇴직연금(DC)계좌': 'DC', 
+    '연금저축(CMA)계좌': 'PENSION', 
+    'ISA(중개형)계좌': 'ISA', 
+    '퇴직연금(IRP)계좌': 'IRP'
 }
 
 def calc_samsungfire_principal():
