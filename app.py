@@ -141,23 +141,20 @@ with c2:
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
-# [원상 복구] 노란 카드에서 제거된 날짜를 원래 우측 상단으로 이동
 st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:600;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (마크다운 에러 원천 차단)
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (막대그래프 & 레이아웃 완벽 반영)
 # =====================================================================
 if "_insight" in data:
     
-    # 0원 오류 방지: 어떤 JSON 키값이 들어와도 무조건 매핑되도록 처리
     t_asset = tot.get('총 자산', tot.get('총자산', 0))
     t_profit = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
     t_diff = tot.get('평가손익(1일전)', tot.get('1일전', 0))
     t_rate = tot.get('수익률(%)', tot.get('손익률(%)', 0))
     
-    # 1. 현금성 자산 합계 계산
     cash_total = 0
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
@@ -166,39 +163,82 @@ if "_insight" in data:
                 if any(x in name for x in ['현금', 'MMF', '삼성화재']):
                     cash_total += item.get('총 자산', item.get('총자산', 0))
 
-    # 2. 우측 시황 분석 텍스트 처리
+    # [막대 그래프를 위한 4계좌 비중 계산]
+    a_dc = data.get('DC', {}).get('총 자산', data.get('DC', {}).get('총자산', 0))
+    a_irp = data.get('IRP', {}).get('총 자산', data.get('IRP', {}).get('총자산', 0))
+    a_pension = data.get('PENSION', {}).get('총 자산', data.get('PENSION', {}).get('총자산', 0))
+    a_isa = data.get('ISA', {}).get('총 자산', data.get('ISA', {}).get('총자산', 0))
+    
+    total_for_bar = a_dc + a_irp + a_pension + a_isa
+    if total_for_bar == 0: total_for_bar = 1 # 0나누기 방지
+
+    p_dc = a_dc / total_for_bar * 100
+    p_irp = a_irp / total_for_bar * 100
+    p_pension = a_pension / total_for_bar * 100
+    p_isa = a_isa / total_for_bar * 100
+
+    def render_bar(p, color):
+        if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>"
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
+
     insight_texts = data.get("_insight", [])
     right_html = ""
     for text in insight_texts:
         if "조회 기준 시간" in text: continue
         right_html += f"<p style='margin-bottom:12px;'>{text}</p>"
 
-    # [원상 복구] 원래 자리의 타이틀 생성
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 자파의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-    # 3. 마크다운 에러를 피하기 위해 list 조립 방식 사용
     html_parts = []
     html_parts.append("<div class='insight-container'>")
     html_parts.append("<div class='insight-left'>")
     
-    # [메인 카드]
+    # [메인 카드 (막대그래프 포함)]
     html_parts.append("<div class='card-main'>")
-    html_parts.append("<div style='font-size: 26px; font-weight: 900; color: #111; margin-bottom: 10px;'>총 자산</div>")
-    html_parts.append(f"<div style='text-align: right; font-size: 30px; font-weight: 900; color: #111; margin-bottom: 20px;'>{fmt(t_asset)}원</div>")
     
-    html_parts.append("<div style='display: flex; justify-content: flex-end; align-items: stretch; gap: 20px;'>")
-    html_parts.append("<div style='text-align: left; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 3px; gap: 4px;'>")
+    # 1행: 총 자산 & 값
+    html_parts.append("<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;'>")
+    html_parts.append("<div style='font-size: 26px; font-weight: 900; color: #111;'>총 자산</div>")
+    html_parts.append(f"<div style='font-size: 28px; font-weight: 900; color: #111;'>{fmt(t_asset)}원</div>")
+    html_parts.append("</div>")
+
+    # 2행: 총 손익 & 값 (동일 라인)
+    html_parts.append("<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;'>")
     html_parts.append("<div style='font-size: 20px; font-weight: 900; color: #111;'>총 손익</div>")
-    # [요청 반영] 현금성 자산 텍스트와 금액을 총손익 바로 아래에 나란히 배치
-    html_parts.append(f"<div style='font-size: 15px; font-weight: 700; color: #888;'>현금성자산 <span style='color:#666;'>{fmt(cash_total)}원</span></div>")
+    html_parts.append(f"<div style='font-size: 24px; font-weight: 900;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
+    html_parts.append("</div>")
+
+    # 3행: 현금성자산 & 값 (동일 라인, 괄호 안 합산값)
+    html_parts.append("<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;'>")
+    html_parts.append("<div style='font-size: 16px; font-weight: 700; color: #777;'>현금성자산</div>")
+    html_parts.append(f"<div style='font-size: 16px; font-weight: 700; color: #777;'>({fmt(cash_total)}원)</div>")
+    html_parts.append("</div>")
+
+    # 4행: 전일비 & 수익률
+    html_parts.append("<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;'>")
+    html_parts.append("<div style='font-size: 16px; font-weight: 700; color: #777;'>전일비</div>")
+    html_parts.append("<div style='display:flex; align-items:center; gap:10px;'>")
+    html_parts.append(f"<div style='font-size: 15px; font-weight: 600; color: #888;'>({fmt(t_diff, True)}원)</div>")
+    html_parts.append(f"<div style='font-size: 24px; font-weight: 900;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
+    html_parts.append("</div>")
+    html_parts.append("</div>")
+
+    # 5행: 누적 막대 그래프
+    html_parts.append("<div style='display: flex; height: 26px; width: 100%; border-radius: 6px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 10px;'>")
+    html_parts.append(render_bar(p_dc, '#8eaadb'))
+    html_parts.append(render_bar(p_irp, '#f4b183'))
+    html_parts.append(render_bar(p_pension, '#a9d18e'))
+    html_parts.append(render_bar(p_isa, '#ffd966'))
     html_parts.append("</div>")
     
-    html_parts.append("<div style='text-align: right; display: flex; flex-direction: column;'>")
-    html_parts.append(f"<div style='font-size: 24px; font-weight: 900;' class='{col(t_profit)}'>{fmt(t_profit, True)}원</div>")
-    html_parts.append(f"<div style='font-size: 15px; font-weight: 600; color: #888; margin-top: 2px; margin-bottom: 2px;'>({fmt(t_diff, True)}원)</div>")
-    html_parts.append(f"<div style='font-size: 22px; font-weight: 900;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
+    # 6행: 범례(Legend)
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: #555; padding: 0 2px;'>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
+    html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
-    html_parts.append("</div>")
+    
     html_parts.append("</div>") # card-main end
     
     # [하단 4분할 계좌 카드]
@@ -234,13 +274,12 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>") # container end
     
-    # 안전하게 HTML 렌더링
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
 # =====================================================================
-# (이하 Andy님 원본 테이블 출력 로직)
+# (이하 Andy님 원본 테이블 출력 로직 절대 유지)
 # =====================================================================
 
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
