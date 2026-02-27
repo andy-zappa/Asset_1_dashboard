@@ -29,10 +29,10 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 
 /* 메인 카드 */
 .card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 18px 22px 15px 22px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-.grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: 100%; }
+.grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 
-/* 서브 카드 (Squeeze 적용: 패딩 축소) */
-.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 10px 15px; }
+/* 서브 카드 (Squeeze 적용) */
+.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 12px 16px; }
 
 /* 하단 텍스트 인사이트 박스 */
 .insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
@@ -154,7 +154,7 @@ if "_insight" in data:
     cash_kws = ['현금성자산', 'mmf']
     ovs_kws = ['tiger', 's&p', '나스닥', '필라델피아', '다우존스', 'ai테크']
     
-    # [수정] Best / Worst 5 추출을 위한 전체 종목 취합 (계좌명 축약 적용)
+    # [새로운 기능] Best / Worst 5 추출을 위한 전체 종목 취합 (계좌명 축약 적용)
     all_items = []
     
     for k in FIXED_ACCOUNT_ORDER:
@@ -178,6 +178,7 @@ if "_insight" in data:
                 else:
                     dom_total += val
 
+    # 수익률 기준으로 정렬하여 Best 5 / Worst 5 추출
     all_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
     best_5 = all_items[:5]
     worst_5 = all_items[::-1][:5]
@@ -220,7 +221,6 @@ if "_insight" in data:
     stop2 = p_cash + p_ovs
     donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
-    # [수정] 도넛 차트 텍스트 정밀 픽셀 보정 (해외투자 top:28% / 국내투자 bottom:8%)
     donut_html = f"""
     <div style='position: relative; width: 130px; height: 130px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0;'>
         <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
@@ -236,16 +236,18 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
+    # [수정] 좌측 메인 카드: "총 자산" 아래로 원금 이동 및 사이즈 우측 카드와 동일하게 매칭
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
+    html_parts.append("<div>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
+    html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: 5px;'>* 원금 : {fmt(t_original_sum)}</div>")
+    html_parts.append("</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
-    html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # [수정] 좌측 메인 카드 세로 압축을 위해 margin-top 15 -> 10, margin-bottom 25 -> 8 로 줄임
     html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px; padding-left: 15px;'>")
     html_parts.append(donut_html)
     
@@ -266,14 +268,12 @@ if "_insight" in data:
     html_parts.append(render_bar(p_pension, '#a9d18e'))
     html_parts.append(render_bar(p_isa, '#ffd966'))
     html_parts.append("</div>")
-    # [수정] 범례 margin-bottom 축소
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
-    # [수정] 달성률 바 padding 축소
     html_parts.append("<div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
     html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억 달성률</span>")
@@ -298,7 +298,6 @@ if "_insight" in data:
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
             
-            # [수정] 우측 서브 카드 Squeeze (margin/padding 대폭 축소)
             html_parts.append("<div class='card-sub' style='padding: 10px 15px; display: flex; flex-direction: column; justify-content: space-between; height: 100%;'>")
             html_parts.append("<div>")
             html_parts.append(f"<div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
@@ -317,15 +316,17 @@ if "_insight" in data:
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
     
+    # [수정] 순위 텍스트 제거 (th 내용 비움)
     html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px;'>손익률 BEST 5</div>")
-    html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     
+    # [수정] 순위 텍스트 제거 (th 내용 비움)
     html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px; margin-top: 10px;'>손익률 WORST 5</div>")
-    html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(worst_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
