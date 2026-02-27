@@ -122,7 +122,6 @@ data = load()
 if not data: st.stop()
 tot = data.get("_total", {})
 
-# [수정] 업데이트 버튼을 타이틀 하단 라인과 맞추기 위해 상단 여백(margin-top) 부여
 c1, c2 = st.columns([8.5, 1.5])
 with c1: 
     st.markdown("<h3>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -192,9 +191,12 @@ if "_insight" in data:
     goal_amount = 1000000000
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
+    ytd_rate = t_rate
+
+    # 누적 막대 그래프 폰트 13.5px 통일
     def render_bar(p, color):
         if p < 5: return f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>"
-        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: bold; color: #333;'>{p:.0f}%</div>"
 
     insight_texts = data.get("_insight", [])
     bottom_html = ""
@@ -208,10 +210,11 @@ if "_insight" in data:
     stop2 = p_cash + p_ovs
     donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
+    # 도넛 그래프 라벨 top: -12% -> top: 2% 로 변경하여 프로그레스 바와 충돌 방지 및 원형에 오버랩
     donut_html = f"""
     <div style='position: relative; width: 125px; height: 125px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; margin-left: 5px; flex-shrink: 0;'>
         <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50%; height: 50%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
-        <div style='position: absolute; top: -12%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #333; white-space: nowrap; font-weight: bold;'>{p_cash:.0f}% 현금성자산</div>
+        <div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #333; white-space: nowrap; font-weight: bold;'>{p_cash:.0f}% 현금성자산</div>
         <div style='position: absolute; top: 35%; right: -25%; font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
         <div style='position: absolute; bottom: 15%; left: 15%; font-size: 13px; color: #fff; font-weight: bold; text-align: center; line-height: 1.2; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div>
     </div>
@@ -227,15 +230,16 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
+    # 1. 상단: 총 자산 Title & Value (22px & 28px BOLD 적용 완벽 반영)
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
-    html_parts.append(f"<div style='font-size: 20px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
+    html_parts.append(f"<div style='font-size: 28px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13px; color: #777; font-weight: normal; margin-top: 4px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    # [수정] YTD를 삭제하고 10억 달성률(Progress) 바만 슬림하게 남김
+    # 1.5. 진행률(Progress to Goal) 및 YTD 영역
     html_parts.append("<div style='margin-bottom: 15px; padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: bold; color: #555; margin-bottom: 6px;'>")
     html_parts.append("<span>🎯 은퇴 자산 목표 10억 달성률</span>")
@@ -246,9 +250,11 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
+    # 2. 중간: 도넛 그래프 + 텍스트 한 덩어리 묶음
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>")
     html_parts.append(donut_html)
     
+    # 텍스트 간격 바짝 붙이기
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 6px; column-gap: 15px; justify-content: end; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
@@ -257,14 +263,16 @@ if "_insight" in data:
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}</div>")
     
+    # 총 손익(BOLD), 수익률(NORMAL) 교차 변경 적용 완벽 반영
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; padding-top: 4px;'>총 손익</div>")
-    html_parts.append(f"<div style='text-align: right; line-height: 1.15; padding-top: 4px;'><div style='font-size: 18px; font-weight: normal;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 18px; font-weight: bold; margin-top: 2px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
+    html_parts.append(f"<div style='text-align: right; line-height: 1.15; padding-top: 4px;'><div style='font-size: 18px; font-weight: bold;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 18px; font-weight: normal; margin-top: 2px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
 
+    # 3. 하단 누적 막대 그래프 (두께 20px 축소, 폰트 13.5px 통일)
     html_parts.append("<div style='margin-top: auto;'>")
-    html_parts.append("<div style='display: flex; height: 24px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
+    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
     html_parts.append(render_bar(p_pension, '#a9d18e'))
