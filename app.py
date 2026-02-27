@@ -154,11 +154,20 @@ if "_insight" in data:
     cash_kws = ['현금성자산', 'mmf']
     ovs_kws = ['tiger', 's&p', '나스닥', '필라델피아', '다우존스', 'ai테크']
     
+    # [새로운 기능] Best / Worst 5 추출을 위한 전체 종목 취합
+    all_items = []
+    
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
+            acc_name = '퇴직연금(DC)' if k == 'DC' else ('퇴직연금(IRP)' if k == 'IRP' else ('연금저축(CMA)' if k == 'PENSION' else 'ISA(중개형)'))
             for item in data[k].get('상세', []):
                 name = item.get('종목명', '')
                 if name == '[ 합계 ]': continue
+                
+                # Best/Worst 용 데이터 복사 및 계좌명 추가
+                item_copy = item.copy()
+                item_copy['계좌'] = acc_name
+                all_items.append(item_copy)
                 
                 val = item.get('총 자산', item.get('총자산', 0))
                 name_lower = name.lower()
@@ -169,6 +178,11 @@ if "_insight" in data:
                     ovs_total += val
                 else:
                     dom_total += val
+
+    # 수익률 기준으로 정렬하여 Best 5 / Worst 5 추출
+    all_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
+    best_5 = all_items[:5]
+    worst_5 = all_items[::-1][:5] # 뒤에서부터 5개 (가장 낮은 수익률)
 
     dom_total = t_asset - cash_total - ovs_total
 
@@ -192,7 +206,6 @@ if "_insight" in data:
     goal_amount = 1000000000
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
-    # [수정] z-index: 10 및 white-space: nowrap 추가하여 1% 텍스트가 잘리거나 가려지지 않고 최상단에 오버랩되도록 적용
     def render_bar(p, color):
         if p == 0: return ""
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>"
@@ -305,9 +318,37 @@ if "_insight" in data:
     html_parts.append("</div>") 
     html_parts.append("</div>") 
     
-    html_parts.append("<div class='insight-bottom-box'>")
+    # [새로운 2단 분할 레이아웃 추가] 좌측: Best/Worst 테이블 / 우측: 자파의 인사이트
+    html_parts.append("<div style='display: flex; gap: 20px; align-items: stretch; margin-bottom: 25px; margin-top: 5px;'>")
+    
+    # 좌측 영역 (Best 5 / Worst 5)
+    html_parts.append("<div style='flex: 1; background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);'>")
+    
+    # Best 5 테이블
+    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #333;'>📈 손익률 BEST 5</div>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 14px;'><tr><th>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    for idx, it in enumerate(best_5):
+        rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
+        html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
+    html_parts.append("</table>")
+    
+    # Worst 5 테이블
+    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #333;'>📉 손익률 WORST 5</div>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 14px;'><tr><th>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    for idx, it in enumerate(worst_5):
+        rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
+        html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
+    html_parts.append("</table>")
+    
+    html_parts.append("</div>")
+    
+    # 우측 영역 (시황 설명 텍스트)
+    html_parts.append("<div style='flex: 1; background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333;'>")
+    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 자파의 자산 인사이트</div>")
     html_parts.append(bottom_html)
     html_parts.append("</div>")
+    
+    html_parts.append("</div>") # End 2단 분할 Flex
     
     html_str = "".join(html_parts).replace("\n", "")
     st.markdown(html_str, unsafe_allow_html=True)
