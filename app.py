@@ -130,6 +130,7 @@ with c2:
     if st.button("🔄 업데이트", use_container_width=True):
         andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
 
+# 우측 상단 날짜 볼드 제거 유지
 st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
@@ -200,7 +201,6 @@ if "_insight" in data:
         if "조회 기준 시간" in text: continue
         bottom_html += f"<p>{text}</p>"
 
-    # [수정] 메인 타이틀 및 우측 설명 병합 배치
     st.markdown("""
     <div style='display: flex; justify-content: space-between; align-items: baseline; margin-top: 15px; margin-bottom: 10px;'>
         <div style='font-size: 22px; font-weight: bold;'>💡 자파의 [절세계좌] 자산 현황 보고</div>
@@ -223,13 +223,15 @@ if "_insight" in data:
 
     html_parts = []
     
+    html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
+    
     html_parts.append("<div class='insight-container'>")
     
     # ---------------- 좌측 영역 (메인 카드) ----------------
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # 1. 상단: 총 자산 Title & Value
+    # 1. 상단: 총 자산 Title & Value (22px & 30px BOLD 적용)
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
@@ -242,6 +244,7 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;'>")
     html_parts.append(donut_html)
     
+    # 텍스트 간격 바짝 붙이기
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 6px; column-gap: 15px; justify-content: end; width: 100%;'>")
     
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>평가금액</div>")
@@ -250,14 +253,17 @@ if "_insight" in data:
     html_parts.append("<div style='color: #777; font-size: 18px; text-align: right;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; text-align: right;'>{fmt(cash_total)}</div>")
     
+    # 수익률 BOLD 제거 (!important 강제 적용)
     html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; padding-top: 4px;'>총 손익</div>")
     html_parts.append(f"<div style='text-align: right; line-height: 1.15; padding-top: 4px;'><div style='font-size: 18px; font-weight: bold;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 18px; font-weight: normal !important; margin-top: 2px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     
     html_parts.append("</div>") # grid end
     html_parts.append("</div>") # flex end
 
-    # 3. 하단 누적 막대 그래프 및 진행률
+    # 3. 하단 영역 묶음 (push to bottom)
     html_parts.append("<div style='margin-top: auto;'>")
+    
+    # 누적 막대 그래프 
     html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; margin-bottom: 8px;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
@@ -265,13 +271,14 @@ if "_insight" in data:
     html_parts.append(render_bar(p_isa, '#ffd966'))
     html_parts.append("</div>")
     
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 18px;'>")
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 15px;'>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#8eaadb;'></div>퇴직연금(DC)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>퇴직연금(IRP)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>연금저축(CMA)</div>")
     html_parts.append("<div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
     html_parts.append("</div>")
     
+    # [수정] 10억 달성률 바를 가장 하단으로 위치 이동 완료
     html_parts.append("<div style='padding: 12px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: bold; color: #555; margin-bottom: 6px;'>")
     html_parts.append("<span>🎯 은퇴 자산 목표 10억 달성률</span>")
