@@ -55,7 +55,7 @@ PORTFOLIO = {
         ['379810', 341, 25105, 'KODEX 미국나스닥100'], 
         ['381180', 295, 28543, 'TIGER 미국필라델피아반도체나스닥'], 
         ['498400', 2444, 13193, 'KODEX 200타겟위클리커버드콜'], 
-        ['PENSION_CASH', 1, 1347241, '현금성자산']
+        ['PENSION_CASH', 1, 1347241, '현금잔고']
     ],
     'ISA': [
         ['498400', 1176, 12806, 'KODEX 200타겟위클리커버드콜'], 
@@ -89,6 +89,7 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
+    # 1. 현재가 및 전일비 조회 (부호 로직 추가 완비)
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -107,7 +108,7 @@ def get_current_price(code, token, avg_p):
             if 'stck_prpr' in out:
                 curr = int(float(out.get('stck_prpr', avg_p)))
                 diff_abs = int(float(out.get('prdy_vrss', 0)))
-                # 전일비 부호 판별: 4(하한), 5(하락)은 마이너스 처리
+                # 부호 판별: '4'(하한), '5'(하락)이면 마이너스 처리
                 sign = str(out.get('prdy_vrss_sign', '3'))
                 if sign in ['4', '5']:
                     diff_1 = -diff_abs
@@ -116,6 +117,7 @@ def get_current_price(code, token, avg_p):
     except: 
         pass
 
+    # 2. 과거 종가 조회 (최대 30영업일)
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
