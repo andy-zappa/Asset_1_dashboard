@@ -31,8 +31,8 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 18px 22px 15px 22px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 
-/* 서브 카드 */
-.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+/* 서브 카드 (Squeeze 적용) */
+.card-sub { background: #fff; border: 1.5px solid #ddd; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 10px 16px; }
 
 /* 하단 텍스트 인사이트 박스 */
 .insight-bottom-box { background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
@@ -246,7 +246,8 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px;'>")
+    # [디자인 보정] 좌측 카드 도넛 위쪽 간격 확보
+    html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 12px;'>")
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: start; width: 100%;'>")
@@ -296,23 +297,24 @@ if "_insight" in data:
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
             
-            html_parts.append("<div class='card-sub' style='padding: 12px 18px;'>")
-            html_parts.append(f"<div style='text-align: right; font-size: 14px; color: #555; font-weight: normal; margin-bottom: 0px;'>{OPEN_DATES.get(k, '')}</div>")
-            html_parts.append(f"<div style='font-size: 20px; font-weight: bold; color: #111; margin-bottom: 2px; margin-top: -3px;'>{acc_name}</div>")
-            html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 10px;'></div>")
+            # [디자인 보정] 우측 서브 카드 Squeeze (패딩 및 마진 축소)
+            html_parts.append("<div class='card-sub' style='padding: 10px 16px;'>")
+            html_parts.append(f"<div style='text-align: right; font-size: 13.5px; color: #555; font-weight: normal; margin-bottom: 2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
+            html_parts.append(f"<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 4px; line-height: 1;'>{acc_name}</div>")
+            html_parts.append("<div style='border-bottom: 1px solid #eee; margin-bottom: 8px;'></div>")
             
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 자산</span>")
-            html_parts.append(f"<span style='font-size: 16.5px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
+            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>")
+            html_parts.append("<span style='font-size: 14.5px; color: #777; font-weight: normal;'>총 자산</span>")
+            html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
             
-            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;'>")
-            html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
-            html_parts.append(f"<div style='text-align: right; line-height: 1.25;'><div class='{col(acc_profit)}' style='font-size: 16.5px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 15px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
+            html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;'>")
+            html_parts.append("<span style='font-size: 14.5px; color: #777; font-weight: normal;'>총 손익</span>")
+            html_parts.append(f"<div style='text-align: right; line-height: 1.2;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 14.5px; font-weight: 400 !important; margin-top: 1px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
             
             principal_label = "* 원금"
-            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
+            html_parts.append(f"<div style='font-size: 13.5px; color: #555; font-weight: normal; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") 
     html_parts.append("</div>") 
@@ -325,16 +327,16 @@ if "_insight" in data:
     html_parts.append("<div style='flex: 1; background: #fff; border: 1.5px solid #ddd; border-radius: 18px; padding: 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);'>")
     
     # Best 5 테이블
-    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #333;'>📈 손익률 BEST 5</div>")
-    html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 14px;'><tr><th>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px;'>손익률 Best 5</div>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:30px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     
     # Worst 5 테이블
-    html_parts.append("<div style='font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #333;'>📉 손익률 WORST 5</div>")
-    html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 14px;'><tr><th>순위</th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+    html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px;'>Worst 5</div>")
+    html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:30px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(worst_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
