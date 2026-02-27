@@ -234,16 +234,22 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: auto;'>")
-    html_parts.append("<div>")
-    html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111; line-height: 1.1;'>총 자산</div>")
-    html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
+    # [수정] 총자산과 원금/전일비가 Baseline(바닥선)에 완벽히 평행하도록 2개의 Row로 분리 설계
+    html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
+    
+    # Row 1: 총 자산 & 474,616,787 (Baseline 정렬)
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
+    html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
+    html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
     html_parts.append("</div>")
-    html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
-    html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
-    html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
+    
+    # Row 2: 원금 & [전일비/전주비] (Baseline 정렬)
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px;'>")
+    html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; line-height: 1;'>* 원금 : {fmt(t_original_sum)}</div>")
+    html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
     html_parts.append("</div>")
-    html_parts.append("</div>")
+    
+    html_parts.append("</div>") # End column Wrapper
 
     html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 22px; padding-left: 15px;'>")
     html_parts.append(donut_html)
@@ -313,7 +319,6 @@ if "_insight" in data:
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
     
-    # [수정] 폰트 사이즈 19px 적용 및 📈 📉 아이콘 추가
     html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 BEST 5</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
@@ -321,7 +326,6 @@ if "_insight" in data:
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     
-    # [수정] 폰트 사이즈 19px 적용 및 📈 📉 아이콘 추가
     html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 WORST 5</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(worst_5):
