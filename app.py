@@ -192,14 +192,10 @@ if "_insight" in data:
     goal_amount = 1000000000
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
+    # [수정] 1% 텍스트를 리더선 없이 강제로 중첩(Absolute)하여 가운데 표기
     def render_bar(p, color):
-        if 0 < p < 5:
-            return f"""<div style='width: {p}%; background-color: {color}; height: 100%; position: relative;'>
-                <div style='position: absolute; top: 100%; left: 50%; width: 1px; height: 11px; background-color: #888; transform: translateX(-50%);'></div>
-                <div style='position: absolute; top: 110%; left: 50%; transform: translateX(-50%); font-size: 11px; color: #555; white-space: nowrap;'>{p:.0f}%</div>
-            </div>"""
         if p == 0: return ""
-        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: normal; color: #333;'>{p:.0f}%</div>"
+        return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333;'>{p:.0f}%</span></div>"
 
     insight_texts = data.get("_insight", [])
     bottom_html = ""
@@ -237,7 +233,8 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;'>")
+    # [수정] 도넛/평가금액 영역: margin-top으로 원금과의 거리를 띄우고, margin-bottom을 줄여 막대그래프 쪽으로 밀착시킴
+    html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px;'>")
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: start; width: 100%;'>")
@@ -251,7 +248,8 @@ if "_insight" in data:
     html_parts.append("</div>")
 
     html_parts.append("<div>")
-    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 25px; position: relative;'>")
+    # [수정] 막대그래프의 margin-bottom을 6px로 줄여 바로 밑의 범례 인덱스와 하나의 덩어리처럼 결속
+    html_parts.append("<div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
     html_parts.append(render_bar(p_dc, '#8eaadb'))
     html_parts.append(render_bar(p_irp, '#f4b183'))
     html_parts.append(render_bar(p_pension, '#a9d18e'))
