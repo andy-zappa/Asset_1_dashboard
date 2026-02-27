@@ -89,7 +89,7 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
-    # 1. 현재가 및 전일비 조회 (부호 로직 추가)
+    # 1. 현재가 및 전일비 조회 (부호 로직 완벽 적용)
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
