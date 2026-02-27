@@ -136,7 +136,7 @@ FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링
+# 💡 자파의 자산 카드뷰 템플릿 렌더링
 # =====================================================================
 if "_insight" in data:
     
@@ -223,14 +223,13 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # [수정] 좌측 카드 상단: 총자산 -> 변동폭 -> 원금(추가) 순으로 레이아웃 구성
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
     html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
     html_parts.append(f"<div style='font-size: 13.5px; color: #777; font-weight: normal; margin-top: 6px;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
-    # 원금 정보 추가 (우측 카드와 위계 통일)
-    html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: bold; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
+    # [수정] 메인 카드 원금: font-weight bold 제거
+    html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
@@ -295,8 +294,9 @@ if "_insight" in data:
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
             html_parts.append(f"<div style='text-align: right; line-height: 1.25;'><div class='{col(acc_profit)}' style='font-size: 16.5px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 15px; font-weight: 400 !important; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
+            # [수정] 서브 카드 원금: font-weight bold 제거
             principal_label = "* 원금"
-            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: bold; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
+            html_parts.append(f"<div style='font-size: 14.5px; color: #555; font-weight: normal; margin-top: auto;'>{principal_label} : {fmt(acc_principal)}</div>")
             html_parts.append("</div>")
     html_parts.append("</div>") 
     html_parts.append("</div>") 
