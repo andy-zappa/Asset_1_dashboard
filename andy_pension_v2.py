@@ -73,7 +73,6 @@ PORTFOLIO = {
 def get_access_token():
     payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try: 
-        # 무한 로딩 프리징 방지 (timeout 5초)
         return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5).json().get("access_token")
     except: 
         return None
@@ -90,6 +89,7 @@ def get_current_price(code, token, avg_p):
     diff_15 = 0
     diff_30 = 0
     
+    # 1. 현재가 및 전일비 조회 (부호 로직 추가)
     headers_curr = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -97,19 +97,27 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010100"
     }
     try:
-        # 무한 로딩 프리징 방지 (timeout 3초)
         res = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
             headers=headers_curr, 
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)},
             timeout=3
         )
-        out = res.json().get('output', {})
-        curr = int(float(out.get('stck_prpr', avg_p)))
-        diff_1 = int(float(out.get('prdy_vrss', 0)))
+        if res.status_code == 200:
+            out = res.json().get('output', {})
+            if 'stck_prpr' in out:
+                curr = int(float(out.get('stck_prpr', avg_p)))
+                diff_abs = int(float(out.get('prdy_vrss', 0)))
+                # 부호 판별: '4'(하한), '5'(하락)이면 마이너스 처리
+                sign = str(out.get('prdy_vrss_sign', '3'))
+                if sign in ['4', '5']:
+                    diff_1 = -diff_abs
+                else:
+                    diff_1 = diff_abs
     except: 
         pass
 
+    # 2. 과거 종가 조회 (최대 30영업일)
     headers_hist = {
         "authorization": f"Bearer {token}", 
         "appkey": APP_KEY, 
@@ -117,7 +125,6 @@ def get_current_price(code, token, avg_p):
         "tr_id": "FHKST01010400"
     }
     try:
-        # 무한 로딩 프리징 방지 (timeout 3초)
         res_hist = requests.get(
             f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
             headers=headers_hist, 
@@ -129,30 +136,31 @@ def get_current_price(code, token, avg_p):
             },
             timeout=3
         )
-        out_hist = res_hist.json().get('output', [])
-        
-        now_dt = datetime.now()
-        t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
-        t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
-        t_30 = (now_dt - timedelta(days=30)).strftime("%Y%m%d")
-        
-        p_7, p_15, p_30 = curr, curr, curr
-        found_7, found_15, found_30 = False, False, False
-        
-        for item in out_hist:
-            dt = item.get('stck_bsop_date', '99999999')
-            pr = int(float(item.get('stck_clpr', curr)))
+        if res_hist.status_code == 200:
+            out_hist = res_hist.json().get('output', [])
             
-            if not found_7 and dt <= t_7:
-                p_7 = pr; found_7 = True
-            if not found_15 and dt <= t_15:
-                p_15 = pr; found_15 = True
-            if not found_30 and dt <= t_30:
-                p_30 = pr; found_30 = True
+            now_dt = datetime.now()
+            t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
+            t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
+            t_30 = (now_dt - timedelta(days=30)).strftime("%Y%m%d")
+            
+            p_7, p_15, p_30 = curr, curr, curr
+            found_7, found_15, found_30 = False, False, False
+            
+            for item in out_hist:
+                dt = item.get('stck_bsop_date', '99999999')
+                pr = int(float(item.get('stck_clpr', curr)))
                 
-        diff_7 = curr - p_7
-        diff_15 = curr - p_15
-        diff_30 = curr - p_30
+                if not found_7 and dt <= t_7:
+                    p_7 = pr; found_7 = True
+                if not found_15 and dt <= t_15:
+                    p_15 = pr; found_15 = True
+                if not found_30 and dt <= t_30:
+                    p_30 = pr; found_30 = True
+                    
+            diff_7 = curr - p_7
+            diff_15 = curr - p_15
+            diff_30 = curr - p_30
     except: 
         pass
 
