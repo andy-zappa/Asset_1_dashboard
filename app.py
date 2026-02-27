@@ -133,7 +133,7 @@ st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weig
 FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
 
 # =====================================================================
-# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (간격 밀착 완벽 구현)
+# 💡 [NEW] 자파의 자산 카드뷰 템플릿 렌더링 (높낮이 정렬 완벽 반영)
 # =====================================================================
 if "_insight" in data:
     
@@ -211,6 +211,10 @@ if "_insight" in data:
     """
 
     html_parts = []
+    
+    # [수정] 단위 텍스트를 컨테이너 바깥으로 완전히 빼내어 좌우 카드 높이의 평행을 완벽하게 맞춥니다.
+    html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
+    
     html_parts.append("<div class='insight-container'>")
     
     # ---------------- 좌측 영역 (메인 카드) ----------------
@@ -265,10 +269,8 @@ if "_insight" in data:
     html_parts.append("</div>") # card-main end
     html_parts.append("</div>") # insight-left end
     
-    # ---------------- 우측 영역 (단위 표기 + 4분할 계좌 카드) ----------------
+    # ---------------- 우측 영역 (4분할 계좌 카드) ----------------
     html_parts.append("<div class='insight-right'>")
-    html_parts.append("<div style='text-align: right; font-size: 14px; color: #555; font-weight: bold; margin-bottom: 8px;'>단위 : 원화(KRW)</div>")
-    
     html_parts.append("<div class='grid-2x2'>")
     for k in FIXED_ACCOUNT_ORDER:
         if k in data:
@@ -286,10 +288,10 @@ if "_insight" in data:
             html_parts.append(f"<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span>")
             html_parts.append("</div>")
             
-            # 총 손익과 수익률 간격을 바짝 붙여서 한 덩어리로 표시
+            # 총 손익과 수익률 간격을 바짝 붙여서 한 덩어리로 표시 (높이 밸런스 유지에 유리)
             html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start;'>")
             html_parts.append("<span style='font-size: 15px; color: #777; font-weight: normal;'>총 손익</span>")
-            html_parts.append(f"<div style='text-align: right; line-height: 1.15;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 16px; font-weight: bold; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
+            html_parts.append(f"<div style='text-align: right; line-height: 1.15;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 16px; font-weight: normal; margin-top: 2px;'>{fmt_p(acc_rate)}</div></div>")
             html_parts.append("</div>")
             
             html_parts.append("</div>")
@@ -302,7 +304,7 @@ if "_insight" in data:
     html_parts.append(bottom_html)
     html_parts.append("</div>")
     
-    # HTML 마크다운 렌더링 에러 차단
+    # HTML 마크다운 렌더링 에러 차단 (한 줄 처리)
     html_str = "".join(html_parts).replace("\n", "")
     st.markdown(html_str, unsafe_allow_html=True)
 
