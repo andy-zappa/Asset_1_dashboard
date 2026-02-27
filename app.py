@@ -154,7 +154,6 @@ if "_insight" in data:
     cash_kws = ['현금성자산', 'mmf']
     ovs_kws = ['tiger', 's&p', '나스닥', '필라델피아', '다우존스', 'ai테크']
     
-    # [새로운 기능] Best / Worst 5 추출을 위한 전체 종목 취합 (계좌명 축약 적용)
     all_items = []
     
     for k in FIXED_ACCOUNT_ORDER:
@@ -178,7 +177,6 @@ if "_insight" in data:
                 else:
                     dom_total += val
 
-    # 수익률 기준으로 정렬하여 Best 5 / Worst 5 추출
     all_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
     best_5 = all_items[:5]
     worst_5 = all_items[::-1][:5]
@@ -222,7 +220,7 @@ if "_insight" in data:
     donut_css = f"background: conic-gradient(#ffffff 0% {stop1}%, #d9d9d9 {stop1}% {stop2}%, #8c8c8c {stop2}% 100%);"
     
     donut_html = f"""
-    <div style='position: relative; width: 130px; height: 130px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0;'>
+    <div style='position: relative; width: 130px; height: 130px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin-top: -12px;'>
         <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
         <div style='position: absolute; top: 3%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div>
         <div style='position: absolute; top: 28%; right: -12%; font-size: 12.5px; color: #333; text-align: center; line-height: 1.2; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
@@ -236,11 +234,10 @@ if "_insight" in data:
     html_parts.append("<div class='insight-left'>")
     html_parts.append("<div class='card-main'>")
     
-    # [수정] 좌측 메인 카드: "총 자산" 아래로 원금 이동 및 사이즈 우측 카드와 동일하게 매칭
-    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
+    html_parts.append("<div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: auto;'>")
     html_parts.append("<div>")
-    html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111;'>총 자산</div>")
-    html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: 5px;'>* 원금 : {fmt(t_original_sum)}</div>")
+    html_parts.append("<div style='font-size: 22px; font-weight: bold; color: #111; line-height: 1.1;'>총 자산</div>")
+    html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: 8px;'>* 원금 : {fmt(t_original_sum)}</div>")
     html_parts.append("</div>")
     html_parts.append("<div style='text-align: right; line-height: 1.1;'>")
     html_parts.append(f"<div style='font-size: 30px; font-weight: bold; color: #111;'>{fmt(t_asset)}</div>")
@@ -248,15 +245,15 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("</div>")
 
-    html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 8px; padding-left: 15px;'>")
+    html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 22px; padding-left: 15px;'>")
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: start; width: 100%;'>")
-    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>평가금액</div>")
+    html_parts.append("<div style='color: #777; font-size: 15px; text-align: right; line-height: 22px;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
-    html_parts.append("<div style='color: #777; font-size: 18px; text-align: right; line-height: 22px;'>현금성자산</div>")
+    html_parts.append("<div style='color: #777; font-size: 15px; text-align: right; line-height: 22px;'>현금성자산</div>")
     html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
-    html_parts.append("<div style='color: #777; font-size: 18px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
+    html_parts.append("<div style='color: #777; font-size: 15px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
     html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: bold; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
@@ -316,16 +313,16 @@ if "_insight" in data:
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
     
-    # [수정] 순위 텍스트 제거 (th 내용 비움)
-    html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px;'>손익률 BEST 5</div>")
+    # [수정] 폰트 사이즈 19px 적용 및 📈 📉 아이콘 추가
+    html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 BEST 5</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
         html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     
-    # [수정] 순위 텍스트 제거 (th 내용 비움)
-    html_parts.append("<div style='font-size: 15px; font-weight: bold; color: #111; margin-bottom: 6px; margin-top: 10px;'>손익률 WORST 5</div>")
+    # [수정] 폰트 사이즈 19px 적용 및 📈 📉 아이콘 추가
+    html_parts.append("<div style='font-size: 19px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 WORST 5</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(worst_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
