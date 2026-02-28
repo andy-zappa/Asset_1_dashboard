@@ -1,36 +1,103 @@
 import json
+import requests
 from datetime import datetime
+import time
+
+# =====================================================================
+# 🔑 한국투자증권 Open API 설정 (Andy님 실전투자 키 장착 완료)
+# =====================================================================
+APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
+APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
+URL_BASE = "https://openapi.koreainvestment.com:9443" # 실전투자 도메인
+
+def get_access_token():
+    """한국투자증권 API 접근 토큰 발급"""
+    if APP_KEY.startswith("여기에"): 
+        return None
+    headers = {"content-type": "application/json"}
+    body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
+    try:
+        res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
+        if res.status_code == 200:
+            return res.json()["access_token"]
+    except: pass
+    return None
+
+def get_dom_price(code, token):
+    """국내 주식 현재가 및 전일대비율 조회"""
+    if not token or code == "-": return None, None
+    url = f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price"
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "authorization": f"Bearer {token}",
+        "appkey": APP_KEY, "appsecret": APP_SECRET,
+        "tr_id": "FHKST01010100" # 주식현재가 시세
+    }
+    params = {"fid_cond_mrkt_div_code": "J", "fid_input_iscd": code}
+    try:
+        res = requests.get(url, headers=headers, params=params, timeout=5)
+        if res.status_code == 200 and res.json()['rt_cd'] == '0':
+            curr_price = float(res.json()['output']['stck_prpr'])
+            d_rate = float(res.json()['output']['prdy_ctrt'])
+            return curr_price, d_rate
+    except: pass
+    return None, None
+
+def get_ovs_price(code, token):
+    """해외(미국) 주식 현재가 및 전일대비율 조회"""
+    if not token or code == "-": return None, None
+    url = f"{URL_BASE}/uapi/overseas-price/v1/quotations/price"
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "authorization": f"Bearer {token}",
+        "appkey": APP_KEY, "appsecret": APP_SECRET,
+        "tr_id": "HHDFS00000300" # 해외주식 현재가 상세
+    }
+    # 미국 주요 거래소 순차 조회 (나스닥 -> 뉴욕 -> 아멕스)
+    for excd in ["NAS", "NYS", "AMS"]:
+        params = {"AUTH": "", "EXCD": excd, "SYMB": code}
+        try:
+            res = requests.get(url, headers=headers, params=params, timeout=5)
+            data = res.json()
+            if res.status_code == 200 and data['rt_cd'] == '0' and data['output']['last'] != '':
+                curr_price = float(data['output']['last'])
+                d_rate = float(data['output']['rate'])
+                return curr_price, d_rate
+        except: pass
+        time.sleep(0.1) # 초당 요청 제한 방지
+    return None, None
 
 def generate_general_data():
-    # 📌 기준 환율 (API 연동 전 하드코딩)
-    usd_krw = 1443.1
+    usd_krw = 1443.1 # 환율 (추후 이 부분도 API 연동 가능)
     
+    # 1. API 토큰 발급 시도
+    print("🔄 ZAPPA: 한국투자증권 API 서버와 통신을 시작합니다...")
+    token = get_access_token()
+    if token: print("✅ API 토큰 발급 성공! 실시간 데이터를 가져옵니다.")
+    else: print("⚠️ API 통신 실패. 기존 세팅된 데이터(안전장치)로 계산을 진행합니다.")
+
     # =====================================================================
-    # 📝 Andy님의 일반 계좌 데이터 입력부 
-    # ※ '예수금액' 부분의 숫자를 현재 계좌의 실제 예수금으로 수정하시면 됩니다.
+    # 📝 기초 자산 데이터 (수량 및 매입가 고정, 현재가는 Fallback용 백업 데이터)
+    # API 연동 성공 시 '현재가'와 '전일비'는 실시간 데이터로 자동 덮어씌워집니다.
     # =====================================================================
-    
-    # [1] 국내1. 키움증권 (6312-5329) - 원화(KRW)
     dom1 = [
-        {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 69100, "전일비": -0.23},
-        {"종목명": "KODEX 레버리지", "코드": "122630", "수량": 300, "매입가": 37480, "현재가": 45000, "전일비": -1.97},
-        {"종목명": "현대차", "코드": "005380", "수량": 65, "매입가": 464862, "현재가": 520000, "전일비": 10.34},
+        {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
+        {"종목명": "KODEX 레버리지", "코드": "122630", "수량": 300, "매입가": 37480, "현재가": 111280, "전일비": -1.97},
+        {"종목명": "현대차", "코드": "005380", "수량": 65, "매입가": 464862, "현재가": 672000, "전일비": 10.34},
         {"종목명": "CJ", "코드": "001040", "수량": 50, "매입가": 93380, "현재가": 219500, "전일비": -0.45},
         {"종목명": "두산에너빌리티", "코드": "034020", "수량": 270, "매입가": 83898, "현재가": 106200, "전일비": 2.31},
         {"종목명": "한화오션", "코드": "042660", "수량": 110, "매입가": 121239, "현재가": 141200, "전일비": 0.86},
         {"종목명": "한국항공우주", "코드": "047810", "수량": 35, "매입가": 177646, "현재가": 192600, "전일비": 4.73},
         {"종목명": "POSCO홀딩스", "코드": "005490", "수량": 15, "매입가": 392467, "현재가": 415000, "전일비": 1.84},
         {"종목명": "셀트리온", "코드": "068270", "수량": 6, "매입가": 241417, "현재가": 237500, "전일비": -1.86},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 1500000} # <-- 여기에 원화 예수금 입력
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4676074}
     ]
 
-    # [2] 국내2. 삼성증권 (7162669785-01) 주식보상 - 원화(KRW)
     dom2 = [
         {"종목명": "삼성전자", "코드": "005930", "수량": 36, "매입가": 160500, "현재가": 217500, "전일비": 0.5},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 18730} # <-- 여기에 원화 예수금 입력
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 18730}
     ]
 
-    # [3] 미국1. 키움증권 (6312-5329) - 달러(USD)
     usa1 = [
         {"종목명": "Apple", "코드": "AAPL", "수량": 70, "매입가": 259.6900, "현재가": 264.1800, "전일비": 1.58},
         {"종목명": "SOXL", "코드": "SOXL", "수량": 250, "매입가": 18.1940, "현재가": 62.7700, "전일비": 3.93},
@@ -45,53 +112,53 @@ def generate_general_data():
         {"종목명": "TQQQ", "코드": "TQQQ", "수량": 600, "매입가": 29.8480, "현재가": 49.5200, "전일비": -1.06},
         {"종목명": "Tesla", "코드": "TSLA", "수량": 100, "매입가": 261.7097, "현재가": 402.5100, "전일비": -1.49},
         {"종목명": "Microsoft", "코드": "MSFT", "수량": 30, "매입가": 427.6786, "현재가": 392.7400, "전일비": -2.24},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 1250.50} # <-- 여기에 달러 예수금 입력
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 249.42}
     ]
 
-    # [4] 미국2. 키움증권 (6443-5993) - 달러(USD)
     usa2 = [
         {"종목명": "Figma", "코드": "FIG", "수량": 100, "매입가": 51.6084, "현재가": 29.3900, "전일비": -2.75},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 300.00} # <-- 여기에 달러 예수금 입력
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 300.00}
     ]
 
     # =====================================================================
-    # ⚙️ 데이터 가공 로직 (수정 금지)
+    # ⚙️ 가격 업데이트 및 계산 코어 로직
     # =====================================================================
-    def process(items, is_usa=False):
+    def process_and_update(items, is_usa=False):
         processed = []
-        sum_asset = 0
-        sum_profit = 0
-        sum_buy = 0
+        sum_asset = 0; sum_profit = 0; sum_buy = 0
         
         for it in items:
-            # 예수금 처리 로직
             if it["종목명"] == "예수금":
                 asset = it.get("예수금액", 0)
-                profit = 0
-                buy = asset
+                sum_asset += asset; sum_buy += asset
                 processed.append({
                     "종목명": "예수금", "코드": "-", "총자산": asset, "평가손익": 0, "수익률(%)": 0, 
                     "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
                 })
-            # 일반 주식 처리 로직
-            else:
-                asset = it['수량'] * it['현재가']
-                profit = (it['현재가'] - it['매입가']) * it['수량']
-                buy = it['수량'] * it['매입가']
-                processed.append({
-                    "종목명": it["종목명"], "코드": it["코드"], "총자산": asset, "평가손익": profit, 
-                    "수익률(%)": (profit / buy * 100) if buy else 0, "수량": it["수량"], 
-                    "매입가": it["매입가"], "현재가": it["현재가"], "전일비": it.get("전일비", 0)
-                })
-            sum_asset += asset
-            sum_profit += profit
-            sum_buy += buy
+                continue
             
-        # 비중 계산 (예수금 포함)
+            # API를 통해 실시간 가격/등락률 덮어쓰기 (토큰이 있을 경우에만)
+            if token:
+                cp, dr = get_ovs_price(it["코드"], token) if is_usa else get_dom_price(it["코드"], token)
+                if cp is not None:
+                    it["현재가"] = cp
+                    it["전일비"] = dr
+            
+            # 자산 및 수익률 계산
+            asset = it['수량'] * it['현재가']
+            profit = (it['현재가'] - it['매입가']) * it['수량']
+            buy = it['수량'] * it['매입가']
+            
+            processed.append({
+                "종목명": it["종목명"], "코드": it["코드"], "총자산": asset, "평가손익": profit, 
+                "수익률(%)": (profit / buy * 100) if buy else 0, "수량": it["수량"], 
+                "매입가": it["매입가"], "현재가": it["현재가"], "전일비": it.get("전일비", 0)
+            })
+            sum_asset += asset; sum_profit += profit; sum_buy += buy
+            
         for p in processed:
             p['비중'] = (p['총자산'] / sum_asset * 100) if sum_asset > 0 else 0
             
-        # 하단 합계 데이터 추가
         processed.append({
             "종목명": "[ 합계 ]", "코드": "-", "비중": 100.0, "총자산": sum_asset, "평가손익": sum_profit, 
             "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
@@ -104,18 +171,19 @@ def generate_general_data():
             "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy
         }
 
-    # 최종 JSON 구조체 생성
     final_data = {
-        "DOM1": process(dom1), 
-        "DOM2": process(dom2),
-        "USA1": process(usa1, True), 
-        "USA2": process(usa2, True),
+        "DOM1": process_and_update(dom1), 
+        "DOM2": process_and_update(dom2),
+        "USA1": process_and_update(usa1, True), 
+        "USA2": process_and_update(usa2, True),
         "환율": usd_krw, 
         "조회시간": datetime.now().strftime("%Y/%m/%d(%a) / %H:%M:%S")
     }
     
     with open('assets_general.json', 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
+        
+    print("✅ ZAPPA 데이터 추출 완료 및 저장 성공!")
 
 if __name__ == "__main__":
     generate_general_data()
