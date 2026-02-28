@@ -14,7 +14,7 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 css = """
 <style>
 /* 🔥 스크롤 시 부드럽게 미끄러지도록 애니메이션 추가 */
-html {
+html, body, .stApp, [data-testid="stAppViewContainer"], .main {
     scroll-behavior: smooth !important;
 }
 
@@ -306,6 +306,7 @@ elif menu == "2. 절세 계좌":
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+        # 리로드 기능을 순수하게 데이터 업데이트로만 유지
         if st.button("🔄 업데이트", use_container_width=True):
             with st.spinner("데이터 업데이트 중..."):
                 andy_pension_v2.generate_asset_data()
@@ -419,7 +420,7 @@ elif menu == "2. 절세 계좌":
         b1_name = short_name(best_5[0]['종목명']) if best_5 else "주도 종목"
         w1_name = short_name(worst_5[0]['종목명']) if worst_5 else "부진 종목"
 
-        strategy_text = f"간밤 최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 단기적으로 아웃퍼폼 중인 <strong>{b1_name}</strong> 등에서 일부 차익을 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
+        strategy_text = f"간밤 최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 단기적으로 아웃퍼폼 중인 <strong>{b1_name}</strong> 등에서 일부 차익 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
         
         zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>"
         t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;"
@@ -441,13 +442,13 @@ elif menu == "2. 절세 계좌":
 
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         
-        # 🔥 [수정] 도넛 크기를 120px로 조정하고 중앙 정렬
+        # 🔥 영점 조절 완벽 패치: 국내투자(위1,우2), 해외투자(좌5), 현금성자산(명칭 원복)
         donut_html = f"""
         <div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'>
             <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
-            <div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금자산</div>
-            <div style='position: absolute; top: 28%; right: -22%; font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
-            <div style='position: absolute; bottom: 6%; left: 14%; font-size: 12px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div>
+            <div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div>
+            <div style='position: absolute; top: 28%; right: -7%; font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div>
+            <div style='position: absolute; bottom: 9%; left: 20%; font-size: 12px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div>
         </div>
         """
 
@@ -459,7 +460,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div class='insight-left'>")
         html_parts.append("  <div class='card-main'>")
         
-        # 🔥 [수정] 전문 웹디자이너 Andy님의 인사이트를 반영한 2단 분할 레이아웃
+        # 2단 분할 레이아웃 적용
         html_parts.append("    <div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'>")
         
         # 1. 왼쪽 단: 총 자산 타이틀 + 도넛 그래프
@@ -470,20 +471,23 @@ elif menu == "2. 절세 계좌":
         
         # 2. 오른쪽 단: 화이트 하이라이트 박스 + 평가금액/현금자산/총손익 텍스트
         html_parts.append("      <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>")
-        html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 12px 14px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 12px;'>")
-        html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 8px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
+        
+        # 🔥 [수정] 박스 패딩 및 마진 축소로 공간 확보
+        html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 8px;'>")
+        html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"          <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("        </div>")
         
-        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 5px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
+        # 🔥 [수정] span을 div로 변경하여 수익률을 총손익 금액 바로 밑으로 강제 줄바꿈 및 밀착 (margin-top: 3px)
+        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성자산</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>")
         html_parts.append("          <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>")
         html_parts.append("          <div style='text-align: right;'>")
-        html_parts.append(f"            <span style='font-size: 18px; font-weight: 600; line-height: 1.1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</span>")
-        html_parts.append(f"            <span style='font-size: 14.5px; font-weight: 400; margin-left: 5px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</span>")
+        html_parts.append(f"            <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
+        html_parts.append(f"            <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
         html_parts.append("          </div>")
         html_parts.append("        </div>")
         html_parts.append("      </div>")
@@ -535,7 +539,7 @@ elif menu == "2. 절세 계좌":
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
                 
-                html_parts.append(f"<a href='#account_detail_section' style='text-decoration:none; color:inherit;'>")
+                html_parts.append(f"<a href='#account_detail_section' target='_self' style='text-decoration:none; color:inherit;'>")
                 html_parts.append("    <div class='card-sub'>")
                 html_parts.append("      <div>")
                 html_parts.append(f"        <div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
@@ -685,6 +689,7 @@ elif menu == "2. 절세 계좌":
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
 
+        # 🔥 순수 HTML Anchor Target (부드럽게 스크롤되어 내려오는 도착 지점)
         st.markdown("<div id='account_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
