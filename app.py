@@ -45,9 +45,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 /* 사이드바 폰트 세팅 */
 div[role="radiogroup"] label { font-size: 15.5px !important; margin-bottom: 8px !important; }
 
-/* =========================================================
-   [ZAPPA 플로팅 배너 CSS 원상복구] (레이아웃 깨짐 100% 해결)
-   ========================================================= */
+/* 플로팅 메뉴 */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
@@ -150,8 +148,8 @@ with st.sidebar:
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
         <div style='font-size:13.5px; font-weight:bold; color:#777; margin-bottom:8px;'>⚡ 퀵 뷰 (전체 자산 현황)</div>
-        <div style='font-size:24px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>
-            {fmt(t_asset_all)}<span style='font-size:16px; font-weight:normal; margin-left:2px;'>원</span>
+        <div style='font-size:24px; font-weight:700; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>
+            {fmt(t_asset_all)}<span style='font-size:15px; font-weight:normal; margin-left:3px;'>KRW</span>
         </div>
         <div style='font-size:14px; margin-top:8px; color:#555;'>
             총 손익: <span class='{col(t_profit_all)}' style='font-weight:bold;'>{fmt(t_profit_all, True)}</span> ({fmt_p(t_rate_all)})
@@ -182,6 +180,9 @@ elif menu == "5. 가상자산":
 
 elif menu == "2. 절세 계좌":
     
+    # ---------------------------------------------------------
+    # 절세계좌 헤더
+    # ---------------------------------------------------------
     c1, c2 = st.columns([8.5, 1.5])
     with c1: 
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -235,6 +236,7 @@ elif menu == "2. 절세 계좌":
                     else:
                         dom_total += val
 
+        # 안전자산 제외 후 정렬
         exclude_kws = ["현금성자산", "삼성화재", "삼성신종종류형"]
         tradeable_items = [it for it in all_items if not any(kw in it.get("종목명", "") for kw in exclude_kws)]
         tradeable_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
@@ -242,29 +244,38 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        # [분석 로직] 전일비 상승/하락/횡보 카운팅 및 리스트업
+        # ==========================================================
+        # [NEW] 상승/하락/횡보 동적 카운팅 로직 (ETF 특성 반영: ±0.3%)
+        # ==========================================================
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
-        major_rise_list, major_fall_list = [], []
+        rise_list, fall_list = [], []
 
         for it in tradeable_items:
-            d_rate = float(it.get('전일비(%)', 0.0))
+            d_rate = float(it.get('전일비', 0.0))
             nm = short_name(it.get('종목명', ''))
+            acc = it.get('계좌', '')
             
-            if d_rate >= 0.5:
+            if d_rate > 0.2:  # 0.3%p 이상 (0.2 초과)
                 rise_cnt += 1
-                if d_rate >= 3.0:
-                    major_rise_list.append(f"{nm}(▲{d_rate:.2f}%)")
-            elif d_rate <= -0.5:
+                rise_list.append((d_rate, f"{nm}({acc} ▲{d_rate:.2f}%)"))
+            elif d_rate < -0.2: # -0.3%p 이하 (-0.2 미만)
                 fall_cnt += 1
-                if d_rate <= -3.0:
-                    major_fall_list.append(f"{nm}(▼{abs(d_rate):.2f}%)")
+                fall_list.append((d_rate, f"{nm}({acc} ▼{abs(d_rate):.2f}%)"))
             else:
                 flat_cnt += 1
                 
-        str_major_rise = ", ".join(major_rise_list) if major_rise_list else "없음"
-        str_major_fall = ", ".join(major_fall_list) if major_fall_list else "없음"
+        # TOP 3 추출을 위한 정렬 (하락은 가장 많이 떨어진 음수부터)
+        rise_list.sort(key=lambda x: x[0], reverse=True)
+        fall_list.sort(key=lambda x: x[0]) 
+        
+        top3_rise = [x[1] for x in rise_list[:3]]
+        top3_fall = [x[1] for x in fall_list[:3]]
+        
+        str_rise = ", ".join(top3_rise) if top3_rise else "없음"
+        str_fall = ", ".join(top3_fall) if top3_fall else "없음"
 
+        # 자산 비중 계산
         p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
         p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
         p_dom = (dom_total / t_asset * 100) if t_asset > 0 else 0
@@ -312,9 +323,13 @@ elif menu == "2. 절세 계좌":
 
         zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div style='{body_style}'>"
         zappa_html += f"현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(best_acc_rate)}' style='font-weight:bold;'>{fmt_p(best_acc_rate)}</span>) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{b1_name}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{w1_name}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다.<br><br>"
-        zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong> (▲3%p↑ {len(major_rise_list)}개), 하락 종목은 <strong>{fall_cnt}개</strong>(▼3%p↓ {len(major_fall_list)}개) 이고 <strong>{flat_cnt}개</strong> 종목은 횡보입니다.<br>"
-        zappa_html += f"<span style='font-size:12.5px; color:#888;'>(#전일비 ±0.5%p 이내는 횡보합으로 간주, 0.5%p 이상 상승시 상승 종목, -0.5%p 이하 하락시 하락 종목으로 간주#)</span><br>"
-        zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ ▲3%p↑ 종목 : {str_major_rise}<br>※ ▼3%p↓ 종목 : {str_major_fall}</span>"
+        
+        # ETF 특성 반영된 새로운 상승/하락 텍스트
+        zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong>, 하락 종목은 <strong>{fall_cnt}개</strong>, 횡보합은 <strong>{flat_cnt}개</strong> 입니다.<br>"
+        zappa_html += f"<span style='font-size:12.5px; color:#888;'>(# 상승 : 전일비 +0.3%p 초과, 하락 : 전일비 -0.3%p 미만, 횡보 : -0.2%p ~ +0.2%p 변동 #)</span><br>"
+        zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ 상승 종목 : {str_rise}<br>"
+        zappa_html += f"※ 하락 종목 : {str_fall}</span>"
+        
         zappa_html += "</div></div>"
         zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div style='{body_style}'>{strategy_text}</div></div>"
         zappa_html += "</div>"
@@ -335,6 +350,7 @@ elif menu == "2. 절세 계좌":
         </div>
         """
 
+        # HTML 조립 시작
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -344,8 +360,10 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div class='card-main'>")
         html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
         html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
+        
+        # 700 Bold 적용 및 'KRW' 글자 추가
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
-        html_parts.append(f"<div style='font-size: 24px; font-weight: 600 !important; color: #111; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 18px; font-weight: normal; margin-left: 2px;'>원</span></div>")
+        html_parts.append(f"<div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: -0.5px; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 15px; font-weight: normal; margin-left: 3px;'>KRW</span></div>")
         html_parts.append("</div>")
         
         html_parts.append("<div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -407,7 +425,6 @@ elif menu == "2. 절세 계좌":
                 acc_profit = a.get('총 수익', 0)
                 acc_rate = a.get('수익률(%)', 0)
                 
-                # 종목 수 카운팅
                 acc_items_list = a.get('상세', [])
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
@@ -433,6 +450,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
         html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+        
         for idx, it in enumerate(best_5):
             rt = it.get('수익률(%)', 0)
             pf = it.get('평가손익', 0)
@@ -442,6 +460,7 @@ elif menu == "2. 절세 계좌":
         
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 부진종목</div>")
         html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
+        
         for idx, it in enumerate(worst_5):
             rt = it.get('수익률(%)', 0)
             pf = it.get('평가손익', 0)
@@ -454,9 +473,9 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
         html_parts.append(zappa_html)
         html_parts.append("</div>")
+        
         html_parts.append("</div>") 
         
-        # HTML 렌더링
         html_str = "".join(html_parts).replace("\n", "")
         st.markdown(html_str, unsafe_allow_html=True)
 
@@ -471,8 +490,12 @@ elif menu == "2. 절세 계좌":
         h1_table = """<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"""
         h1_table = re.sub(r'\n\s*', '', h1_table)
 
+        td7_tot_1 = (t_asset - tot.get('평가손익(7일전)', 0)) - t_original_sum
+        td15_tot_1 = (t_asset - tot.get('평가손익(15일전)', 0)) - t_original_sum
+        td30_tot_1 = (t_asset - tot.get('평가손익(30일전)', 0)) - t_original_sum
+
         h1 = [unit_html, h1_table]
-        h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_profit)}'>{fmt(t_profit, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(tot.get('평가손익(15일전)', 0))}'>{fmt(tot.get('평가손익(15일전)', 0), True)}</td><td class='{col(tot.get('평가손익(30일전)', 0))}'>{fmt(tot.get('평가손익(30일전)', 0), True)}</td><td class='{col(t_rate)}'>{fmt_p(t_rate)}</td><td>{fmt(t_original_sum)}</td></tr>")
+        h1.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_profit)}'>{fmt(t_profit, True)}</td><td class='{col(td7_tot_1)}'>{fmt(td7_tot_1, True)}</td><td class='{col(td15_tot_1)}'>{fmt(td15_tot_1, True)}</td><td class='{col(td30_tot_1)}'>{fmt(td30_tot_1, True)}</td><td class='{col(t_rate)}'>{fmt_p(t_rate)}</td><td>{fmt(t_original_sum)}</td></tr>")
 
         keys_1 = [k for k in FIXED_ACCOUNT_ORDER if k in data]
         if st.session_state.sort_mode == 'asset': keys_1.sort(key=lambda k: data.get(k, {}).get('총 자산', 0), reverse=True)
@@ -481,7 +504,16 @@ elif menu == "2. 절세 계좌":
 
         for k in keys_1:
             a = data.get(k, {})
-            h1.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(a.get('총 자산',0))}</td><td class='{col(a.get('총 수익',0))}'>{fmt(a.get('총 수익',0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(15일전)',0))}'>{fmt(a.get('평가손익(15일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(a.get('수익률(%)',0))}'>{fmt_p(a.get('수익률(%)',0))}</td><td>{fmt(a.get('원금',0))}</td></tr>")
+            curr_asset = a.get('총 자산', 0)
+            principal = a.get('원금', 0)
+            a_prof = a.get('총 수익', 0)
+            a_rate = a.get('수익률(%)', 0)
+            
+            ad7_acc_1 = (curr_asset - a.get('평가손익(7일전)', 0)) - principal
+            ad15_acc_1 = (curr_asset - a.get('평가손익(15일전)', 0)) - principal
+            ad30_acc_1 = (curr_asset - a.get('평가손익(30일전)', 0)) - principal
+            
+            h1.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(curr_asset)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(ad7_acc_1)}'>{fmt(ad7_acc_1, True)}</td><td class='{col(ad15_acc_1)}'>{fmt(ad15_acc_1, True)}</td><td class='{col(ad30_acc_1)}'>{fmt(ad30_acc_1, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(principal)}</td></tr>")
 
         h1.append("</table>")
         st.markdown("".join(h1), unsafe_allow_html=True)
@@ -495,13 +527,17 @@ elif menu == "2. 절세 계좌":
         h2_table = """<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"""
         h2_table = re.sub(r'\n\s*', '', h2_table)
 
+        td1_tot = tot.get('평가손익(1일전)', 0)
+        td7_tot = tot.get('평가손익(7일전)', 0)
+        td30_tot = tot.get('평가손익(30일전)', 0)
+
         h2 = [unit_html, h2_table]
-        h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff)}'>{fmt(t_diff, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(tot.get('평가손익(30일전)', 0))}'>{fmt(tot.get('평가손익(30일전)', 0), True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합', 0))}</td></tr>")
+        h2.append(f"<tr class='sum-row'><td>[ 합계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(td1_tot)}'>{fmt(td1_tot, True)}</td><td class='{col(td7_tot)}'>{fmt(td7_tot, True)}</td><td class='{col(td30_tot)}'>{fmt(td30_tot, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(tot.get('매입금액합', 0))}</td></tr>")
 
         sec2_items = []
         for k in FIXED_ACCOUNT_ORDER:
             if k in data:
-                a = data[k]
+                a = data.get(k, {})
                 ag_acc = sum(i.get('평가손익', 0) for i in a.get('상세', []) if i.get('종목명') != '[ 합계 ]')
                 curr_asset = a.get('총 자산', 0)
                 ap_acc = curr_asset - ag_acc
@@ -514,14 +550,17 @@ elif menu == "2. 절세 계좌":
 
         for item in sec2_items:
             a = item['a']
-            h2.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(item['curr_asset'])}</td><td class='{col(item['ag_acc'])}'>{fmt(item['ag_acc'], True)}</td><td class='{col(a.get('평가손익(1일전)',0))}'>{fmt(a.get('평가손익(1일전)',0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(item['ay_acc'])}'>{fmt_p(item['ay_acc'])}</td><td>{fmt(item['ap_acc'])}</td></tr>")
+            curr_asset = item['curr_asset']
+            ad1_acc = a.get('평가손익(1일전)', 0)
+            ad7_acc = a.get('평가손익(7일전)', 0)
+            ad30_acc = a.get('평가손익(30일전)', 0)
+            
+            h2.append(f"<tr><td>{clean_label(a.get('label', ''))}</td><td>{fmt(curr_asset)}</td><td class='{col(item['ag_acc'])}'>{fmt(item['ag_acc'], True)}</td><td class='{col(ad1_acc)}'>{fmt(ad1_acc, True)}</td><td class='{col(ad7_acc)}'>{fmt(ad7_acc, True)}</td><td class='{col(ad30_acc)}'>{fmt(ad30_acc, True)}</td><td class='{col(item['ay_acc'])}'>{fmt_p(item['ay_acc'])}</td><td>{fmt(item['ap_acc'])}</td></tr>")
 
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
 
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
-        
-        # [수정] 플로팅 메뉴 버튼 컨테이너 (정확하게 5등분 분할 복구)
         b1, b2, b3, b4, b5 = st.columns(5)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -566,7 +605,7 @@ elif menu == "2. 절세 계좌":
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
-                h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>전일비(%)</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"
+                h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>전일비</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"
                 h3 = [unit_html, h3_table]
                 items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
                 
@@ -585,7 +624,7 @@ elif menu == "2. 절세 계좌":
                         
                     item_asset = i.get('총 자산', 0)
                     i_rate = i.get('수익률(%)', 0)
-                    d_rate = float(i.get('전일비(%)', 0.0))
+                    d_rate = float(i.get('전일비', 0.0))
                     
                     d_rate_str = "-" if is_s else fmt_p(d_rate)
                     d_class = "" if is_s else col(d_rate)
