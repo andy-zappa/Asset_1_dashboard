@@ -252,7 +252,7 @@ elif menu == "2. 절세 계좌":
         major_fall_list = []
 
         for it in tradeable_items:
-            d_rate = it.get('전일비(%)', 0) 
+            d_rate = it.get('전일비(%)', 0.0) 
             nm = short_name(it.get('종목명', ''))
             
             if d_rate >= 0.5:
@@ -467,10 +467,10 @@ elif menu == "2. 절세 계좌":
         html_parts.append("</div>") 
         html_parts.append("</div>") 
         
-        # [3] 하단 시황 및 베스트/워스트
+        # [3] 인사이트 박스
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
-        html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
         
+        html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
         html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
         
@@ -496,9 +496,9 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
         html_parts.append(zappa_html)
         html_parts.append("</div>")
+        
         html_parts.append("</div>") 
         
-        # HTML 렌더링
         html_str = "".join(html_parts).replace("\n", "")
         st.markdown(html_str, unsafe_allow_html=True)
 
@@ -646,9 +646,12 @@ elif menu == "2. 절세 계좌":
                 item_asset = i.get('총 자산', i.get('총자산', 0))
                 i_rate = i.get('수익률(%)', i.get('손익률(%)', 0))
                 d_rate = i.get('전일비(%)', 0.0)
-                d_rate_str = "-" if is_s else fmt_p(d_rate)
                 
-                row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(item_asset)}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(d_rate) if not is_s else \"\"}'>{d_rate_str}</td><td class='{col(i_rate)}'>{fmt_p(i_rate)}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
+                # [수정] SyntaxError를 방지하기 위해 f-string 내부 이스케이프 제거하고 변수로 뺌
+                d_rate_str = "-" if is_s else fmt_p(d_rate)
+                d_class = "" if is_s else col(d_rate)
+                
+                row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(item_asset)}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{d_class}'>{d_rate_str}</td><td class='{col(i_rate)}'>{fmt_p(i_rate)}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
                 h3.append(row)
                 
             h3.append("</table>")
