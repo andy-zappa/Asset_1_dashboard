@@ -523,3 +523,4 @@ for k in FIXED_ACCOUNT_ORDER:
             row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(item_asset)}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i_rate)}'>{fmt_p(i_rate)}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
             h3.append(row)
         h3.append("</table>"); st.markdown("".join(h3), unsafe_allow_html=True)
+
