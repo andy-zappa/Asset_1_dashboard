@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# [ZAPPA] 전용 디자인 시스템 (CSS) - 수정 반영
+# [ZAPPA] 전용 디자인 시스템 (CSS)
 # =========================================================
 css = """
 <style>
@@ -97,7 +97,7 @@ h3 {
     height: 100%;
 }
 
-/* 🔥 [수정] 서브 카드: 마우스 오버 시 배경색 회색 변경 및 커서 포인터 설정 */
+/* 서브 카드: 마우스 오버 시 회색 배경 적용 (클릭 유도) */
 .card-sub {
     background: #fff;
     border: 1.5px solid #ddd;
@@ -106,11 +106,11 @@ h3 {
     display: flex;
     flex-direction: column;
     padding: 10px 15px;
-    transition: background-color 0.2s, border-color 0.2s; /* 부드러운 전환 효과 */
-    cursor: pointer; /* 마우스 오버 시 손가락 커서 */
+    transition: background-color 0.2s, border-color 0.2s; 
+    cursor: pointer; 
 }
 .card-sub:hover {
-    background-color: #f2f2f2 !important; /* expander와 동일한 회색 배경 */
+    background-color: #f2f2f2 !important; 
     border-color: #ccc !important;
 }
 
@@ -265,7 +265,6 @@ with st.sidebar:
     t_profit_all = tot.get('총 수익', 0)
     t_rate_all = tot.get('수익률(%)', 0)
     
-    # [좌측 퀵뷰] 24px + 600 굵기 + 자간 -0.5px (우측 메인과 완벽 동일)
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
         <div style='font-size:13.5px; font-weight:bold; color:#777; margin-bottom:8px;'>⚡ 퀵 뷰 (전체 자산 현황)</div>
@@ -297,19 +296,15 @@ elif menu == "5. 가상자산":
 
 elif menu == "2. 절세 계좌":
     
-    # 클릭된 카드의 계좌 정보를 Query Parameter에서 읽기
-    account_to_expand = st.query_params.get("expand")
-
     c1, c2 = st.columns([8.5, 1.5])
     with c1: 
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-        # 업데이트 버튼 클릭 시 Query Parameter 초기화 (검색 기록 안 남게)
+        # 리로드 기능을 순수하게 데이터 업데이트로만 유지
         if st.button("🔄 업데이트", use_container_width=True):
             with st.spinner("데이터 업데이트 중..."):
                 andy_pension_v2.generate_asset_data()
-            st.query_params.clear()
             st.cache_data.clear()
             st.rerun()
 
@@ -356,9 +351,6 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        # ==========================================================
-        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.2%p 초과)
-        # ==========================================================
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
         rise_list, fall_list = [], []
@@ -462,7 +454,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div class='insight-left'>")
         html_parts.append("  <div class='card-main'>")
         
-        # 🔥 [수정] 테두리 색상 미세 조정 (#233b5d -> #dcdcdc 회색)
+        # 하이라이트 박스 테두리 #dcdcdc
         html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
         html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1; margin-top: 10px;'>총 자산</div>")
         html_parts.append("      <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 12px 16px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04);'>")
@@ -532,8 +524,8 @@ elif menu == "2. 절세 계좌":
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
                 
-                # 🔥 [수정] 카드 전체를 클릭 시 하단 상세 페이지의 해당 계좌 위치로 드릴다운 링크 설정 (Anchor 이용)
-                html_parts.append(f"<a href='/?expand={k}#account_detail_anchor' target='_self' style='text-decoration:none; color:inherit;'>")
+                # 🔥 [수정] 순수 HTML Anchor 링크로 스크롤 (서버 리로드 없음)
+                html_parts.append(f"<a href='#account_detail_section' style='text-decoration:none; color:inherit;'>")
                 html_parts.append("    <div class='card-sub'>")
                 html_parts.append("      <div>")
                 html_parts.append(f"        <div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
@@ -578,7 +570,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
         html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>")
         html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div>")
-        # 🔥 [수정] 시황 도움말 문구 변경
         html_parts.append("      <div style='font-size: 13.5px; color: #888;'>[ -0.2%p < 횡보 < +0.2%p ]</div>")
         html_parts.append("    </div>")
         html_parts.append(f"    {zappa_html}")
@@ -593,9 +584,6 @@ elif menu == "2. 절세 계좌":
         # 하단 상세 데이터 테이블 섹션
         # =====================================================================
         unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
-
-        # 🔥 [수정] 상단 카드 클릭 시 드릴다운 이동을 위한 HTML Anchor 위치 지정
-        st.markdown("<div id='account_detail_anchor'></div>", unsafe_allow_html=True)
 
         st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
         st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
@@ -687,6 +675,8 @@ elif menu == "2. 절세 계좌":
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
 
+        # 🔥 [수정] 순수 HTML Anchor Target 심기 (화면 깜빡임 없이 여기로 스크롤됩니다)
+        st.markdown("<div id='account_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
         b1, b2, b3, b4, b5, b6 = st.columns(6)
@@ -700,7 +690,7 @@ elif menu == "2. 절세 계좌":
         with b4:
             if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with b5:
-            if st.button("🔄 등락률 [ + ]" if st.session_state.show_change_rate else "🔄 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+            if st.button("↕️ 등락률 [ + ]" if st.session_state.show_change_rate else "↕️ 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
         with b6:
             if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
@@ -711,10 +701,8 @@ elif menu == "2. 절세 계좌":
             if k not in data: continue
             a = data.get(k, {})
             
-            # 🔥 [수정] Query Parameter에 expand 값이 해당 계좌 키와 일치하면 expander를 열림(True) 상태로 설정
-            is_expanded = (k == account_to_expand)
-            
-            with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label', ''))} ] 종목별 현황", expanded=is_expanded):
+            # 🔥 무거운 자동 열림(expander=True) 기능 제거, 수동(Manual) 클릭으로 경량화
+            with st.expander(f"📂 [ {t3_lbl.get(k, a.get('label', ''))} ] 종목별 현황", expanded=False):
                 s_data = next((i for i in a.get('상세', []) if i.get('종목명') == "[ 합계 ]"), {})
                 extra_info_html = ""
                 
