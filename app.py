@@ -105,7 +105,7 @@ h3 {
     height: 100%;
 }
 
-/* 서브 카드: 마우스 오버 시 회색 배경 적용 */
+/* 서브 카드: 마우스 오버 시 회색 배경 적용 (클릭 유도) */
 .card-sub {
     background: #fff;
     border: 1.5px solid #ddd;
@@ -146,7 +146,7 @@ h3 {
     font-size: 20px !important;
 }
 
-/* 엑셀 스타일 병합 */
+/* 엑셀 스타일 병합 (중첩 테이블 효과용) */
 .main-table th.th-eval {
     border-right: none !important;
 }
@@ -250,7 +250,7 @@ data = load()
 tot = data.get("_total", {})
 
 # =========================================================
-# 📍 Left Sidebar Navigation
+# 📍 Left Sidebar Navigation & Quick View
 # =========================================================
 with st.sidebar:
     st.markdown(
@@ -434,7 +434,6 @@ elif menu == "2. 절세 계좌":
         zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div>{strategy_text}</div></div>"
         zappa_html += "</div>"
 
-        # 메인 타이틀
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
@@ -464,15 +463,13 @@ elif menu == "2. 절세 계좌":
         html_parts.append("      </div>")
         
         html_parts.append("      <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>")
-        
-        # 🔥 [수정] 박스의 마진을 16px로 줄여 위로 붙이고, Grid column-gap을 30px로 넓혀 여백 3칸 확보
         html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px;'>")
         html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"          <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("        </div>")
         
-        # 🔥 [수정] row-gap 8px, column-gap 30px 적용 (행간 확대 및 가로 여백 확대)
-        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%;'>")
+        # 🔥 [수정] padding-right: 12px 추가하여 왼쪽으로 2칸 밀기
+        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px;'>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성자산</div>")
@@ -502,7 +499,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>ISA(중개형)</div>")
         html_parts.append("      </div>")
         
-        # 🔥 [수정] 원금 표기를 슬래시(/)와 함께 우측 달성률에 밀착 배치
         html_parts.append("      <div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
         html_parts.append("        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
         html_parts.append("          <span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억</span>")
