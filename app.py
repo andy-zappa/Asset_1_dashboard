@@ -180,6 +180,8 @@ if 'sort_mode' not in st.session_state:
     st.session_state.sort_mode = 'init'
 if 'show_code' not in st.session_state: 
     st.session_state.show_code = False
+if 'show_change_rate' not in st.session_state: 
+    st.session_state.show_change_rate = False
 if 'init' not in st.session_state:
     with st.spinner("데이터 업데이트 중..."):
         andy_pension_v2.generate_asset_data()
@@ -343,7 +345,7 @@ elif menu == "2. 절세 계좌":
         worst_5 = tradeable_items[::-1][:5]
 
         # ==========================================================
-        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.2%p 초과) - 로직 동기화 완료
+        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.2%p 초과)
         # ==========================================================
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
@@ -451,7 +453,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: baseline;'>")
         html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         
-        # [우측 메인 카드 총자산] 좌측과 완벽히 동일한 24px + 700 굵기 + 자간 -0.5px 적용
         html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append("      </div>")
         html_parts.append("      <div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -560,7 +561,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("    </table>")
         html_parts.append("  </div>")
         
-        # [수정] 구조 정리 및 우측 정렬 텍스트 추가
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
         html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>")
         html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div>")
@@ -670,7 +670,9 @@ elif menu == "2. 절세 계좌":
         st.markdown("".join(h2), unsafe_allow_html=True)
 
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
-        b1, b2, b3, b4, b5 = st.columns(5)
+        
+        # [수정] 플로팅 메뉴를 6개의 컬럼으로 분리 및 등락률 토글 추가
+        b1, b2, b3, b4, b5, b6 = st.columns(6)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
             if st.button("🛠️ 초기화 [ ● ]" if st.session_state.sort_mode == 'init' else "🛠️ 초기화 [ ○ ]", type="primary" if st.session_state.sort_mode == 'init' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'init')): pass
@@ -681,6 +683,8 @@ elif menu == "2. 절세 계좌":
         with b4:
             if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with b5:
+            if st.button("🔄 등락률 [ + ]" if st.session_state.show_change_rate else "🔄 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+        with b6:
             if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -704,7 +708,8 @@ elif menu == "2. 절세 계좌":
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
-                h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>전일비</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"
+                # [수정] 테이블 헤더: '전일비' 삭제, 맨 끝에 '등락률' 조건부 추가
+                h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{'<th>등락률</th>' if st.session_state.show_change_rate else ''}</tr>"
                 h3 = [unit_html, h3_table]
                 items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
                 
@@ -736,11 +741,15 @@ elif menu == "2. 절세 계좌":
                     row += f"<td>{i.get('비중', 0):.1f}%</td>"
                     row += f"<td>{fmt(item_asset)}</td>"
                     row += f"<td class='{col(i.get('평가손익', 0))}'>{fmt(i.get('평가손익', 0), True)}</td>"
-                    row += f"<td class='{d_class}'>{d_rate_str}</td>"
                     row += f"<td class='{col(i_rate)}'>{fmt_p(i_rate)}</td>"
                     row += f"<td>{fmt(i.get('수량', '-'))}</td>"
                     row += f"<td>{fmt(i.get('매입가', '-'))}</td>"
                     row += f"<td>{fmt(i.get('현재가', '-'))}</td>"
+                    
+                    # [수정] 등락률 열을 현재가 다음으로 배치 (조건부 노출)
+                    if st.session_state.show_change_rate:
+                        row += f"<td class='{d_class}'>{d_rate_str}</td>"
+                        
                     row += "</tr>"
                     
                     h3.append(row)
