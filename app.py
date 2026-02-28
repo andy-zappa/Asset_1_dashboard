@@ -13,8 +13,11 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 # =========================================================
 css = """
 <style>
-/* 🔥 스크롤 시 부드럽게 미끄러지도록 애니메이션 추가 */
-html, body, .stApp, [data-testid="stAppViewContainer"], .main {
+/* 🔥 [완벽 패치] Streamlit 내부 컨테이너까지 스무스 스크롤 강제 적용 */
+* {
+    scroll-behavior: smooth !important;
+}
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], .main {
     scroll-behavior: smooth !important;
 }
 
@@ -71,12 +74,12 @@ h3 {
     margin-bottom: 20px;
 }
 .insight-left {
-    flex: 0 0 46%;
+    flex: 0 0 49%; /* 🔥 [수정] 좌측 노란색 카드 너비 2음절(약 3%) 추가 확장 (46% -> 49%) */
     display: flex;
     flex-direction: column;
 }
 .insight-right {
-    flex: 1;
+    flex: 1; /* 🔥 좌측이 커진 만큼 우측 흰색 카드들은 자동으로 줄어들며 밸런스 유지 */
     display: flex;
     flex-direction: column;
 }
@@ -113,6 +116,7 @@ h3 {
     padding: 10px 15px;
     transition: background-color 0.2s, border-color 0.2s; 
     cursor: pointer; 
+    height: 100%;
 }
 .card-sub:hover {
     background-color: #f2f2f2 !important; 
@@ -420,7 +424,7 @@ elif menu == "2. 절세 계좌":
         b1_name = short_name(best_5[0]['종목명']) if best_5 else "주도 종목"
         w1_name = short_name(worst_5[0]['종목명']) if worst_5 else "부진 종목"
 
-        strategy_text = f"간밤 최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 단기적으로 아웃퍼폼 중인 <strong>{b1_name}</strong> 등에서 일부 차익 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
+        strategy_text = f"간밤 최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 단기적으로 아웃퍼폼 중인 <strong>{b1_name}</strong> 등에서 일부 차익을 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
         
         zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>"
         t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;"
@@ -442,7 +446,6 @@ elif menu == "2. 절세 계좌":
 
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         
-        # 🔥 영점 조절 완벽 패치: 국내투자(위1,우2), 해외투자(좌5), 현금성자산(명칭 원복)
         donut_html = f"""
         <div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'>
             <div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div>
@@ -460,7 +463,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div class='insight-left'>")
         html_parts.append("  <div class='card-main'>")
         
-        # 2단 분할 레이아웃 적용
         html_parts.append("    <div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'>")
         
         # 1. 왼쪽 단: 총 자산 타이틀 + 도넛 그래프
@@ -472,13 +474,11 @@ elif menu == "2. 절세 계좌":
         # 2. 오른쪽 단: 화이트 하이라이트 박스 + 평가금액/현금자산/총손익 텍스트
         html_parts.append("      <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>")
         
-        # 🔥 [수정] 박스 패딩 및 마진 축소로 공간 확보
         html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 8px;'>")
         html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"          <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("        </div>")
         
-        # 🔥 [수정] span을 div로 변경하여 수익률을 총손익 금액 바로 밑으로 강제 줄바꿈 및 밀착 (margin-top: 3px)
         html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>")
@@ -492,7 +492,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("        </div>")
         html_parts.append("      </div>")
         
-        html_parts.append("    </div>") # 2단 분할 Flex 종료
+        html_parts.append("    </div>") 
 
         html_parts.append("    <div style='margin-top: 20px;'>")
         html_parts.append("      <div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
@@ -539,7 +539,8 @@ elif menu == "2. 절세 계좌":
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
                 
-                html_parts.append(f"<a href='#account_detail_section' target='_self' style='text-decoration:none; color:inherit;'>")
+                # 🔥 target='_self' 제거하여 화면 깜빡임/리로딩 없이 순수 HTML 앵커 스크롤 적용 (block 속성 추가)
+                html_parts.append(f"<a href='#account_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'>")
                 html_parts.append("    <div class='card-sub'>")
                 html_parts.append("      <div>")
                 html_parts.append(f"        <div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
