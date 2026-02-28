@@ -32,8 +32,7 @@ def calc_samsungfire_principal():
     today_n = datetime.now().replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     n_days = (today_n - 기준일_n).days
-    if n_days <= 0: 
-        return 기준금액
+    if n_days <= 0: return 기준금액
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
 def calc_mmf_principal():
@@ -44,8 +43,7 @@ def calc_mmf_principal():
     today_n = datetime.now().replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     기준일_n = 기준일.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
     n_days = (today_n - 기준일_n).days
-    if n_days <= 0: 
-        return 기준금액
+    if n_days <= 0: return 기준금액
     return int(기준금액 + (원금 * 연이율 * n_days / 365))
 
 PORTFOLIO = {
@@ -82,135 +80,77 @@ PORTFOLIO = {
 }
 
 def get_access_token():
-    payload = {
-        "grant_type": "client_credentials", 
-        "appkey": APP_KEY, 
-        "appsecret": APP_SECRET
-    }
-    try: 
-        res = requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5)
-        return res.json().get("access_token")
-    except: 
-        return None
+    payload = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
+    try: return requests.post(f"{URL_BASE}/oauth2/tokenP", json=payload, timeout=5).json().get("access_token")
+    except: return None
 
 def get_current_price(code, token, avg_p):
-    if code == 'CASH_INS': 
-        return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
-    if code == 'MMF00004': 
-        return {"c": calc_mmf_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
-    if code.startswith('CASH') or code == 'PENSION_CASH': 
-        return {"c": int(avg_p), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
+    # 현금성 자산은 등락률(d1_rate) 0.0으로 고정 반환
+    if code == 'CASH_INS': return {"c": calc_samsungfire_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
+    if code == 'MMF00004': return {"c": calc_mmf_principal(), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
+    if code.startswith('CASH') or code == 'PENSION_CASH': return {"c": int(avg_p), "d1": 0, "d7": 0, "d15": 0, "d30": 0, "d1_rate": 0.0}
     
     curr = int(avg_p)
     diff_1, diff_7, diff_15, diff_30, diff_rate = 0, 0, 0, 0, 0.0
     
-    headers_curr = {
-        "authorization": f"Bearer {token}", 
-        "appkey": APP_KEY, 
-        "appsecret": APP_SECRET, 
-        "tr_id": "FHKST01010100"
-    }
-    
+    headers_curr = {"authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "FHKST01010100"}
     try:
-        res = requests.get(
-            f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", 
-            headers=headers_curr, 
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}, 
-            timeout=3
-        )
+        res = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", headers=headers_curr, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6)}, timeout=3)
         if res.status_code == 200:
             out = res.json().get('output', {})
             if 'stck_prpr' in out:
                 curr = int(float(out.get('stck_prpr', avg_p)))
                 diff_abs = int(float(out.get('prdy_vrss', 0)))
-                diff_rate = float(out.get('prdy_ctrt', 0.0))  # 전일 대비율(%)
-                
                 sign = str(out.get('prdy_vrss_sign', '3'))
+                
                 if sign in ['4', '5']:
                     diff_1 = -diff_abs
-                    if diff_rate > 0: 
-                        diff_rate = -diff_rate
                 else:
                     diff_1 = diff_abs
-    except: 
-        pass
+                
+                # [핵심] 전일 종가를 역산하여 정확한 전일비(%) 수동 계산
+                prev_close = curr - diff_1
+                if prev_close > 0:
+                    diff_rate = (diff_1 / prev_close) * 100.0
+                else:
+                    diff_rate = 0.0
+    except: pass
 
-    headers_hist = {
-        "authorization": f"Bearer {token}", 
-        "appkey": APP_KEY, 
-        "appsecret": APP_SECRET, 
-        "tr_id": "FHKST01010400"
-    }
+    headers_hist = {"authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "FHKST01010400"}
     try:
-        res_hist = requests.get(
-            f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", 
-            headers=headers_hist, 
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6), "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"}, 
-            timeout=3
-        )
+        res_hist = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-daily-price", headers=headers_hist, params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code.zfill(6), "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"}, timeout=3)
         if res_hist.status_code == 200:
             out_hist = res_hist.json().get('output', [])
             now_dt = datetime.now()
-            t_7 = (now_dt - timedelta(days=7)).strftime("%Y%m%d")
-            t_15 = (now_dt - timedelta(days=15)).strftime("%Y%m%d")
-            t_30 = (now_dt - timedelta(days=30)).strftime("%Y%m%d")
-            
+            t_7, t_15, t_30 = (now_dt - timedelta(days=7)).strftime("%Y%m%d"), (now_dt - timedelta(days=15)).strftime("%Y%m%d"), (now_dt - timedelta(days=30)).strftime("%Y%m%d")
             p_7, p_15, p_30 = curr, curr, curr
             found_7, found_15, found_30 = False, False, False
-            
             for item in out_hist:
                 dt = item.get('stck_bsop_date', '99999999')
                 pr = int(float(item.get('stck_clpr', curr)))
-                
-                if not found_7 and dt <= t_7: 
-                    p_7 = pr; found_7 = True
-                if not found_15 and dt <= t_15: 
-                    p_15 = pr; found_15 = True
-                if not found_30 and dt <= t_30: 
-                    p_30 = pr; found_30 = True
-                    
-            diff_7 = curr - p_7
-            diff_15 = curr - p_15
-            diff_30 = curr - p_30
-    except: 
-        pass
+                if not found_7 and dt <= t_7: p_7 = pr; found_7 = True
+                if not found_15 and dt <= t_15: p_15 = pr; found_15 = True
+                if not found_30 and dt <= t_30: p_30 = pr; found_30 = True
+            diff_7, diff_15, diff_30 = curr - p_7, curr - p_15, curr - p_30
+    except: pass
 
-    return {
-        "c": curr, 
-        "d1": diff_1, 
-        "d7": diff_7, 
-        "d15": diff_15, 
-        "d30": diff_30, 
-        "d1_rate": diff_rate
-    }
+    return {"c": curr, "d1": diff_1, "d7": diff_7, "d15": diff_15, "d30": diff_30, "d1_rate": diff_rate}
 
 def generate_asset_data():
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     days_kr = ['월', '화', '수', '목', '금', '토', '일']
-    day_str = days_kr[now_kst.weekday()]
-    fetch_time = now_kst.strftime(f"%Y/%m/%d({day_str}) / %H:%M:%S")
+    fetch_time = now_kst.strftime(f"%Y/%m/%d({days_kr[now_kst.weekday()]}) / %H:%M:%S")
     
     token = get_access_token()
-    if not token: 
-        return None
+    if not token: return None
 
-    t_asset = 0
-    t_p_effective = 0
-    t_diff_1 = 0
-    t_diff_7 = 0
-    t_diff_15 = 0
-    t_diff_30 = 0
+    t_asset, t_p_effective, t_diff_1, t_diff_7, t_diff_15, t_diff_30 = 0, 0, 0, 0, 0, 0
     assets_json = {}
     
     for acc_label, p_val in ORIGINAL_CAPITAL.items():
         acc_key = ACC_MAP[acc_label]
-        a_asset = 0
-        a_diff_1 = 0
-        a_diff_7 = 0
-        a_diff_15 = 0
-        a_diff_30 = 0
-        a_buy_total = 0
+        a_asset, a_diff_1, a_diff_7, a_diff_15, a_diff_30, a_buy_total = 0, 0, 0, 0, 0, 0
         sub_info = []
         
         for code, qty, avg_p, title in PORTFOLIO[acc_key]:
@@ -220,93 +160,54 @@ def generate_asset_data():
             diff_val_7 = px['d7'] * qty
             diff_val_15 = px['d15'] * qty
             diff_val_30 = px['d30'] * qty
-            d1_rate = px['d1_rate']
+            d1_rate = px['d1_rate'] # API 로직에서 넘겨받은 전일비(%)
             
             asset = int(qty * curr)
             buy_amt = int(qty * avg_p)
             gain = asset - buy_amt
             
-            a_asset += asset
-            a_diff_1 += diff_val_1
-            a_diff_7 += diff_val_7
-            a_diff_15 += diff_val_15
-            a_diff_30 += diff_val_30
-            a_buy_total += buy_amt
+            a_asset += asset; a_diff_1 += diff_val_1; a_diff_7 += diff_val_7; a_diff_15 += diff_val_15; a_diff_30 += diff_val_30; a_buy_total += buy_amt
             
             sub_info.append({
-                "종목명": title, 
-                "코드": code, 
-                "총 자산": asset, 
-                "평가손익": gain, 
-                "1일전": diff_val_1, 
-                "7일전": diff_val_7, 
-                "15일전": diff_val_15, 
-                "30일전": diff_val_30,
-                "전일비(%)": d1_rate,
+                "종목명": title, "코드": code, "총 자산": asset, "평가손익": gain, 
+                "1일전": diff_val_1, "7일전": diff_val_7, "15일전": diff_val_15, "30일전": diff_val_30,
+                "전일비(%)": d1_rate, # JSON에 정확히 저장!
                 "수익률(%)": (gain/buy_amt*100) if buy_amt!=0 else 0, 
-                "수량": qty, 
-                "매입가": avg_p, 
-                "현재가": curr
+                "수량": qty, "매입가": avg_p, "현재가": curr
             })
             
-        for item in sub_info: 
-            item["비중"] = (item["총 자산"] / a_asset * 100) if a_asset > 0 else 0
+        for item in sub_info: item["비중"] = (item["총 자산"] / a_asset * 100) if a_asset > 0 else 0
         
         a_val_gain = sum(i['평가손익'] for i in sub_info)
         sub_info.insert(0, {
-            "종목명": "[ 합계 ]", 
-            "코드": "-", 
-            "비중": 100.0, 
-            "총 자산": a_asset, 
-            "평가손익": a_val_gain, 
-            "전일비(%)": 0.0, 
-            "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
-            "수량": "-", 
-            "매입가": "-", 
-            "현재가": "-"
+            "종목명": "[ 합계 ]", "코드": "-", "비중": 100.0, "총 자산": a_asset, "평가손익": a_val_gain, 
+            "전일비(%)": 0.0, "수익률(%)": (a_val_gain/a_buy_total*100) if a_buy_total>0 else 0, 
+            "수량": "-", "매입가": "-", "현재가": "-"
         })
         
-        t_asset += a_asset
-        t_p_effective += p_val
-        t_diff_1 += a_diff_1
-        t_diff_7 += a_diff_7
-        t_diff_15 += a_diff_15
-        t_diff_30 += a_diff_30
+        t_asset += a_asset; t_p_effective += p_val
+        t_diff_1 += a_diff_1; t_diff_7 += a_diff_7; t_diff_15 += a_diff_15; t_diff_30 += a_diff_30
         
         assets_json[acc_key] = {
-            "label": acc_label, 
-            "총 자산": a_asset, 
-            "원금": p_val, 
-            "총 수익": a_asset - p_val, 
+            "label": acc_label, "총 자산": a_asset, "원금": p_val, "총 수익": a_asset - p_val, 
             "수익률(%)": ((a_asset - p_val) / p_val * 100) if p_val > 0 else 0, 
-            "평가손익(1일전)": a_diff_1, 
-            "평가손익(7일전)": a_diff_7, 
-            "평가손익(15일전)": a_diff_15, 
-            "평가손익(30일전)": a_diff_30, 
-            "상세": sub_info
+            "평가손익(1일전)": a_diff_1, "평가손익(7일전)": a_diff_7, 
+            "평가손익(15일전)": a_diff_15, "평가손익(30일전)": a_diff_30, "상세": sub_info
         }
     
     t_avg_buy = sum(sum(i['수량']*i['매입가'] for i in assets_json[k]['상세'] if i['종목명']!='[ 합계 ]' and isinstance(i['수량'], int)) for k in assets_json if k in ACC_MAP.values())
     
     assets_json["_total"] = {
-        "총 자산": t_asset, 
-        "원금합": t_p_effective, 
-        "총 수익": t_asset - t_p_effective, 
-        "수익률(%)": (t_asset - t_p_effective) / t_p_effective * 100, 
-        "평가손익(1일전)": t_diff_1, 
-        "평가손익(7일전)": t_diff_7, 
-        "평가손익(15일전)": t_diff_15, 
-        "평가손익(30일전)": t_diff_30, 
-        "매입금액합": t_avg_buy, 
-        "조회시간": fetch_time
+        "총 자산": t_asset, "원금합": t_p_effective, "총 수익": t_asset-t_p_effective, 
+        "수익률(%)": (t_asset-t_p_effective)/t_p_effective*100, 
+        "평가손익(1일전)": t_diff_1, "평가손익(7일전)": t_diff_7, 
+        "평가손익(15일전)": t_diff_15, "평가손익(30일전)": t_diff_30, 
+        "매입금액합": t_avg_buy, "조회시간": fetch_time
     }
     
     assets_json["_insight"] = [f"조회 기준 시간: {fetch_time}"]
     
-    with open("assets.json", "w", encoding="utf-8") as f: 
-        json.dump(assets_json, f, ensure_ascii=False, indent=2)
-        
+    with open("assets.json", "w", encoding="utf-8") as f: json.dump(assets_json, f, ensure_ascii=False, indent=2)
     return assets_json
 
-if __name__ == "__main__": 
-    generate_asset_data()
+if __name__ == "__main__": generate_asset_data()
