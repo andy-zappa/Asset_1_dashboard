@@ -74,12 +74,12 @@ h3 {
     margin-bottom: 20px;
 }
 .insight-left {
-    flex: 0 0 49%;
+    flex: 0 0 49%; 
     display: flex;
     flex-direction: column;
 }
 .insight-right {
-    flex: 1;
+    flex: 1; 
     display: flex;
     flex-direction: column;
 }
@@ -105,7 +105,7 @@ h3 {
     height: 100%;
 }
 
-/* 서브 카드: 마우스 오버 시 회색 배경 적용 (클릭 유도) */
+/* 서브 카드: 마우스 오버 시 회색 배경 적용 */
 .card-sub {
     background: #fff;
     border: 1.5px solid #ddd;
@@ -250,7 +250,7 @@ data = load()
 tot = data.get("_total", {})
 
 # =========================================================
-# 📍 Left Sidebar Navigation & Quick View
+# 📍 Left Sidebar Navigation
 # =========================================================
 with st.sidebar:
     st.markdown(
@@ -359,33 +359,35 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        total_tradeable = len(tradeable_items)
-        rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
-        rise_list, fall_list = [], []
-
-        for it in tradeable_items:
-            d_rate_val = it.get('전일비', it.get('전일비(%)', 0.0))
-            d_rate = float(d_rate_val)
-            nm = short_name(it.get('종목명', ''))
-            acc = it.get('계좌', '')
-            
+        # ==========================================================
+        # 🔥 [수정] 텍스트 부분 컬러 적용 및 TOP5/TOP3 개수 조절
+        # ==========================================================
+        tradeable_items_by_day = sorted(tradeable_items, key=lambda x: float(x.get('전일비', x.get('전일비(%)', 0))), reverse=True)
+        rise_cnt = sum(1 for it in tradeable_items_by_day if float(it.get('전일비', it.get('전일비(%)', 0))) > 0.2)
+        fall_cnt = sum(1 for it in tradeable_items_by_day if float(it.get('전일비', it.get('전일비(%)', 0))) < -0.2)
+        flat_cnt = len(tradeable_items_by_day) - rise_cnt - fall_cnt
+        
+        rise_list = []
+        for it in tradeable_items_by_day:
+            d_rate = float(it.get('전일비', it.get('전일비(%)', 0.0)))
             if d_rate > 0.2:
-                rise_cnt += 1
-                rise_list.append((d_rate, f"{nm}({acc} ▲{d_rate:.2f}%)"))
-            elif d_rate < -0.2:
-                fall_cnt += 1
-                fall_list.append((d_rate, f"{nm}({acc} ▼{abs(d_rate):.2f}%)"))
-            else:
-                flat_cnt += 1
+                nm = short_name(it.get('종목명', ''))
+                acc = it.get('계좌', '')
+                rise_list.append(f"{nm}({acc} <span class='{col(d_rate)}'>{fmt_p(d_rate)}</span>)")
                 
-        rise_list.sort(key=lambda x: x[0], reverse=True)
-        fall_list.sort(key=lambda x: x[0]) 
+        fall_list = []
+        for it in tradeable_items_by_day[::-1]:
+            d_rate = float(it.get('전일비', it.get('전일비(%)', 0.0)))
+            if d_rate < -0.2:
+                nm = short_name(it.get('종목명', ''))
+                acc = it.get('계좌', '')
+                fall_list.append(f"{nm}({acc} <span class='{col(d_rate)}'>{fmt_p(d_rate)}</span>)")
         
-        top3_rise = [x[1] for x in rise_list[:3]]
-        top3_fall = [x[1] for x in fall_list[:3]]
+        top5_rise = rise_list[:5]
+        top3_fall = fall_list[:3]
         
-        str_rise = ", ".join(top3_rise) if top3_rise else "없음"
-        str_fall = ", ".join(top3_fall) if top3_fall else "없음"
+        str_rise = ", ".join(top5_rise) + " 등" if top5_rise else "없음"
+        str_fall = ", ".join(top3_fall) + " 등" if top3_fall else "없음"
 
         p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
         p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
@@ -396,17 +398,12 @@ elif menu == "2. 절세 계좌":
         a_pension = data.get('PENSION', {}).get('총 자산', 0)
         a_isa = data.get('ISA', {}).get('총 자산', 0)
         
-        total_for_bar = a_dc + a_irp + a_pension + a_isa
-        if total_for_bar == 0: 
-            total_for_bar = 1 
-
+        total_for_bar = max(1, a_dc + a_irp + a_pension + a_isa)
         p_dc = a_dc / total_for_bar * 100
         p_irp = a_irp / total_for_bar * 100
         p_pension = a_pension / total_for_bar * 100
         p_isa = a_isa / total_for_bar * 100
-        
-        goal_amount = 1000000000
-        progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
+        progress_pct = (t_asset / 1000000000) * 100
 
         def render_bar(p, color):
             return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
@@ -430,16 +427,15 @@ elif menu == "2. 절세 계좌":
         bullet = "<span style='font-size:11px;'>🔵</span>"
 
         zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div>"
-        
         zappa_html += f"현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(best_acc_rate)}' style='font-weight:bold;'>{fmt_p(best_acc_rate)}</span>) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{b1_name}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{w1_name}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다. "
-        zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong>, 하락 종목은 <strong>{fall_cnt}개</strong>, 횡보합은 <strong>{flat_cnt}개</strong> 입니다.<br>"
+        zappa_html += f"총 <strong>{len(tradeable_items)}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong>, 하락 종목은 <strong>{fall_cnt}개</strong>, 횡보합은 <strong>{flat_cnt}개</strong> 입니다.<br>"
         zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ 상승 종목 : {str_rise}<br>"
         zappa_html += f"※ 하락 종목 : {str_fall}</span>"
-        
         zappa_html += "</div></div>"
         zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div>{strategy_text}</div></div>"
         zappa_html += "</div>"
 
+        # 메인 타이틀
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
@@ -463,22 +459,17 @@ elif menu == "2. 절세 계좌":
         
         html_parts.append("    <div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'>")
         
-        # 1. 왼쪽 단: 총 자산 타이틀 + 도넛 그래프
         html_parts.append("      <div style='flex: 0 0 38%; display: flex; flex-direction: column;'>")
         html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px;'>총 자산</div>")
         html_parts.append(donut_html)
         html_parts.append("      </div>")
         
-        # 2. 오른쪽 단: 화이트 하이라이트 박스 + 평가금액/현금자산/총손익 텍스트
         html_parts.append("      <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>")
-        
-        # 🔥 [수정] 박스의 하단 마진을 대폭 늘려(22px) 아래쪽 텍스트를 막대그래프 쪽으로 밀어냄
         html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 22px;'>")
         html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"          <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("        </div>")
         
-        # 🔥 [수정] 평가금액/현금성자산/총손익 그리드 (행간 5px로 미세조정)
         html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 5px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>")
@@ -496,10 +487,7 @@ elif menu == "2. 절세 계좌":
 
         html_parts.append("    <div style='margin-top: 20px;'>")
         html_parts.append("      <div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
-        html_parts.append(f"        {render_bar(p_dc, '#b4a7d6')}")
-        html_parts.append(f"        {render_bar(p_irp, '#f4b183')}")
-        html_parts.append(f"        {render_bar(p_pension, '#a9d18e')}")
-        html_parts.append(f"        {render_bar(p_isa, '#ffd966')}")
+        html_parts.append(f"        {render_bar(p_dc, '#b4a7d6')}{render_bar(p_irp, '#f4b183')}{render_bar(p_pension, '#a9d18e')}{render_bar(p_isa, '#ffd966')}")
         html_parts.append("      </div>")
         
         html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'>")
@@ -560,30 +548,27 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
         
         html_parts.append("  <div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
-        html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
+        # 🔥 동일한 타이틀 포맷팅을 명시적으로 적용
+        html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 손익률 우수종목 (TOP 5)</div>")
         html_parts.append("    <table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
         
         for idx, it in enumerate(best_5):
-            rt = it.get('수익률(%)', 0)
-            pf = it.get('평가손익', 0)
-            s_nm = short_name(it.get('종목명', ''))
+            rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0); s_nm = short_name(it.get('종목명', ''))
             html_parts.append(f"    <tr><td>{idx+1}</td><td>{s_nm}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
         html_parts.append("    </table>")
         
-        html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 부진종목</div>")
+        html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 손익률 부진종목</div>")
         html_parts.append("    <table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
         
         for idx, it in enumerate(worst_5):
-            rt = it.get('수익률(%)', 0)
-            pf = it.get('평가손익', 0)
-            s_nm = short_name(it.get('종목명', ''))
+            rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0); s_nm = short_name(it.get('종목명', ''))
             html_parts.append(f"    <tr><td>{idx+1}</td><td>{s_nm}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
         html_parts.append("    </table>")
         html_parts.append("  </div>")
         
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
         html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>")
-        html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div>")
+        html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div>")
         html_parts.append("      <div style='font-size: 13.5px; color: #888;'>[ -0.2%p &lt; 횡보 &lt; +0.2%p ]</div>")
         html_parts.append("    </div>")
         html_parts.append(f"    {zappa_html}")
@@ -729,6 +714,7 @@ elif menu == "2. 절세 계좌":
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
+                # 🔥 [등락률 포맷] 헤더 구성 유지
                 h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{'<th>등락률</th>' if st.session_state.show_change_rate else ''}</tr>"
                 h3 = [unit_html, h3_table]
                 items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
@@ -742,7 +728,6 @@ elif menu == "2. 절세 계좌":
                 
                 for i in ([s_data] + items):
                     is_s = (i.get('종목명') == "[ 합계 ]")
-                    
                     row = f"<tr class='sum-row'>" if is_s else "<tr>"
                     row += f"<td>{i.get('종목명', '')}</td>"
                     
@@ -752,8 +737,22 @@ elif menu == "2. 절세 계좌":
                     item_asset = i.get('총 자산', 0)
                     i_rate = i.get('수익률(%)', 0)
                     
+                    # 🔥 등락률 및 절대 차액 계산 로직 추가
                     d_rate_val = i.get('전일비', i.get('전일비(%)', 0.0))
                     d_rate = float(d_rate_val)
+                    
+                    try:
+                        curr_price = float(str(i.get('현재가', 0)).replace(',', ''))
+                    except:
+                        curr_price = 0
+                        
+                    if curr_price > 0 and d_rate != 0:
+                        prev_price = curr_price / (1 + d_rate / 100)
+                        diff_amt = curr_price - prev_price
+                    else:
+                        diff_amt = 0
+                        
+                    diff_amt_str = f"{abs(diff_amt):,.0f}" if diff_amt != 0 else "0"
                     
                     d_rate_str = "-" if is_s else fmt_p(d_rate)
                     d_class = "" if is_s else col(d_rate)
@@ -766,11 +765,14 @@ elif menu == "2. 절세 계좌":
                     row += f"<td>{fmt(i.get('매입가', '-'))}</td>"
                     row += f"<td>{fmt(i.get('현재가', '-'))}</td>"
                     
+                    # 🔥 [수정] 등락률 열: 차액(원)과 등락률(%)을 위아래 2줄로 쫀쫀하게 배치
                     if st.session_state.show_change_rate:
-                        row += f"<td class='{d_class}'>{d_rate_str}</td>"
+                        if is_s:
+                            row += "<td>-</td>"
+                        else:
+                            row += f"<td style='padding: 4px; line-height: 1.35;'><div class='{d_class}' style='font-size:13.5px;'>{diff_amt_str}</div><div class='{d_class}' style='font-size:13.5px;'>{d_rate_str}</div></td>"
                         
                     row += "</tr>"
-                    
                     h3.append(row)
                     
                 h3.append("</table>")
