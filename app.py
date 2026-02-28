@@ -13,7 +13,7 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 # =========================================================
 css = """
 <style>
-/* 🔥 [완벽 패치] Streamlit 내부 컨테이너까지 스무스 스크롤 강제 적용 */
+/* 🔥 Streamlit 내부 컨테이너까지 스무스 스크롤 강제 적용 */
 * {
     scroll-behavior: smooth !important;
 }
@@ -74,12 +74,12 @@ h3 {
     margin-bottom: 20px;
 }
 .insight-left {
-    flex: 0 0 49%; /* 🔥 [수정] 좌측 노란색 카드 너비 2음절(약 3%) 추가 확장 (46% -> 49%) */
+    flex: 0 0 49%;
     display: flex;
     flex-direction: column;
 }
 .insight-right {
-    flex: 1; /* 🔥 좌측이 커진 만큼 우측 흰색 카드들은 자동으로 줄어들며 밸런스 유지 */
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -310,7 +310,6 @@ elif menu == "2. 절세 계좌":
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-        # 리로드 기능을 순수하게 데이터 업데이트로만 유지
         if st.button("🔄 업데이트", use_container_width=True):
             with st.spinner("데이터 업데이트 중..."):
                 andy_pension_v2.generate_asset_data()
@@ -441,7 +440,6 @@ elif menu == "2. 절세 계좌":
         zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div>{strategy_text}</div></div>"
         zappa_html += "</div>"
 
-        # 메인 타이틀
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
@@ -474,12 +472,14 @@ elif menu == "2. 절세 계좌":
         # 2. 오른쪽 단: 화이트 하이라이트 박스 + 평가금액/현금자산/총손익 텍스트
         html_parts.append("      <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>")
         
-        html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 8px;'>")
+        # 🔥 [수정] 박스의 하단 마진을 대폭 늘려(22px) 아래쪽 텍스트를 막대그래프 쪽으로 밀어냄
+        html_parts.append("        <div style='background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 8px; padding: 10px 12px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 22px;'>")
         html_parts.append(f"          <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"          <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("        </div>")
         
-        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
+        # 🔥 [수정] 평가금액/현금성자산/총손익 그리드 (행간 5px로 미세조정)
+        html_parts.append("        <div style='display: grid; grid-template-columns: auto auto; row-gap: 5px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%;'>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>")
         html_parts.append(f"          <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>")
         html_parts.append("          <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성자산</div>")
@@ -539,7 +539,6 @@ elif menu == "2. 절세 계좌":
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
                 
-                # 🔥 target='_self' 제거하여 화면 깜빡임/리로딩 없이 순수 HTML 앵커 스크롤 적용 (block 속성 추가)
                 html_parts.append(f"<a href='#account_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'>")
                 html_parts.append("    <div class='card-sub'>")
                 html_parts.append("      <div>")
@@ -690,7 +689,6 @@ elif menu == "2. 절세 계좌":
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
 
-        # 🔥 순수 HTML Anchor Target (부드럽게 스크롤되어 내려오는 도착 지점)
         st.markdown("<div id='account_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
