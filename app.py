@@ -343,7 +343,7 @@ elif menu == "2. 절세 계좌":
         worst_5 = tradeable_items[::-1][:5]
 
         # ==========================================================
-        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.3%p 초과)
+        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.2%p 초과) - 로직 동기화 완료
         # ==========================================================
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
@@ -355,10 +355,10 @@ elif menu == "2. 절세 계좌":
             nm = short_name(it.get('종목명', ''))
             acc = it.get('계좌', '')
             
-            if d_rate > 0.3:
+            if d_rate > 0.2:
                 rise_cnt += 1
                 rise_list.append((d_rate, f"{nm}({acc} ▲{d_rate:.2f}%)"))
-            elif d_rate < -0.3:
+            elif d_rate < -0.2:
                 fall_cnt += 1
                 fall_list.append((d_rate, f"{nm}({acc} ▼{abs(d_rate):.2f}%)"))
             else:
@@ -560,8 +560,12 @@ elif menu == "2. 절세 계좌":
         html_parts.append("    </table>")
         html_parts.append("  </div>")
         
+        # [수정] 구조 정리 및 우측 정렬 텍스트 추가
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
-        html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
+        html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>")
+        html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div>")
+        html_parts.append("      <div style='font-size: 13.5px; color: #888;'>상승 > +0.2%p &nbsp;/&nbsp; 하락 < -0.2%p &nbsp;/&nbsp; 횡보 -0.2%p ~ +0.2%p</div>")
+        html_parts.append("    </div>")
         html_parts.append(f"    {zappa_html}")
         html_parts.append("  </div>")
         
@@ -743,9 +747,3 @@ elif menu == "2. 절세 계좌":
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
-
-
