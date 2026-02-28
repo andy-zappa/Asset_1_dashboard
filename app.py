@@ -561,8 +561,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("  </div>")
         
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
-        
-html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
+        html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
         html_parts.append(f"    {zappa_html}")
         html_parts.append("  </div>")
         
@@ -744,6 +743,7 @@ html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
