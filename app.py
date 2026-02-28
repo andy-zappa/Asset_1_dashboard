@@ -22,6 +22,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .sum-row td{background-color:#fff9e6;font-weight:bold!important;}
 .red{color:#FF2323!important;} .blue{color:#0047EB!important;}
 
+/* 레이아웃 및 카드 디자인 */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 1; display: flex; flex-direction: column; }
@@ -36,12 +37,17 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
 
+/* 엑셀 스타일 병합 */
 .main-table th.th-eval { border-right: none !important; }
 .main-table th.th-blank { border-left: none !important; border-bottom: none !important; padding: 0 !important; }
 .main-table th.th-week { border-left: 1px solid #ddd !important; border-top: 1px solid #ddd !important; font-size: 13.5px; }
 
+/* 사이드바 폰트 세팅 */
 div[role="radiogroup"] label { font-size: 15.5px !important; margin-bottom: 8px !important; }
 
+/* =========================================================
+   [ZAPPA 플로팅 배너 CSS 원상복구] (레이아웃 깨짐 100% 해결)
+   ========================================================= */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
@@ -49,26 +55,27 @@ div[data-testid="column"]:has(span#zappa-floating-menu) {
     position: fixed !important; bottom: 30px !important; right: 30px !important; left: auto !important; transform: none !important;
     width: max-content !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.98) !important; padding: 10px 25px !important; 
     border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important;
-    z-index: 999999 !important; display: flex !important; align-items: center; justify-content: center; gap: 14px !important; 
+    z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 14px !important; 
 }
 div.element-container:has(span#zappa-floating-menu) { display: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 5px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 26px !important; color: #9ca3af !important; font-size: 15px !important; box-shadow: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111 !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { color: #111 !important; font-weight: bold !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 5px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 26px !important; min-height: 26px !important; color: #9ca3af !important; font-size: 15px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 14.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; white-space: nowrap !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background: transparent !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
 
 # =========================================================
-# Session State 및 초기 데이터 업데이트
+# Session State 초기화
 # =========================================================
 if 'sort_mode' not in st.session_state: 
     st.session_state.sort_mode = 'init'
 if 'show_code' not in st.session_state: 
     st.session_state.show_code = False
-
 if 'init' not in st.session_state:
-    with st.spinner("데이터를 업데이트 중입니다. 잠시만 기다려주세요..."): 
+    with st.spinner("데이터 업데이트 중..."): 
         andy_pension_v2.generate_asset_data()
     st.session_state['init'] = True
     st.cache_data.clear()
@@ -125,6 +132,7 @@ tot = data.get("_total", {})
 with st.sidebar:
     st.markdown("<div style='display:flex; align-items:center; gap:10px; margin-bottom:20px;'><span class='zappa-icon'>🤖</span><span style='font-size:24px; font-weight:bold; color:#111; letter-spacing: -0.5px;'>ZAPPA MENU</span></div>", unsafe_allow_html=True)
     
+    # 메인 네비게이션 메뉴
     menu = st.radio(
         "카테고리 선택",
         ("1. 복합 대시보드", "2. 절세 계좌", "3. 일반 계좌", "4. Quant 매매", "5. 가상자산"),
@@ -134,9 +142,10 @@ with st.sidebar:
     
     st.markdown("<hr style='margin:25px 0 20px 0; border: none; border-top: 1px dashed #ccc;'>", unsafe_allow_html=True)
     
-    t_asset_all = tot.get('총 자산', 0)
-    t_profit_all = tot.get('총 수익', 0)
-    t_rate_all = tot.get('수익률(%)', 0)
+    # 퀵 뷰 (전체 자산 요약)
+    t_asset_all = tot.get('총 자산', tot.get('총자산', 0))
+    t_profit_all = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
+    t_rate_all = tot.get('수익률(%)', tot.get('손익률(%)', 0))
     
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
@@ -190,7 +199,7 @@ elif menu == "2. 절세 계좌":
     OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
     # ---------------------------------------------------------
-    # [데이터 안정성 검증 블록] NameError 완벽 방지
+    # 데이터 안정성 검증 및 렌더링
     # ---------------------------------------------------------
     if data and "_insight" in data:
         t_asset = tot.get('총 자산', 0)
@@ -226,7 +235,6 @@ elif menu == "2. 절세 계좌":
                     else:
                         dom_total += val
 
-        # 안전자산 제외 후 정렬
         exclude_kws = ["현금성자산", "삼성화재", "삼성신종종류형"]
         tradeable_items = [it for it in all_items if not any(kw in it.get("종목명", "") for kw in exclude_kws)]
         tradeable_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
@@ -234,7 +242,7 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        # [상승/하락/횡보 동적 카운팅 로직]
+        # [분석 로직] 전일비 상승/하락/횡보 카운팅 및 리스트업
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
         major_rise_list, major_fall_list = [], []
@@ -327,7 +335,6 @@ elif menu == "2. 절세 계좌":
         </div>
         """
 
-        # HTML 조립 시작 (리스트 사용으로 줄바꿈 및 가독성 개선)
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -393,13 +400,14 @@ elif menu == "2. 절세 계좌":
         
         for k in FIXED_ACCOUNT_ORDER:
             if k in data:
-                a = data[k]
+                a = data.get(k, {})
                 acc_name = '퇴직연금(DC)' if k == 'DC' else ('퇴직연금(IRP)' if k == 'IRP' else ('연금저축(CMA)' if k == 'PENSION' else 'ISA(중개형)'))
                 acc_asset = a.get('총 자산', 0)
                 acc_principal = a.get('원금', 0)
                 acc_profit = a.get('총 수익', 0)
                 acc_rate = a.get('수익률(%)', 0)
                 
+                # 종목 수 카운팅
                 acc_items_list = a.get('상세', [])
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
@@ -512,18 +520,30 @@ elif menu == "2. 절세 계좌":
         st.markdown("".join(h2), unsafe_allow_html=True)
 
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+        
+        # [수정] 플로팅 메뉴 버튼 컨테이너 (정확하게 5등분 분할 복구)
         b1, b2, b3, b4, b5 = st.columns(5)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
-            if st.button("🛠️ 초기화 [ ● ]" if st.session_state.sort_mode == 'init' else "🛠️ 초기화 [ ○ ]", type="primary" if st.session_state.sort_mode == 'init' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'init')): pass
+            if st.button("🛠️ 초기화 [ ● ]" if st.session_state.sort_mode == 'init' else "🛠️ 초기화 [ ○ ]", type="primary" if st.session_state.sort_mode == 'init' else "secondary"): 
+                st.session_state.sort_mode = 'init'
+                st.rerun()
         with b2:
-            if st.button("💰 총 자산 [ ● ]" if st.session_state.sort_mode == 'asset' else "💰 총 자산 [ ○ ]", type="primary" if st.session_state.sort_mode == 'asset' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'asset')): pass
+            if st.button("💰 총 자산 [ ● ]" if st.session_state.sort_mode == 'asset' else "💰 총 자산 [ ○ ]", type="primary" if st.session_state.sort_mode == 'asset' else "secondary"): 
+                st.session_state.sort_mode = 'asset'
+                st.rerun()
         with b3:
-            if st.button("📊 평가손익 [ ● ]" if st.session_state.sort_mode == 'profit' else "📊 평가손익 [ ○ ]", type="primary" if st.session_state.sort_mode == 'profit' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'profit')): pass
+            if st.button("📊 평가손익 [ ● ]" if st.session_state.sort_mode == 'profit' else "📊 평가손익 [ ○ ]", type="primary" if st.session_state.sort_mode == 'profit' else "secondary"): 
+                st.session_state.sort_mode = 'profit'
+                st.rerun()
         with b4:
-            if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
+            if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary"): 
+                st.session_state.sort_mode = 'rate'
+                st.rerun()
         with b5:
-            if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
+            if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary"): 
+                st.session_state.show_code = not st.session_state.show_code
+                st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
         t3_lbl = {'DC':'퇴직연금(DC)계좌 / (삼성증권 7165962472-28)', 'PENSION':'연금저축(CMA)계좌 / (삼성증권 7169434836-15)', 'ISA':'ISA(중개형)계좌 / (키움증권 6448-4934)', 'IRP':'퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)'}
@@ -557,7 +577,6 @@ elif menu == "2. 절세 계좌":
                 for i in ([s_data] + items):
                     is_s = (i.get('종목명') == "[ 합계 ]")
                     
-                    # HTML 문법 오류 방지를 위해 f-string 내부 따옴표 회피
                     row = f"<tr class='sum-row'>" if is_s else "<tr>"
                     row += f"<td>{i.get('종목명', '')}</td>"
                     
@@ -566,9 +585,8 @@ elif menu == "2. 절세 계좌":
                         
                     item_asset = i.get('총 자산', 0)
                     i_rate = i.get('수익률(%)', 0)
-                    d_rate = i.get('전일비(%)', 0.0)
+                    d_rate = float(i.get('전일비(%)', 0.0))
                     
-                    # 전일비(%) 텍스트 및 클래스 변수 처리 (SyntaxError 방지)
                     d_rate_str = "-" if is_s else fmt_p(d_rate)
                     d_class = "" if is_s else col(d_rate)
                     
