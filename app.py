@@ -858,7 +858,7 @@ elif menu == "3. 일반 계좌":
         if k in g_data:
             is_usa = 'USA' in k
             fx = g_data.get('환율', 1443.1) if is_usa else 1
-            short_nm = {'DOM1':'국내1.키움', 'DOM2':'국내2.삼성', 'USA1':'미국1.키움', 'USA2':'미국2.키움'}[k]
+            short_nm = {'DOM1':'국내1.키움', 'DOM2':'국내2.삼성', 'USA1':'해외1.키움', 'USA2':'해외2.키움'}[k]
             
             for item in g_data[k].get('상세', []):
                 if item.get('종목명') == '[ 합계 ]': continue
@@ -869,7 +869,6 @@ elif menu == "3. 일반 계좌":
                 
                 if nm == '예수금': cash_total += val_krw
                 else:
-                    # 환율 반영된 전일비 금액 계산
                     c_p = float(it_copy.get('현재가', 0)) if type(it_copy.get('현재가', 0)) in [int, float] else 0
                     qty = float(it_copy.get('수량', 0)) if type(it_copy.get('수량', 0)) in [int, float] else 0
                     d_rate = float(it_copy.get('전일비', 0))
@@ -884,45 +883,50 @@ elif menu == "3. 일반 계좌":
                         dom_total += val_krw
                         dom_items.append(it_copy)
 
-    t_diff = sum(acc_1d_diff.values()) # 총 전일비 합산
-    t_diff_7 = 0 # API 연동 전 임시 0
+    t_diff = sum(acc_1d_diff.values()) 
+    t_diff_7 = 0 
     
-    # 목표 달성률 계산
     goal_amount = 1000000000
     progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
-    # 횡보 조건 -0.5%p ~ +0.5%p
     all_tradeable = dom_items + ovs_items
     rise_cnt = sum(1 for it in all_tradeable if float(it.get('전일비', 0)) > 0.5)
     fall_cnt = sum(1 for it in all_tradeable if float(it.get('전일비', 0)) < -0.5)
     flat_cnt = len(all_tradeable) - rise_cnt - fall_cnt
     
-    # 우수종목/부진종목 필터링 (+5% 미만 조건 적용)
     dom_best = sorted(dom_items, key=lambda x: x.get('수익률(%)', 0), reverse=True)[:5]
     dom_worst = sorted([it for it in dom_items if it.get('수익률(%)', 0) < 5.0], key=lambda x: x.get('수익률(%)', 0))[:5]
     ovs_best = sorted(ovs_items, key=lambda x: x.get('수익률(%)', 0), reverse=True)[:5]
     ovs_worst = sorted([it for it in ovs_items if it.get('수익률(%)', 0) < 5.0], key=lambda x: x.get('수익률(%)', 0))[:5]
 
-    total_for_bar = max(1, dom_total + ovs_total + cash_total)
-    p_dom = dom_total / total_for_bar * 100
-    p_ovs = ovs_total / total_for_bar * 100
-    p_cash = cash_total / total_for_bar * 100
-    def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p >= 5 else (f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>" if p > 0 else "")
+    # 🔥 [수정 2] 계좌별 비중으로 막대그래프 렌더링
+    total_for_bar = max(1, t_asset)
+    p_dom1 = g_data.get('DOM1', {}).get('총자산_KRW', 0) / total_for_bar * 100 if 'DOM1' in g_data else 0
+    p_dom2 = g_data.get('DOM2', {}).get('총자산_KRW', 0) / total_for_bar * 100 if 'DOM2' in g_data else 0
+    p_usa1 = g_data.get('USA1', {}).get('총자산_KRW', 0) / total_for_bar * 100 if 'USA1' in g_data else 0
+    p_usa2 = g_data.get('USA2', {}).get('총자산_KRW', 0) / total_for_bar * 100 if 'USA2' in g_data else 0
+
+    def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p >= 4 else (f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>" if p > 0 else "")
 
     acc_rates = sorted([(k, (g_data[k].get('총수익_KRW',0) / principals[k] * 100 if principals[k]>0 else 0)) for k in GEN_ACC_ORDER if k in g_data], key=lambda x: x[1], reverse=True)
-    best_acc_name = {'DOM1':'국내1.키움', 'DOM2':'국내2.삼성', 'USA1':'미국1.키움', 'USA2':'미국2.키움'}.get(acc_rates[0][0]) if acc_rates else "전체"
+    best_acc_name = {'DOM1':'국내1. 키움증권', 'DOM2':'국내2. 삼성증권', 'USA1':'해외1. 키움증권', 'USA2':'해외2. 키움증권'}.get(acc_rates[0][0]) if acc_rates else "전체"
 
     dom_top_nm = short_name(dom_best[0]['종목명']) if dom_best else '국내 우량주'
     dom_wr_nm = short_name(dom_worst[0]['종목명']) if dom_worst else '일부 조정주'
     ovs_top_nm = short_name(ovs_best[0]['종목명']) if ovs_best else '빅테크 우량주'
     ovs_wr_nm = short_name(ovs_worst[0]['종목명']) if ovs_worst else '단기 하락주'
 
-    zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약</span><div>현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(acc_rates[0][1] if acc_rates else 0)}' style='font-weight:bold;'>{fmt_p(acc_rates[0][1] if acc_rates else 0)}</span>) 1위</strong>를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 15px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망</span><div>최근 국내 시장은 <strong>{dom_top_nm}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{dom_wr_nm}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망</span><div>미국 증시는 <strong>{ovs_top_nm}</strong> 위주로 긍정적 흐름을 보이나, <strong>{ovs_wr_nm}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{p_cash:.1f}%</strong>인 현금(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div></div></div>"
+    zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약</span><div>현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(acc_rates[0][1] if acc_rates else 0)}' style='font-weight:bold;'>{fmt_p(acc_rates[0][1] if acc_rates else 0)}</span>) 1위</strong>를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 15px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망</span><div>최근 국내 시장은 <strong>{dom_top_nm}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{dom_wr_nm}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망</span><div>미국 증시는 <strong>{ovs_top_nm}</strong> 위주로 긍정적 흐름을 보이나, <strong>{ovs_wr_nm}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{(cash_total/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div></div></div>"
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [일반계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
-    donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
-    # 🔥 국내주식 텍스트 (bottom: 24%, left: 15%) 로 이동하여 짙은 회색 경계에 안착
-    donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>예수금</div><div style='position: absolute; top: 28%; right: -7%; font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>미국주식</div><div style='position: absolute; bottom: 24%; left: 15%; font-size: 12px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내주식</div></div>"
+    
+    # 🔥 [수정 5] 도넛 차트 라벨 좌표 미세조정 (국내주식 좌측 상단, 해외주식 우측 하단)
+    p_cash_donut = (cash_total/t_asset*100) if t_asset>0 else 0
+    p_ovs_donut = (ovs_total/t_asset*100) if t_asset>0 else 0
+    p_dom_donut = (dom_total/t_asset*100) if t_asset>0 else 0
+    donut_css = f"background: conic-gradient(#ffffff 0% {p_cash_donut}%, #d9d9d9 {p_cash_donut}% {p_cash_donut+p_ovs_donut}%, #8c8c8c {p_cash_donut+p_ovs_donut}% 100%);"
+    
+    donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash_donut:.0f}%<br>예수금</div><div style='position: absolute; top: 40%; right: -2%; font-size: 11.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs_donut:.0f}%<br>해외주식</div><div style='position: absolute; bottom: 31%; left: 12%; font-size: 12px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom_donut:.0f}%<br>국내주식</div></div>"
 
     html_parts = []
     html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
@@ -953,15 +957,21 @@ elif menu == "3. 일반 계좌":
     html_parts.append("      </div>")
     html_parts.append("    </div>") 
     html_parts.append("    <div style='margin-top: 20px;'>")
+    
+    # 🔥 [수정 2] 계좌별 막대그래프 (절세계좌와 동일한 색상)
     html_parts.append("      <div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
-    html_parts.append(f"        {render_bar(p_dom, '#4a90e2')}{render_bar(p_ovs, '#f5a623')}{render_bar(p_cash, '#7ed321')}")
+    html_parts.append(f"        {render_bar(p_dom1, '#b4a7d6')}{render_bar(p_dom2, '#f4b183')}{render_bar(p_usa1, '#a9d18e')}{render_bar(p_usa2, '#ffd966')}")
     html_parts.append("      </div>")
-    html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 4px; margin-bottom: 16px;'>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#4a90e2; border-radius:2px;'></div>국내주식</div>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f5a623; border-radius:2px;'></div>미국주식</div>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#7ed321; border-radius:2px;'></div>예수금(현금)</div>")
+    
+    # 🔥 [수정 6] 범례 패딩 값을 절세계좌와 100% 동일하게 맞춰서 높이 영점 조절
+    html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6;'></div>국내1. 키움</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183;'></div>국내2. 삼성</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e;'></div>해외1. 키움</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966;'></div>해외2. 키움</div>")
     html_parts.append("      </div>")
-    # 🔥 목표 10억 달성률 하단에 추가
+    
+    # 🔥 [수정 1] 일반계좌 자산 목표 10억
     html_parts.append("      <div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
     html_parts.append("          <span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 일반계좌 자산 목표 10억</span>")
@@ -971,6 +981,7 @@ elif menu == "3. 일반 계좌":
     html_parts.append(f"          <div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div>")
     html_parts.append("        </div>")
     html_parts.append("      </div>")
+    
     html_parts.append("    </div>") 
     html_parts.append("  </div>") 
     html_parts.append("</div>") 
@@ -980,8 +991,8 @@ elif menu == "3. 일반 계좌":
     for k in GEN_ACC_ORDER:
         if k in g_data:
             a = g_data[k]
-            # 🔥 카드 타이틀 및 서브 텍스트(계좌번호) 수정
-            acc_name_map = {'DOM1': '국내1. 키움증권(위탁종합)', 'DOM2': '국내2. 삼성증권(주식보상-01)', 'USA1': '미국1. 키움증권(위탁종합)', 'USA2': '미국2. 키움증권(위탁종합)'}
+            # 🔥 [수정 3] 우측 상단 카드 제목 및 계좌번호 일치
+            acc_name_map = {'DOM1': '국내1. 키움증권', 'DOM2': '국내2. 삼성증권', 'USA1': '해외1. 키움증권', 'USA2': '해외2. 키움증권'}
             acc_num_map = {'DOM1': '[ 6312-5329 ]', 'DOM2': '[ 7162669785-01 ]', 'USA1': '[ 6312-5329 ]', 'USA2': '[ 6443-5993 ]'}
             item_count = len([i for i in a.get('상세', []) if i.get('종목명') not in ['[ 합계 ]', '예수금']])
             html_parts.append(f"<a href='#gen_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{acc_num_map[k]}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{acc_name_map[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(a.get('총자산_KRW', 0))}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a.get('총수익_KRW', 0))}' style='font-size: 16px; font-weight: normal;'>{fmt(a.get('총수익_KRW', 0), True)}</div><div class='{col(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* 원금 : {fmt(principals[k])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
@@ -990,11 +1001,10 @@ elif menu == "3. 일반 계좌":
     html_parts.append("</div>") 
     html_parts.append("</div>") 
     
-    # 🔥 국내/해외 테이블 분리, 계좌 열 삭제 및 등락률 삽입, 횡보 0.5% 텍스트 반영
+    # 🔥 [수정 5] 인사이트 박스: 국내/해외 테이블 분리 및 등락률 열 적용
     html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
     html_parts.append("  <div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
     
-    # [국내] 테이블
     html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [국내] 손익률 우수종목</div>")
     html_parts.append("    <table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
     for idx, it in enumerate(dom_best): html_parts.append(f"<tr><td>{idx+1}</td><td>{short_name(it.get('종목명', ''))}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td><td class='{col(float(it.get('전일비',0)))}'>{fmt_p(float(it.get('전일비',0)))}</td></tr>")
@@ -1004,7 +1014,6 @@ elif menu == "3. 일반 계좌":
     for idx, it in enumerate(dom_worst): html_parts.append(f"<tr><td>{idx+1}</td><td>{short_name(it.get('종목명', ''))}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td><td class='{col(float(it.get('전일비',0)))}'>{fmt_p(float(it.get('전일비',0)))}</td></tr>")
     html_parts.append("    </table><hr style='border:0; border-top:1px dashed #ddd; margin: 25px 0;'>")
     
-    # [해외] 테이블
     fx_rate = g_data.get('환율', 1443.1)
     html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [해외] 손익률 우수종목</div>")
     html_parts.append("    <table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>")
@@ -1019,6 +1028,7 @@ elif menu == "3. 일반 계좌":
     html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
     html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>")
     html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div>")
+    # 🔥 [수정 4] 횡보 0.5% 텍스트 반영
     html_parts.append("      <div style='font-size: 13.5px; color: #888;'>[ -0.5%p &lt; 횡보 &lt; +0.5%p ]</div>")
     html_parts.append("    </div>")
     html_parts.append(f"    {zappa_html}")
@@ -1026,7 +1036,9 @@ elif menu == "3. 일반 계좌":
     html_parts.append("</div>") 
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
-    # 🔥 [1] 투자원금 대비 요약표 (7, 15, 30일전 반영 구조)
+    # 🔥 [수정 4 & 9] 투자원금 대비 요약표 (7, 15, 30일전 반영 구조 및 계좌명 수정)
+    nm_table = {'DOM1':'국내1. 키움증권(위탁)', 'DOM2':'국내2. 삼성증권(주식보상)', 'USA1':'해외1. 키움증권(위탁)', 'USA2':'해외2. 키움증권(위탁)'}
+    
     unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
     st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
@@ -1036,12 +1048,11 @@ elif menu == "3. 일반 계좌":
     for k in GEN_ACC_ORDER:
         if k in g_data:
             a = g_data[k]
-            nm = {'DOM1':'국내1.키움(5329)', 'DOM2':'국내2.삼성(01)', 'USA1':'미국1.키움(5329)', 'USA2':'미국2.키움(5993)'}[k]
-            h1.append(f"<tr><td>{nm}</td><td>{fmt(a.get('총자산_KRW',0))}</td><td class='{col(a.get('총수익_KRW',0))}'>{fmt(a.get('총수익_KRW',0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(15일전)',0))}'>{fmt(a.get('평가손익(15일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}'>{fmt_p(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}</td><td>{fmt(principals[k])}</td></tr>")
+            h1.append(f"<tr><td>{nm_table[k]}</td><td>{fmt(a.get('총자산_KRW',0))}</td><td class='{col(a.get('총수익_KRW',0))}'>{fmt(a.get('총수익_KRW',0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(15일전)',0))}'>{fmt(a.get('평가손익(15일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}'>{fmt_p(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}</td><td>{fmt(principals[k])}</td></tr>")
     h1.append("</table>")
     st.markdown("".join(h1), unsafe_allow_html=True)
 
-    # 🔥 [2] 매입금액 대비 요약표 (전일비, 전주비, 전월비 반영 구조)
+    # 🔥 [수정 4 & 10] 매입금액 대비 요약표 (전일비, 전주비, 전월비 반영 구조 및 계좌명 수정)
     ag_tot = t_asset - t_buy_total
     ay_tot = (ag_tot / t_buy_total * 100) if t_buy_total > 0 else 0
     st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -1052,15 +1063,12 @@ elif menu == "3. 일반 계좌":
     for k in GEN_ACC_ORDER:
         if k in g_data:
             a = g_data[k]
-            nm = {'DOM1':'국내1.키움(5329)', 'DOM2':'국내2.삼성(01)', 'USA1':'미국1.키움(5329)', 'USA2':'미국2.키움(5993)'}[k]
             ag_acc = a.get('총자산_KRW', 0) - a.get('매입금액_KRW', 0)
             ay_acc = (ag_acc / a.get('매입금액_KRW', 1) * 100) if a.get('매입금액_KRW', 1) > 0 else 0
-            # 미국 계좌 전일비도 앞서 계산한 환율 적용 원화값 사용
-            h2.append(f"<tr><td>{nm}</td><td>{fmt(a.get('총자산_KRW',0))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(acc_1d_diff.get(k, 0))}'>{fmt(acc_1d_diff.get(k, 0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(a.get('매입금액_KRW', 0))}</td></tr>")
+            h2.append(f"<tr><td>{nm_table[k]}</td><td>{fmt(a.get('총자산_KRW',0))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(acc_1d_diff.get(k, 0))}'>{fmt(acc_1d_diff.get(k, 0), True)}</td><td class='{col(a.get('평가손익(7일전)',0))}'>{fmt(a.get('평가손익(7일전)',0), True)}</td><td class='{col(a.get('평가손익(30일전)',0))}'>{fmt(a.get('평가손익(30일전)',0), True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(a.get('매입금액_KRW', 0))}</td></tr>")
     h2.append("</table>")
     st.markdown("".join(h2), unsafe_allow_html=True)
 
-    # [3] 상세 계좌 내역
     st.markdown("<div id='gen_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>", unsafe_allow_html=True)
     st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
     
@@ -1076,8 +1084,10 @@ elif menu == "3. 일반 계좌":
         if st.button("📈 손익률 [ ▼ ]" if st.session_state.gen_sort_mode == 'rate' else "📈 손익률 [ ▽ ]", type="primary" if st.session_state.gen_sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'rate')): pass
     with b5:
         if st.button("↕️ 등락률 [ + ]" if st.session_state.gen_show_change_rate else "↕️ 등락률 [ - ]", type="primary" if st.session_state.gen_show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'gen_show_change_rate', not st.session_state.gen_show_change_rate)): pass
+    
+    # 🔥 [수정 1] 통화 버튼 제거, 종목코드 버튼으로 교체 (세션은 기존 show_code 공유)
     with b6:
-        if st.button("💵 통화 [ KRW ]" if st.session_state.gen_curr == 'USD' else "💵 통화 [ USD ]", type="primary" if st.session_state.gen_curr == 'USD' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_curr', 'KRW' if st.session_state.gen_curr == 'USD' else 'USD')): pass
+        if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -1085,7 +1095,7 @@ elif menu == "3. 일반 계좌":
         if k not in g_data: continue
         a = g_data[k]
         is_usa = 'USA' in k
-        nm = {'DOM1':'국내1. 키움증권 (위탁종합 : 6312-5329)', 'DOM2':'국내2. 삼성증권 (주식보상 : 7162669785-01)', 'USA1':'미국1. 키움증권 (위탁종합 : 6312-5329)', 'USA2':'미국2. 키움증권 (위탁종합 : 6443-5993)'}[k]
+        nm = {'DOM1':'국내1. 키움증권 (위탁종합 : 6312-5329)', 'DOM2':'국내2. 삼성증권 (주식보상 : 7162669785-01)', 'USA1':'해외1. 키움증권 (위탁종합 : 6312-5329)', 'USA2':'해외2. 키움증권 (위탁종합 : 6443-5993)'}[k]
         
         with st.expander(f"📂 [ {nm} ] 종목별 현황", expanded=False):
             s_data = next((i for i in a.get('상세', []) if i.get('종목명') == "[ 합계 ]"), {})
@@ -1094,9 +1104,10 @@ elif menu == "3. 일반 계좌":
             
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
             
-            mode = "KRW" if not is_usa else st.session_state.gen_curr
+            # 🔥 모든 금액 원화 고정
+            mode = "KRW"
             rate_val = g_data.get('환율', 1443.1)
-            u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : {'달러(USD)' if mode == 'USD' else '원화(KRW)'}</div>"
+            u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
             if st.session_state.gen_show_change_rate:
                 code_th = "<th rowspan='2'>종목코드</th>" if st.session_state.show_code else ""
@@ -1131,7 +1142,6 @@ elif menu == "3. 일반 계좌":
             elif st.session_state.gen_sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
             elif st.session_state.gen_sort_mode == 'rate': items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
             
-            # 🔥 [수정 7] [ 합계 ] 행을 헤더 바로 아래 2행에 고정 배치 (s_data가 최우선 출력)
             for i in ([s_data] + items + [cash_item]):
                 if i.get('종목명') == "예수금" and i.get('총자산', 0) == 0 and s_data.get('총자산', 0) > 0: continue 
                 is_s = (i.get('종목명') == "[ 합계 ]")
@@ -1140,7 +1150,7 @@ elif menu == "3. 일반 계좌":
                 if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>"
                 
                 def cv(val): return (val * rate_val) if (is_usa and mode == 'KRW' and val != '-') else val
-                dec = 4 if (is_usa and mode == 'USD') else 0
+                dec = 0
                 
                 ia = cv(i.get('총자산', 0)); ip = cv(i.get('평가손익', 0))
                 ibuy = cv(i.get('매입가', '-')) if i.get('매입가') != '-' else '-'
@@ -1153,7 +1163,8 @@ elif menu == "3. 일반 계좌":
                 diff_amt_str = fmt(diff_amt, True, decimal=dec) if diff_amt != 0 else "0"
                 d_rate_str = "-" if is_s else fmt_p(d_rate); d_class = "" if is_s else col(d_rate)
                 
-                row += f"<td>{pct:.1f}%</td><td>{fmt(ia, decimal=2 if is_usa and mode=='USD' else 0)}</td><td class='{col(ip)}'>{fmt(ip, True, decimal=2 if is_usa and mode=='USD' else 0)}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td><td>{fmt(i.get('수량', '-'))}</td><td>{fmt(ibuy, decimal=dec) if ibuy != '-' else '-'}</td><td>{fmt(icurr, decimal=dec) if icurr != '-' else '-'}</td>"
+                # 외화 계좌 원화 표기 시, 미국 달러 수익률은 원래 % 값 유지 (총수익률 왜곡 방지)
+                row += f"<td>{pct:.1f}%</td><td>{fmt(ia, decimal=dec)}</td><td class='{col(ip)}'>{fmt(ip, True, decimal=dec)}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td><td>{fmt(i.get('수량', '-'))}</td><td>{fmt(ibuy, decimal=dec) if ibuy != '-' else '-'}</td><td>{fmt(icurr, decimal=dec) if icurr != '-' else '-'}</td>"
                 
                 if st.session_state.gen_show_change_rate:
                     if is_s or i.get('종목명') == '예수금': row += "<td>-</td>"
