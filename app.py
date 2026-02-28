@@ -161,7 +161,7 @@ div[data-testid="column"]:has(span#zappa-floating-menu) {
     position: fixed !important; bottom: 30px !important; right: 30px !important; left: auto !important; transform: none !important;
     width: max-content !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.98) !important; padding: 10px 25px !important; 
     border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important;
-    z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 14px !important; 
+    z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 4px !important; 
 }
 div.element-container:has(span#zappa-floating-menu) { display: none !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
@@ -757,3 +757,4 @@ elif menu == "2. 절세 계좌":
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
