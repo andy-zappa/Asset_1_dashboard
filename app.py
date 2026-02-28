@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# [ZAPPA] 전용 디자인 시스템 (CSS) - 완벽 복구
+# [ZAPPA] 전용 디자인 시스템 (CSS) - 줄바꿈 원상 복구
 # =========================================================
 css = """
 <style>
@@ -151,87 +151,48 @@ div[role="radiogroup"] label {
     margin-bottom: 8px !important;
 }
 
-/* =========================================================
-   [ZAPPA 플로팅 배너 CSS] - 들여쓰기 꼬임 및 줄바꿈 완전 방지
-   ========================================================= */
-.zappa-icon { 
-    font-family: "Segoe UI Emoji", sans-serif !important; 
-    font-size: 32px !important; 
+/* 플로팅 메뉴 원상 복구 */
+.zappa-icon {
+    font-family: "Segoe UI Emoji", sans-serif !important;
+    font-size: 32px !important;
 }
 
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
 div[data-testid="column"]:has(span#zappa-floating-menu) {
-    position: fixed !important; 
-    bottom: 30px !important; 
-    right: 30px !important; 
-    left: auto !important; 
+    position: fixed !important;
+    bottom: 30px !important;
+    right: 30px !important;
+    left: auto !important;
     transform: none !important;
-    width: max-content !important; 
-    min-width: 0 !important; 
-    background: rgba(255, 255, 255, 0.98) !important; 
-    padding: 10px 25px !important; 
-    border-radius: 8px !important; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; 
+    width: max-content !important;
+    min-width: 0 !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    padding: 10px 25px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
     border: 1px solid #e5e7eb !important;
-    z-index: 999999 !important; 
-    display: flex !important; 
-    flex-wrap: nowrap !important; 
-    align-items: center !important; 
-    justify-content: center !important; 
-    gap: 14px !important; 
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
 }
-
-div.element-container:has(span#zappa-floating-menu) { display: none !important; }
-
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { 
-    min-width: 0 !important; 
-    width: auto !important; 
-    padding: 0 !important; 
-    margin: 0 !important; 
-    flex: 0 0 auto !important; 
-    border-right: none !important; 
+div.element-container:has(span#zappa-floating-menu) {
+    display: none !important;
 }
-
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { 
-    margin: 0 !important; 
-    padding: 0 5px !important; 
-    width: auto !important; 
-    background: transparent !important; 
-    border: none !important; 
-    border-radius: 0 !important; 
-    height: 26px !important; 
-    min-height: 26px !important; 
-    color: #9ca3af !important; 
-    font-size: 15px !important; 
-    font-weight: normal !important; 
-    white-space: nowrap !important; 
-    box-shadow: none !important; 
-    display: flex !important; 
-    align-items: center !important; 
-    justify-content: center !important; 
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button {
+    background: transparent !important;
+    border: none !important;
+    color: #9ca3af !important;
+    font-size: 15px !important;
+    box-shadow: none !important;
 }
-
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { 
-    color: inherit !important; 
-    font-size: 14.5px !important; 
-    font-weight: inherit !important; 
-    margin: 0 !important; 
-    padding: 0 !important; 
-    line-height: 1 !important; 
-    text-align: center !important; 
-    white-space: nowrap !important; 
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover {
+    color: #111 !important;
 }
-
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { 
-    color: #111111 !important; 
-    background: transparent !important; 
-}
-
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { 
-    background: transparent !important; 
-    border: none !important; 
-    color: #111111 !important; 
-    font-weight: bold !important; 
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] {
+    color: #111 !important;
+    font-weight: bold !important;
 }
 </style>
 """
@@ -256,8 +217,7 @@ if 'init' not in st.session_state:
 def fmt(v, sign=False):
     try:
         val = int(float(v))
-        if sign and val > 0: 
-            return f"+{val:,}"
+        if sign and val > 0: return f"+{val:,}"
         return f"{val:,}"
     except: 
         return str(v)
@@ -321,11 +281,11 @@ with st.sidebar:
     t_profit_all = tot.get('총 수익', 0)
     t_rate_all = tot.get('수익률(%)', 0)
     
-    # 퀵뷰 총 자산 (700 굵기 & 자간 -0.5px 적용)
+    # [수정] 700 -> 600으로 한 단계 얇게 하향 (너무 두꺼움 방지), 자간 -0.5px은 유지
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
         <div style='font-size:13.5px; font-weight:bold; color:#777; margin-bottom:8px;'>⚡ 퀵 뷰 (전체 자산 현황)</div>
-        <div style='font-size:24px; font-weight:700; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>
+        <div style='font-size:24px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>
             {fmt(t_asset_all)}<span style='font-size:15px; font-weight:normal; margin-left:3px; letter-spacing:normal;'>KRW</span>
         </div>
         <div style='font-size:14px; margin-top:8px; color:#555;'>
@@ -353,9 +313,6 @@ elif menu == "5. 가상자산":
 
 elif menu == "2. 절세 계좌":
     
-    # ---------------------------------------------------------
-    # 절세계좌 헤더
-    # ---------------------------------------------------------
     c1, c2 = st.columns([8.5, 1.5])
     with c1: 
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -372,9 +329,6 @@ elif menu == "2. 절세 계좌":
     FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
-    # ---------------------------------------------------------
-    # 데이터 안정성 검증 및 렌더링
-    # ---------------------------------------------------------
     if data and "_insight" in data:
         t_asset = tot.get('총 자산', 0)
         t_profit = tot.get('총 수익', 0)
@@ -421,11 +375,13 @@ elif menu == "2. 절세 계좌":
         rise_list, fall_list = [], []
 
         for it in tradeable_items:
+            # 데이터 키 안전 매핑
             d_rate_val = it.get('전일비', it.get('전일비(%)', 0.0))
             d_rate = float(d_rate_val)
             nm = short_name(it.get('종목명', ''))
             acc = it.get('계좌', '')
             
+            # ±0.3%p 초과 기준 적용
             if d_rate > 0.3:
                 rise_cnt += 1
                 rise_list.append((d_rate, f"{nm}({acc} ▲{d_rate:.2f}%)"))
@@ -435,6 +391,7 @@ elif menu == "2. 절세 계좌":
             else:
                 flat_cnt += 1
                 
+        # TOP 3 추출 정렬
         rise_list.sort(key=lambda x: x[0], reverse=True)
         fall_list.sort(key=lambda x: x[0]) 
         
@@ -454,7 +411,8 @@ elif menu == "2. 절세 계좌":
         a_isa = data.get('ISA', {}).get('총 자산', 0)
         
         total_for_bar = a_dc + a_irp + a_pension + a_isa
-        if total_for_bar == 0: total_for_bar = 1 
+        if total_for_bar == 0: 
+            total_for_bar = 1 
 
         p_dc = a_dc / total_for_bar * 100
         p_irp = a_irp / total_for_bar * 100
@@ -487,14 +445,13 @@ elif menu == "2. 절세 계좌":
 
         zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div>"
         
-        # [수정] 줄바꿈 없이 자연스럽게 이어지도록 변경
         zappa_html += f"현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(best_acc_rate)}' style='font-weight:bold;'>{fmt_p(best_acc_rate)}</span>) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{b1_name}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{w1_name}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다. "
         zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong>, 하락 종목은 <strong>{fall_cnt}개</strong>, 횡보합은 <strong>{flat_cnt}개</strong> 입니다.<br>"
         zappa_html += f"<span style='font-size:12.5px; color:#888;'>(# 상승 : 전일비 +0.3%p 초과, 하락 : 전일비 -0.3%p 미만, 횡보 : -0.3%p ~ +0.3%p 변동 #)</span><br>"
         zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ 상승 종목 : {str_rise}<br>"
         zappa_html += f"※ 하락 종목 : {str_fall}</span>"
-        zappa_html += "</div></div>"
         
+        zappa_html += "</div></div>"
         zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div>{strategy_text}</div></div>"
         zappa_html += "</div>"
 
@@ -512,7 +469,6 @@ elif menu == "2. 절세 계좌":
         </div>
         """
 
-        # HTML 조립 시작
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -524,8 +480,8 @@ elif menu == "2. 절세 계좌":
         html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: baseline;'>")
         html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         
-        # [수정] 메인 총 자산: 700 굵기 & -0.5px 자간 적용
-        html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: -0.5px; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 15px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
+        # [수정] 700 -> 600 하향, 자간 -0.5px 유지 (양쪽 통일)
+        html_parts.append(f"        <div style='font-size: 24px; font-weight: 600 !important; color: #111; letter-spacing: -0.5px; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 15px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append("      </div>")
         html_parts.append("      <div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
         html_parts.append(f"        <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
@@ -536,15 +492,14 @@ elif menu == "2. 절세 계좌":
         html_parts.append(donut_html)
         html_parts.append("      <div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
         
-        # [수정] 서브 숫자들 원래 굵기(400) 및 18px 핏으로 원상 복구 (왜소함 해결)
         html_parts.append("        <div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>평가금액</div>")
-        html_parts.append(f"        <div style='color: #111; font-size: 18px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
+        html_parts.append(f"        <div style='color: #111; font-size: 20px; font-weight: bold; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
         html_parts.append("        <div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>현금성자산</div>")
-        html_parts.append(f"        <div style='color: #111; font-size: 18px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
+        html_parts.append(f"        <div style='color: #111; font-size: 20px; font-weight: bold; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
         html_parts.append("        <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
         html_parts.append("        <div style='text-align: right;'>")
-        html_parts.append(f"          <div style='font-size: 18px; font-weight: bold; line-height: 1.1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
-        html_parts.append(f"          <div style='font-size: 14.5px; font-weight: 400 !important; margin-top: 0px; line-height: 1.3;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
+        html_parts.append(f"          <div style='font-size: 20px; font-weight: bold; line-height: 1.1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
+        html_parts.append(f"          <div style='font-size: 14.5px; font-weight: bold; margin-top: 0px; line-height: 1.3;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div>")
         html_parts.append("        </div>")
         html_parts.append("      </div>")
         html_parts.append("    </div>")
@@ -612,7 +567,6 @@ elif menu == "2. 절세 계좌":
         # [3] 인사이트 박스
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
         
-        # [수정] 통통했던 표 해결 -> font-size 13.5px 원상 복구 적용
         html_parts.append("  <div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
         html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
         html_parts.append("    <table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
