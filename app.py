@@ -107,6 +107,10 @@ def col(v):
 def clean_label(lbl):
     return re.sub(r'\s*\(\d{2}\.\d+월\)', '', lbl)
 
+# 긴 종목명 말줄임 처리 함수
+def short_name(nm):
+    return nm[:13] + "***" if len(nm) > 13 else nm
+
 @st.cache_data(ttl=60)
 def load():
     try:
@@ -206,7 +210,7 @@ if "_insight" in data:
         return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>"
 
     # =====================================================================
-    # 🧠 ZAPPA 동적 매크로 상관관계 분석 알고리즘 (Dynamic Strategy Engine)
+    # 🧠 ZAPPA 동적 매크로 상관관계 분석 알고리즘
     # =====================================================================
     def get_zappa_macro_strategy(p_dom, p_ovs, p_cash, best_item, best_rate, worst_item, worst_rate, best_acc):
         macro_news = "최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론, 그리고 주요 빅테크 기업들의 실적 가이던스 조정"
@@ -217,11 +221,11 @@ if "_insight" in data:
         insight = f"간밤 <strong>{macro_news}</strong>이 겹치며 글로벌 위험자산 회피 심리가 부각되었습니다. 반면 <strong>{local_news}</strong>입니다. "
         
         if p_ovs > p_dom:
-            insight += f"현재 Andy님의 포트폴리오는 해외/기술주 비중({p_ovs:.1f}%)이 높아 글로벌 매크로 타격을 직접적으로 받을 수 있는 구조입니다. 특히 <strong>{worst_item} ({rs(worst_rate)})</strong>의 부진은 이러한 글로벌 투심 위축을 강하게 반영하고 있습니다. "
+            insight += f"현재 Andy님의 포트폴리오는 해외/기술주 비중({p_ovs:.1f}%)이 높아 글로벌 매크로 타격을 직접적으로 받을 수 있는 구조입니다. 특히 <strong>{short_name(worst_item)} ({rs(worst_rate)})</strong>의 부진은 이러한 글로벌 투심 위축을 강하게 반영하고 있습니다. "
         else:
             insight += f"다행히 현재 Andy님의 포트폴리오는 국내 자산 비중({p_dom:.1f}%)이 높아 글로벌 변동성 대비 방어력이 훌륭한 상태입니다. <strong>{best_acc} 계좌</strong> 중심의 포트 배분이 주효했습니다. "
             
-        insight += f"단기적으로 아웃퍼폼 중인 <strong>{best_item} ({rs(best_rate)})</strong> 등 주도 종목군에서 일부 차익을 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되고 지정학적 리스크가 해소되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
+        insight += f"단기적으로 아웃퍼폼 중인 <strong>{short_name(best_item)} ({rs(best_rate)})</strong> 등 주도 종목군에서 일부 차익을 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되고 지정학적 리스크가 해소되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
         
         return insight
 
@@ -239,16 +243,19 @@ if "_insight" in data:
 
         strategy_text = get_zappa_macro_strategy(p_dom, p_ovs, p_cash, b1_name, b1_rate, w1_name, w1_rate, best_acc_name)
         
-        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; letter-spacing: -0.2px; padding-left: 0px;'>"
+        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>"
         
-        # 시황 분석 소제목 16px
-        t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;"
+        # 16px 짝수 체계 적용 (시황 소제목) - 자간 좁힘 없음
+        t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px; letter-spacing: normal;"
         bullet = "<span style='font-size:11px;'>🔵</span>"
+        
+        # 본문(Paragraph)에만 쫀쫀하게 자간 축소 적용
+        body_style = "letter-spacing: -0.2px;"
 
         def rate_span(v): return f"<span class='{col(v)}' style='font-weight:bold;'>{fmt_p(v)}</span>"
 
-        zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span>현재 <strong>{best_acc_name} 계좌가 전체 수익률({rate_span(best_acc_rate)}) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{b1_name}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{w1_name}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다.</div>"
-        zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 거시 경제 및 향후 대응 전략</span>{strategy_text}</div>"
+        zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div style='{body_style}'>현재 <strong>{best_acc_name} 계좌가 전체 수익률({rate_span(best_acc_rate)}) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{short_name(b1_name)}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{short_name(w1_name)}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다.</div></div>"
+        zappa_html += f"<div style='margin-bottom: 0px;'><span style='{t_style}'>{bullet} 주식 시황 및 향후 대응 전략</span><div style='{body_style}'>{strategy_text}</div></div>"
         zappa_html += "</div>"
         
     except Exception:
@@ -282,9 +289,8 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
     
-    # [수정] 짝수 체계: 라벨 18px, 메인 금액 26px -> 24px로 한 단계 축소
     html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
-    html_parts.append(f"<div style='font-size: 24px; font-weight: bold; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
+    html_parts.append(f"<div style='font-size: 24px; font-weight: 400 !important; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
     html_parts.append("</div>")
     
     html_parts.append("<div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -296,8 +302,6 @@ if "_insight" in data:
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
-    
-    # [수정] 평가금액, 현금성자산, 총 손익 숫자 22px -> 18px 짝수 체계 적용 (간격 유지)
     html_parts.append("<div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>평가금액</div>")
     html_parts.append(f"<div style='color: #111; font-size: 18px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
     html_parts.append("<div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>현금성자산</div>")
@@ -344,6 +348,11 @@ if "_insight" in data:
             acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
             acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
             
+            # 종목 수 동적 카운팅 로직
+            acc_items_list = a.get('상세', [])
+            valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
+            item_count = len(valid_items)
+            
             html_parts.append("<div class='card-sub' style='padding: 10px 15px; display: flex; flex-direction: column; justify-content: space-between; height: 100%;'>")
             html_parts.append("<div>")
             html_parts.append(f"<div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div>")
@@ -352,7 +361,8 @@ if "_insight" in data:
             html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span></div>")
             html_parts.append(f"<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(acc_rate)}</div></div></div>")
             html_parts.append("</div>")
-            html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px;'>* 원금 : {fmt(acc_principal)}</div>")
+            
+            html_parts.append(f"<div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between;'><span>* 원금 : {fmt(acc_principal)}</span><span>{item_count} 종목</span></div>")
             html_parts.append("</div>")
     html_parts.append("</div>") 
     html_parts.append("</div>") 
@@ -361,18 +371,22 @@ if "_insight" in data:
     html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
-    html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 BEST 5</div>")
+    # [수정] 타이틀 변경
+    html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(best_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
-        html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
+        s_nm = short_name(it.get('종목명', '')) # 말줄임 적용
+        html_parts.append(f"<tr><td>{idx+1}</td><td>{s_nm}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     
-    html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 WORST 5</div>")
+    # [수정] 타이틀 변경
+    html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px;'>📉 손익률 부진종목</div>")
     html_parts.append("<table class='main-table' style='margin-bottom: 0px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
     for idx, it in enumerate(worst_5):
         rt = it.get('수익률(%)', 0); pf = it.get('평가손익', 0)
-        html_parts.append(f"<tr><td>{idx+1}</td><td>{it.get('종목명','')}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
+        s_nm = short_name(it.get('종목명', '')) # 말줄임 적용
+        html_parts.append(f"<tr><td>{idx+1}</td><td>{s_nm}</td><td class='{col(rt)}'>{fmt_p(rt)}</td><td class='{col(pf)}'>{fmt(pf, True)}</td><td>{it.get('계좌','')}</td></tr>")
     html_parts.append("</table>")
     html_parts.append("</div>")
     
