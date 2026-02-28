@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import warnings
-import google.generativeai as genai
 import andy_pension_v2
 import os
 import re
@@ -46,9 +45,7 @@ h3{font-size:26px!important;font-weight:bold;margin-bottom:0px; padding-bottom:0
 /* 사이드바 폰트 세팅 */
 div[role="radiogroup"] label { font-size: 15.5px !important; margin-bottom: 8px !important; }
 
-/* =========================================================
-   [ZAPPA 플로팅 배너 CSS] 
-   ========================================================= */
+/* 플로팅 메뉴 */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu),
@@ -69,10 +66,13 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="
 st.markdown(css, unsafe_allow_html=True)
 
 # Session State 초기화
-if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
-if 'show_code' not in st.session_state: st.session_state.show_code = False
+if 'sort_mode' not in st.session_state: 
+    st.session_state.sort_mode = 'init'
+if 'show_code' not in st.session_state: 
+    st.session_state.show_code = False
 if 'init' not in st.session_state:
-    with st.spinner("데이터 업데이트 중..."): andy_pension_v2.generate_asset_data()
+    with st.spinner("데이터 업데이트 중..."): 
+        andy_pension_v2.generate_asset_data()
     st.session_state['init'] = True
     st.cache_data.clear()
 
@@ -82,21 +82,25 @@ if 'init' not in st.session_state:
 def fmt(v, sign=False):
     try:
         val = int(float(v))
-        if sign and val > 0: return f"+{val:,}"
+        if sign and val > 0: 
+            return f"+{val:,}"
         return f"{val:,}"
-    except: return str(v)
+    except: 
+        return str(v)
 
 def fmt_p(v):
     try:
         val = float(v)
         return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
-    except: return str(v)
+    except: 
+        return str(v)
 
 def col(v):
     try:
         val = float(v)
         return "red" if val > 0 else ("blue" if val < 0 else "")
-    except: return ""
+    except: 
+        return ""
 
 def clean_label(lbl):
     return re.sub(r'\s*\(\d{2}\.\d+월\)', '', lbl)
@@ -110,11 +114,14 @@ def short_name(nm):
 @st.cache_data(ttl=60)
 def load():
     try:
-        with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
+        with open('assets.json', 'r', encoding='utf-8') as f: 
+            return json.load(f)
+    except: 
+        return {}
 
 data = load()
-if not data: st.stop()
+if not data: 
+    st.stop()
 tot = data.get("_total", {})
 
 # =========================================================
@@ -123,27 +130,30 @@ tot = data.get("_total", {})
 with st.sidebar:
     st.markdown("<div style='display:flex; align-items:center; gap:10px; margin-bottom:20px;'><span class='zappa-icon'>🤖</span><span style='font-size:24px; font-weight:bold; color:#111; letter-spacing: -0.5px;'>ZAPPA MENU</span></div>", unsafe_allow_html=True)
     
-    # 1. 메인 네비게이션 메뉴
+    # 메인 네비게이션 메뉴
     menu = st.radio(
         "카테고리 선택",
         ("1. 복합 대시보드", "2. 절세 계좌", "3. 일반 계좌", "4. Quant 매매", "5. 가상자산"),
-        index=1, # 기본값을 '절세 계좌'로 세팅
+        index=1, 
         label_visibility="collapsed"
     )
     
     st.markdown("<hr style='margin:25px 0 20px 0; border: none; border-top: 1px dashed #ccc;'>", unsafe_allow_html=True)
     
-    # 2. 퀵 뷰 (전체 자산 요약)
+    # 퀵 뷰 (전체 자산 요약)
     t_asset_all = tot.get('총 자산', tot.get('총자산', 0))
     t_profit_all = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
     t_rate_all = tot.get('수익률(%)', tot.get('손익률(%)', 0))
     
-    # [수정] 퀵뷰에도 '원' 추가
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
         <div style='font-size:13.5px; font-weight:bold; color:#777; margin-bottom:8px;'>⚡ 퀵 뷰 (전체 자산 현황)</div>
-        <div style='font-size:24px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(t_asset_all)}<span style='font-size:16px; font-weight:normal; margin-left:2px;'>원</span></div>
-        <div style='font-size:14px; margin-top:8px; color:#555;'>총 손익: <span class='{col(t_profit_all)}' style='font-weight:bold;'>{fmt(t_profit_all, True)}</span> ({fmt_p(t_rate_all)})</div>
+        <div style='font-size:24px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>
+            {fmt(t_asset_all)}<span style='font-size:16px; font-weight:normal; margin-left:2px;'>원</span>
+        </div>
+        <div style='font-size:14px; margin-top:8px; color:#555;'>
+            총 손익: <span class='{col(t_profit_all)}' style='font-weight:bold;'>{fmt(t_profit_all, True)}</span> ({fmt_p(t_rate_all)})
+        </div>
     </div>
     """
     st.markdown(quick_view_html, unsafe_allow_html=True)
@@ -170,24 +180,28 @@ elif menu == "5. 가상자산":
 
 elif menu == "2. 절세 계좌":
     
+    # ---------------------------------------------------------
+    # 절세계좌 헤더
+    # ---------------------------------------------------------
     c1, c2 = st.columns([8.5, 1.5])
     with c1: 
         st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True):
-            andy_pension_v2.generate_asset_data(); st.cache_data.clear(); st.rerun()
+            andy_pension_v2.generate_asset_data()
+            st.cache_data.clear()
+            st.rerun()
 
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
     FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
-    # =====================================================================
-    # 💡 ZAPPA 자산 카드뷰 템플릿 렌더링
-    # =====================================================================
+    # ---------------------------------------------------------
+    # 절세계좌 메인 카드뷰 렌더링
+    # ---------------------------------------------------------
     if "_insight" in data:
-        
         t_asset = tot.get('총 자산', tot.get('총자산', 0))
         t_profit = tot.get('총 수익', tot.get('총 손익', tot.get('평가손익', 0)))
         t_diff = tot.get('평가손익(1일전)', tot.get('1일전', 0))
@@ -195,7 +209,10 @@ elif menu == "2. 절세 계좌":
         t_rate = tot.get('수익률(%)', tot.get('손익률(%)', 0))
         t_original_sum = tot.get('원금합', 0)
         
-        cash_total = 0; ovs_total = 0; dom_total = 0; all_items = []
+        cash_total = 0
+        ovs_total = 0
+        dom_total = 0
+        all_items = []
         
         for k in FIXED_ACCOUNT_ORDER:
             if k in data:
@@ -226,28 +243,32 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        # [분석 로직] 전일비 상승/하락/횡보 카운팅 및 리스트업
+        # [새로운 분석 로직] 전일비 상승/하락/횡보 카운팅 및 리스트업
         total_tradeable = len(tradeable_items)
-        rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
-        major_rise_list, major_fall_list = [], []
+        rise_cnt = 0
+        fall_cnt = 0
+        flat_cnt = 0
+        major_rise_list = []
+        major_fall_list = []
 
         for it in tradeable_items:
-            d_rate = it.get('전일비(%)', 0) # JSON에 이 키가 있어야 함
+            d_rate = it.get('전일비(%)', 0) 
             nm = short_name(it.get('종목명', ''))
             
             if d_rate >= 0.5:
                 rise_cnt += 1
-                if d_rate >= 3.0: major_rise_list.append(f"{nm}(+{d_rate:.1f}%)")
+                if d_rate >= 3.0:
+                    major_rise_list.append(f"{nm}(▲{d_rate:.2f}%)")
             elif d_rate <= -0.5:
                 fall_cnt += 1
-                if d_rate <= -3.0: major_fall_list.append(f"{nm}({d_rate:.1f}%)")
+                if d_rate <= -3.0:
+                    major_fall_list.append(f"{nm}(▼{abs(d_rate):.2f}%)")
             else:
                 flat_cnt += 1
                 
         str_major_rise = ", ".join(major_rise_list) if major_rise_list else "없음"
         str_major_fall = ", ".join(major_fall_list) if major_fall_list else "없음"
 
-        dom_total = t_asset - cash_total - ovs_total
         p_cash = (cash_total / t_asset * 100) if t_asset > 0 else 0
         p_ovs = (ovs_total / t_asset * 100) if t_asset > 0 else 0
         p_dom = (dom_total / t_asset * 100) if t_asset > 0 else 0
@@ -258,7 +279,8 @@ elif menu == "2. 절세 계좌":
         a_isa = data.get('ISA', {}).get('총 자산', data.get('ISA', {}).get('총자산', 0))
         
         total_for_bar = a_dc + a_irp + a_pension + a_isa
-        if total_for_bar == 0: total_for_bar = 1 
+        if total_for_bar == 0: 
+            total_for_bar = 1 
 
         p_dc = a_dc / total_for_bar * 100
         p_irp = a_irp / total_for_bar * 100
@@ -272,21 +294,21 @@ elif menu == "2. 절세 계좌":
             if p == 0: return ""
             return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>"
 
-        # =====================================================================
-        # 🧠 ZAPPA 동적 매크로 상관관계 분석 알고리즘
-        # =====================================================================
         def get_zappa_macro_strategy(p_dom, p_ovs, p_cash, best_item, best_rate, worst_item, worst_rate, best_acc):
             macro_news = "최근 미국 KCE/PCE 물가 지표의 끈적한 흐름과 연준(Fed)의 금리 인하 신중론, 그리고 주요 빅테크 기업들의 실적 가이던스 조정"
             local_news = "한국 증시는 밸류업 프로그램 기대감과 기업 실적 개선 호재가 맞물리며 견조한 하방 지지력을 보여주는 상황"
+            
             def rs(v): return f"<span class='{col(v)}' style='font-weight:bold;'>{fmt_p(v)}</span>"
             
             insight = f"간밤 <strong>{macro_news}</strong>이 겹치며 글로벌 위험자산 회피 심리가 부각되었습니다. 반면 <strong>{local_news}</strong>입니다. "
+            
             if p_ovs > p_dom:
                 insight += f"현재 Andy님의 포트폴리오는 해외/기술주 비중({p_ovs:.1f}%)이 높아 글로벌 매크로 타격을 직접적으로 받을 수 있는 구조입니다. 특히 <strong>{short_name(worst_item)} ({rs(worst_rate)})</strong>의 부진은 이러한 글로벌 투심 위축을 강하게 반영하고 있습니다. "
             else:
                 insight += f"다행히 현재 Andy님의 포트폴리오는 국내 자산 비중({p_dom:.1f}%)이 높아 글로벌 변동성 대비 방어력이 훌륭한 상태입니다. <strong>{best_acc} 계좌</strong> 중심의 포트 배분이 주효했습니다. "
                 
             insight += f"단기적으로 아웃퍼폼 중인 <strong>{short_name(best_item)} ({rs(best_rate)})</strong> 등 주도 종목군에서 일부 차익을 실현하여 현재 <strong>{p_cash:.1f}% 수준인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다. 향후 빅테크 실적 불확실성이 소화되고 지정학적 리스크가 해소되는 변곡점에서 낙폭 과대 우량주로의 스위칭 리밸런싱을 권고합니다."
+            
             return insight
 
         try:
@@ -306,17 +328,20 @@ elif menu == "2. 절세 계좌":
             strategy_text = get_zappa_macro_strategy(p_dom, p_ovs, p_cash, b1_name, b1_rate, w1_name, w1_rate, best_acc_name)
             
             zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>"
+            
             t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px; letter-spacing: normal;"
             bullet = "<span style='font-size:11px;'>🔵</span>"
             body_style = "letter-spacing: -0.2px;"
 
             def rate_span(v): return f"<span class='{col(v)}' style='font-weight:bold;'>{fmt_p(v)}</span>"
 
-            zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div style='{body_style}'>현재 <strong>{best_acc_name} 계좌가 전체 수익률({rate_span(best_acc_rate)}) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{short_name(b1_name)}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{short_name(w1_name)}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다."
+            zappa_html += f"<div style='margin-bottom: 22px;'><span style='{t_style}'>{bullet} 계좌 현황 및 종목 분석</span><div style='{body_style}'>"
+            zappa_html += f"현재 <strong>{best_acc_name} 계좌가 전체 수익률({rate_span(best_acc_rate)}) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{short_name(b1_name)}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{short_name(w1_name)}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다.<br><br>"
             
-            # 상승/하락/횡보 동적 텍스트 추가
-            zappa_html += f"<br><br>총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong> (▲3%p↑ {len(major_rise_list)}개), 하락 종목은 <strong>{fall_cnt}개</strong>(▼3%p↓ {len(major_fall_list)}개) 이고 <strong>{flat_cnt}개</strong> 종목은 횡보입니다.<br>"
-            zappa_html += f"<span style='font-size:13px; color:#777;'>※ ▲3%p↑ 종목 : {str_major_rise}<br>"
+            # 동적 텍스트 추가 (전일비 상승/하락)
+            zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong> (▲3%p↑ {len(major_rise_list)}개), 하락 종목은 <strong>{fall_cnt}개</strong>(▼3%p↓ {len(major_fall_list)}개) 이고 <strong>{flat_cnt}개</strong> 종목은 횡보입니다.<br>"
+            zappa_html += f"<span style='font-size:12.5px; color:#888;'>(#전일비 ±0.5%p 이내는 횡보합으로 간주, 0.5%p 이상 상승시 상승 종목, -0.5%p 이하 하락시 하락 종목으로 간주#)</span><br>"
+            zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ ▲3%p↑ 종목 : {str_major_rise}<br>"
             zappa_html += f"※ ▼3%p↓ 종목 : {str_major_fall}</span>"
             
             zappa_html += "</div></div>"
@@ -326,7 +351,6 @@ elif menu == "2. 절세 계좌":
         except Exception:
             zappa_html = "<p>ZAPPA 실시간 매크로 분석 엔진을 로딩하는 중입니다...</p>"
 
-        # ZAPPA 자산 현황 보고 타이틀
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
         stop1 = p_cash
@@ -346,14 +370,13 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
         
-        # [1] 인사이트 메인 카드 (Left)
+        # [1] 메인 카드뷰 (Left)
         html_parts.append("<div class='insight-left'>")
         html_parts.append("<div class='card-main'>")
-        
         html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
         html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
         
-        # 메인 금액 600 Semi-Bold 적용 및 '원' 글자 추가
+        # 600 Semi-Bold 적용 및 '원' 글자 추가
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         html_parts.append(f"<div style='font-size: 24px; font-weight: 600 !important; color: #111; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 18px; font-weight: normal; margin-left: 2px;'>원</span></div>")
         html_parts.append("</div>")
@@ -422,7 +445,7 @@ elif menu == "2. 절세 계좌":
                 acc_profit = a.get('총 수익', a.get('총 손익', a.get('평가손익', 0)))
                 acc_rate = a.get('수익률(%)', a.get('손익률(%)', 0))
                 
-                # 종목 수 카운팅
+                # 종목 수 동적 카운팅 로직 (안전자산 제외)
                 acc_items_list = a.get('상세', [])
                 valid_items = [i for i in acc_items_list if i.get('종목명') != '[ 합계 ]' and '현금성자산' not in i.get('종목명', '') and '삼성신종종류형' not in i.get('종목명', '')]
                 item_count = len(valid_items)
@@ -446,8 +469,8 @@ elif menu == "2. 절세 계좌":
         
         # [3] 하단 시황 및 베스트/워스트
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
-        
         html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
+        
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 우수종목 (TOP 5)</div>")
         html_parts.append("<table class='main-table' style='margin-bottom: 20px; font-size: 13.5px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>계좌</th></tr>")
         
@@ -473,7 +496,6 @@ elif menu == "2. 절세 계좌":
         html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
         html_parts.append(zappa_html)
         html_parts.append("</div>")
-        
         html_parts.append("</div>") 
         
         # HTML 렌더링
@@ -607,7 +629,7 @@ elif menu == "2. 절세 계좌":
             
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
             
-            h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"
+            h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>전일비(%)</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"
             h3 = [unit_html, h3_table]
             items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
             
@@ -623,8 +645,10 @@ elif menu == "2. 절세 계좌":
                 
                 item_asset = i.get('총 자산', i.get('총자산', 0))
                 i_rate = i.get('수익률(%)', i.get('손익률(%)', 0))
+                d_rate = i.get('전일비(%)', 0.0)
+                d_rate_str = "-" if is_s else fmt_p(d_rate)
                 
-                row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(item_asset)}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i_rate)}'>{fmt_p(i_rate)}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
+                row += f"<td>{i.get('비중',0):.1f}%</td><td>{fmt(item_asset)}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(d_rate) if not is_s else \"\"}'>{d_rate_str}</td><td class='{col(i_rate)}'>{fmt_p(i_rate)}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>"
                 h3.append(row)
                 
             h3.append("</table>")
