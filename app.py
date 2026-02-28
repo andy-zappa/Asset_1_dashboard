@@ -453,6 +453,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: baseline;'>")
         html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         
+        # [우측 메인 카드 총자산] 좌측과 완벽히 동일한 24px + 700 굵기 + 자간 -0.5px 적용
         html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append("      </div>")
         html_parts.append("      <div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -671,7 +672,7 @@ elif menu == "2. 절세 계좌":
 
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
-        # [수정] 플로팅 메뉴를 6개의 컬럼으로 분리 및 등락률 토글 추가
+        # [수정] 플로팅 메뉴 버튼 배치 (6개 컬럼) 및 ↕️ 아이콘 적용
         b1, b2, b3, b4, b5, b6 = st.columns(6)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -683,7 +684,8 @@ elif menu == "2. 절세 계좌":
         with b4:
             if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with b5:
-            if st.button("🔄 등락률 [ + ]" if st.session_state.show_change_rate else "🔄 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+            # ↕️ 아이콘으로 변경
+            if st.button("↕️ 등락률 [ + ]" if st.session_state.show_change_rate else "↕️ 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
         with b6:
             if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
@@ -708,7 +710,6 @@ elif menu == "2. 절세 계좌":
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
-                # [수정] 테이블 헤더: '전일비' 삭제, 맨 끝에 '등락률' 조건부 추가
                 h3_table = f"<table class='main-table'><tr><th>종목명</th>{'<th>종목코드</th>' if st.session_state.show_code else ''}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{'<th>등락률</th>' if st.session_state.show_change_rate else ''}</tr>"
                 h3 = [unit_html, h3_table]
                 items = [i for i in a.get('상세', []) if i.get('종목명') != "[ 합계 ]"]
@@ -746,7 +747,7 @@ elif menu == "2. 절세 계좌":
                     row += f"<td>{fmt(i.get('매입가', '-'))}</td>"
                     row += f"<td>{fmt(i.get('현재가', '-'))}</td>"
                     
-                    # [수정] 등락률 열을 현재가 다음으로 배치 (조건부 노출)
+                    # [수정] 등락률 열을 현재가 다음(맨 우측)으로 배치
                     if st.session_state.show_change_rate:
                         row += f"<td class='{d_class}'>{d_rate_str}</td>"
                         
