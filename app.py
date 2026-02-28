@@ -172,7 +172,7 @@ if "_insight" in data:
                 else:
                     dom_total += val
 
-    # 현금성자산, 삼성화재, 삼성신종종류형 등 안전/고정자산 제외 로직 적용
+    # 안전자산/고정금리형 상품 WORST 집계 제외
     exclude_kws = ["현금성자산", "삼성화재", "삼성신종종류형"]
     tradeable_items = [it for it in all_items if not any(kw in it.get("종목명", "") for kw in exclude_kws)]
     tradeable_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
@@ -239,9 +239,10 @@ if "_insight" in data:
 
         strategy_text = get_zappa_macro_strategy(p_dom, p_ovs, p_cash, b1_name, b1_rate, w1_name, w1_rate, best_acc_name)
         
-        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; letter-spacing: -0.2px; padding-left: 0px; margin-left: -15px;'>"
-        # 14px 짝수 체계 적용 (시황 소제목)
-        t_style = "color:#111; font-size:14px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;"
+        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; letter-spacing: -0.2px; padding-left: 0px;'>"
+        
+        # 시황 분석 소제목 16px
+        t_style = "color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;"
         bullet = "<span style='font-size:11px;'>🔵</span>"
 
         def rate_span(v): return f"<span class='{col(v)}' style='font-weight:bold;'>{fmt_p(v)}</span>"
@@ -254,7 +255,7 @@ if "_insight" in data:
         zappa_html = "<p>ZAPPA 실시간 매크로 분석 엔진을 로딩하는 중입니다...</p>"
 
     # =====================================================================
-    # [복구 완료] ZAPPA 자산 현황 보고 타이틀
+    # ZAPPA 자산 현황 보고 타이틀
     # =====================================================================
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
     # =====================================================================
@@ -281,9 +282,9 @@ if "_insight" in data:
     html_parts.append("<div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: baseline;'>")
     
-    # 짝수 체계: 라벨 18px, 금액 26px
+    # [수정] 짝수 체계: 라벨 18px, 메인 금액 26px -> 24px로 한 단계 축소
     html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
-    html_parts.append(f"<div style='font-size: 26px; font-weight: bold; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
+    html_parts.append(f"<div style='font-size: 24px; font-weight: bold; color: #111; line-height: 1;'>{fmt(t_asset)}</div>")
     html_parts.append("</div>")
     
     html_parts.append("<div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -295,13 +296,14 @@ if "_insight" in data:
     html_parts.append(donut_html)
     
     html_parts.append("<div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
-    # 14px 짝수 체계 적용 (메인 카드 라벨)
+    
+    # [수정] 평가금액, 현금성자산, 총 손익 숫자 22px -> 18px 짝수 체계 적용 (간격 유지)
     html_parts.append("<div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>평가금액</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 18px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(t_asset - cash_total)}</div>")
     html_parts.append("<div style='color: #777; font-size: 14px; text-align: right; line-height: 22px;'>현금성자산</div>")
-    html_parts.append(f"<div style='color: #111; font-size: 22px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
+    html_parts.append(f"<div style='color: #111; font-size: 18px; font-weight: 400 !important; text-align: right; line-height: 22px;'>{fmt(cash_total)}</div>")
     html_parts.append("<div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 22px;'>총 손익</div>")
-    html_parts.append(f"<div style='text-align: right;'><div style='font-size: 22px; font-weight: bold; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 15.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
+    html_parts.append(f"<div style='text-align: right;'><div style='font-size: 18px; font-weight: bold; line-height: 22px;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 14.5px; font-weight: 400 !important; margin-top: 4px;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div>")
     html_parts.append("</div>")
     html_parts.append("</div>")
 
@@ -320,7 +322,6 @@ if "_insight" in data:
     html_parts.append("</div>")
     html_parts.append("<div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
-    # 14px 짝수 체계 적용 (은퇴 자산 목표)
     html_parts.append(f"<span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 은퇴 자산 목표 10억 달성률 <span style='font-size: 13.5px; color: #888;'>(* 원금 : {fmt(t_original_sum)})</span></span>")
     html_parts.append(f"<span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span>")
     html_parts.append("</div>")
@@ -357,7 +358,7 @@ if "_insight" in data:
     html_parts.append("</div>") 
     html_parts.append("</div>") 
     
-    html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 30px; align-items: stretch;'>")
+    html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>")
     
     html_parts.append("<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>")
     html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 8px;'>📈 손익률 BEST 5</div>")
@@ -375,7 +376,7 @@ if "_insight" in data:
     html_parts.append("</table>")
     html_parts.append("</div>")
     
-    html_parts.append("<div style='flex: 1; padding-left: 10px;'>")
+    html_parts.append("<div style='flex: 1.1; padding-left: 5px;'>")
     html_parts.append("<div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
     html_parts.append(zappa_html)
     html_parts.append("</div>")
@@ -385,7 +386,7 @@ if "_insight" in data:
     html_str = "".join(html_parts).replace("\n", "")
     st.markdown(html_str, unsafe_allow_html=True)
 
-# 섹션 1, 2, 3 부분 (안전망 키맵핑)
+# 섹션 1, 2, 3 부분
 unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
 st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
