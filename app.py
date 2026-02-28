@@ -419,7 +419,6 @@ elif menu == "2. 절세 계좌":
         
         zappa_html += f"현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(best_acc_rate)}' style='font-weight:bold;'>{fmt_p(best_acc_rate)}</span>) 1위</strong>를 기록하며 하방을 견인 중입니다. 개별 종목에서는 <strong>{b1_name}</strong>가 시장 트렌드를 주도하며 효자 역할을 수행 중이나, <strong>{w1_name}</strong> 등 일부 섹터는 외부 매크로 요인에 의해 단기 조정을 겪고 있습니다. "
         zappa_html += f"총 <strong>{total_tradeable}개</strong> 종목 중 전일비 상승 종목은 <strong>{rise_cnt}개</strong>, 하락 종목은 <strong>{fall_cnt}개</strong>, 횡보합은 <strong>{flat_cnt}개</strong> 입니다.<br>"
-        zappa_html += f"<span style='font-size:12.5px; color:#888;'>(# 상승 : 전일비 +0.3%p 초과, 하락 : 전일비 -0.3%p 미만, 횡보 : -0.3%p ~ +0.3%p 변동 #)</span><br>"
         zappa_html += f"<span style='font-size:13.5px; color:#555;'>※ 상승 종목 : {str_rise}<br>"
         zappa_html += f"※ 하락 종목 : {str_fall}</span>"
         
@@ -562,7 +561,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("  </div>")
         
         html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'>")
-        html_parts.append("    <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>💡 시황 및 향후 전망</div>")
+        html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>상승 > +0.2%p  /  하락 < -0.2%p  /  횡보 -0.2%p ~ +0.2%p</div></div>")
         html_parts.append(f"    {zappa_html}")
         html_parts.append("  </div>")
         
