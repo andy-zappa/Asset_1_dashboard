@@ -152,7 +152,7 @@ div[role="radiogroup"] label {
 }
 
 /* =========================================================
-   [ZAPPA 플로팅 배너 CSS] - 원본 100% 이식 복구
+   [ZAPPA 플로팅 배너 CSS]
    ========================================================= */
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 32px !important; }
 
@@ -258,7 +258,6 @@ with st.sidebar:
     t_profit_all = tot.get('총 수익', 0)
     t_rate_all = tot.get('수익률(%)', 0)
     
-    # [좌측 퀵뷰] 24px + 600 굵기 + 자간 -0.5px (우측 메인과 완벽 동일)
     quick_view_html = f"""
     <div style='background-color: #f8f9fa; border-radius: 12px; padding: 18px 15px; border: 1px solid #eaeaea;'>
         <div style='font-size:13.5px; font-weight:bold; color:#777; margin-bottom:8px;'>⚡ 퀵 뷰 (전체 자산 현황)</div>
@@ -344,9 +343,6 @@ elif menu == "2. 절세 계좌":
         best_5 = tradeable_items[:5]
         worst_5 = tradeable_items[::-1][:5]
 
-        # ==========================================================
-        # ETF 특성 반영 상승/하락 카운팅 로직 (±0.2%p 초과)
-        # ==========================================================
         total_tradeable = len(tradeable_items)
         rise_cnt, fall_cnt, flat_cnt = 0, 0, 0
         rise_list, fall_list = [], []
@@ -449,19 +445,20 @@ elif menu == "2. 절세 계좌":
         # [1] 메인 카드뷰 (Left)
         html_parts.append("<div class='insight-left'>")
         html_parts.append("  <div class='card-main'>")
-        html_parts.append("    <div style='display: flex; flex-direction: column; margin-bottom: auto;'>")
-        html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: baseline;'>")
-        html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         
-        # [우측 메인 카드 총자산] 좌측과 완벽히 동일한 24px + 700 굵기 + 자간 -0.5px 적용
-        html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
-        html_parts.append("      </div>")
-        html_parts.append("      <div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
+        # ==============================================================
+        # 🔥 수정된 부분: 총 자산 수치를 감싸는 화이트 하이라이트 박스 추가
+        # ==============================================================
+        html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: auto;'>")
+        html_parts.append("      <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1; margin-top: 10px;'>총 자산</div>")
+        html_parts.append("      <div style='background-color: #ffffff; border: 1.5px solid #233b5d; border-radius: 8px; padding: 12px 16px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04);'>")
+        html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 10px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append(f"        <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div>")
         html_parts.append("      </div>")
         html_parts.append("    </div>") 
+        # ==============================================================
 
-        html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 22px; padding-left: 15px;'>")
+        html_parts.append("    <div style='display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 22px; padding-left: 15px;'>")
         html_parts.append(donut_html)
         html_parts.append("      <div style='display: grid; grid-template-columns: auto auto; row-gap: 8px; column-gap: 15px; justify-content: end; align-items: baseline; width: 100%; margin-top: 18px;'>")
         
@@ -672,7 +669,6 @@ elif menu == "2. 절세 계좌":
 
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
-        # [수정] 플로팅 메뉴 버튼 배치 (6개 컬럼) 및 ↕️ 아이콘 적용
         b1, b2, b3, b4, b5, b6 = st.columns(6)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -684,7 +680,6 @@ elif menu == "2. 절세 계좌":
         with b4:
             if st.button("📈 손익률 [ ● ]" if st.session_state.sort_mode == 'rate' else "📈 손익률 [ ○ ]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with b5:
-            # ↕️ 아이콘으로 변경
             if st.button("↕️ 등락률 [ + ]" if st.session_state.show_change_rate else "↕️ 등락률 [ - ]", type="primary" if st.session_state.show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
         with b6:
             if st.button("💻 종목코드 [ + ]" if st.session_state.show_code else "💻 종목코드 [ - ]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
@@ -747,7 +742,6 @@ elif menu == "2. 절세 계좌":
                     row += f"<td>{fmt(i.get('매입가', '-'))}</td>"
                     row += f"<td>{fmt(i.get('현재가', '-'))}</td>"
                     
-                    # [수정] 등락률 열을 현재가 다음(맨 우측)으로 배치
                     if st.session_state.show_change_rate:
                         row += f"<td class='{d_class}'>{d_rate_str}</td>"
                         
@@ -757,4 +751,3 @@ elif menu == "2. 절세 계좌":
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
