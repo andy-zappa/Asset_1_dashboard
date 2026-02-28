@@ -822,7 +822,8 @@ elif menu == "2. 절세 계좌":
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 # =========================================================
-# [ 3. 일반 계좌 대시보드 ]
+# =========================================================
+# [ 3. 일반 계좌 대시보드 (완벽 이식) ]
 # =========================================================
 elif menu == "3. 일반 계좌":
     c1, c2 = st.columns([8.5, 1.5])
@@ -869,6 +870,20 @@ elif menu == "3. 일반 계좌":
     tradeable_items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
     best_5 = tradeable_items[:5]; worst_5 = tradeable_items[::-1][:5]
 
+    # 🔥 [핵심 수정] NameError 방지 및 총 전일비(t_diff) 자동 계산 로직 추가
+    t_diff = 0
+    for it in tradeable_items:
+        try:
+            d_rate = float(it.get('전일비', 0))
+            c_p = float(it.get('현재가', 0)) if type(it.get('현재가', 0)) in [int, float] else 0
+            qty = float(it.get('수량', 0)) if type(it.get('수량', 0)) in [int, float] else 0
+            if c_p > 0 and d_rate != 0:
+                diff = (c_p - (c_p / (1 + d_rate / 100))) * qty
+                if 'USA' in it.get('계좌', ''): diff *= g_data.get('환율', 1443.1)
+                t_diff += diff
+        except: pass
+    t_diff_7 = 0 # 일반계좌는 아직 전주비 데이터가 없으므로 0 처리
+
     rise_cnt = sum(1 for it in tradeable_items if float(it.get('전일비', 0)) > 0.2)
     fall_cnt = sum(1 for it in tradeable_items if float(it.get('전일비', 0)) < -0.2)
     flat_cnt = len(tradeable_items) - rise_cnt - fall_cnt
@@ -884,7 +899,7 @@ elif menu == "3. 일반 계좌":
     p_dom = dom_total / total_for_bar * 100
     p_ovs = ovs_total / total_for_bar * 100
     p_cash = cash_total / total_for_bar * 100
-    def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
+    def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p >= 5 else (f"<div style='width: {p}%; background-color: {color}; height: 100%;'></div>" if p > 0 else "")
 
     acc_rates = sorted([(k, (g_data[k].get('총수익_KRW',0) / principals[k] * 100 if principals[k]>0 else 0)) for k in GEN_ACC_ORDER if k in g_data], key=lambda x: x[1], reverse=True)
     best_acc_name = {'DOM1':'국내1.키움', 'DOM2':'국내2.삼성', 'USA1':'미국1.키움', 'USA2':'미국2.키움'}.get(acc_rates[0][0]) if acc_rates else "전체"
