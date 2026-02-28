@@ -20,13 +20,13 @@ css = """
 h3 {
     font-size: 26px !important;
     font-weight: bold;
-    margin-bottom: 0px;
+    margin-bottom: -10px;
     padding-bottom: 0px;
 }
 .sub-title {
     font-size: 22px !important;
     font-weight: bold;
-    margin: 25px 0 10px;
+    margin: 12px 0 10px;
 }
 .main-table {
     width: 100%;
@@ -744,6 +744,7 @@ elif menu == "2. 절세 계좌":
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
