@@ -452,7 +452,7 @@ elif menu == "2. 절세 계좌":
         html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: baseline;'>")
         html_parts.append("        <div style='font-size: 18px; font-weight: bold; color: #111; line-height: 1;'>총 자산</div>")
         
-        # [우측 메인 카드 총자산] 좌측과 완벽히 동일한 24px + 600 굵기 + 자간 -0.5px 적용
+        # [우측 메인 카드 총자산] 좌측과 완벽히 동일한 24px + 700 굵기 + 자간 -0.5px 적용
         html_parts.append(f"        <div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: -0.5px; line-height: 1;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div>")
         html_parts.append("      </div>")
         html_parts.append("      <div style='display: flex; justify-content: flex-end; align-items: baseline; margin-top: 8px;'>")
@@ -744,4 +744,5 @@ elif menu == "2. 절세 계좌":
                     
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
