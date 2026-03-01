@@ -128,7 +128,7 @@ def generate_general_data():
         for p in processed:
             p['비중'] = (p['총자산'] / sum_asset * 100) if sum_asset > 0 else 0
             
-        # 🎯 [ 합  계 ] 명칭 통일 적용
+        # 🎯 [ 합  계 ] 띄어쓰기 명칭 통일
         processed.append({
             "종목명": "[ 합  계 ]", "코드": "-", "비중": 100.0, "총자산": sum_asset, "평가손익": sum_profit, 
             "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
