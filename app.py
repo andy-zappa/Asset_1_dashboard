@@ -149,6 +149,20 @@ if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
 if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_change_rate = False
 
+# [수정 3] 일반계좌: 해외 계좌 KRW/USD 토글 버튼 상태 관리용 session_state 추가
+if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
+if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
+
+def toggle_usa_krw():
+    st.session_state.usa_show_krw = not st.session_state.usa_show_krw
+    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
+        st.session_state.usa_show_usd = True
+
+def toggle_usa_usd():
+    st.session_state.usa_show_usd = not st.session_state.usa_show_usd
+    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
+        st.session_state.usa_show_krw = True
+
 if 'current_view' not in st.session_state:
     st.session_state.current_view = '대시보드'
 
@@ -664,8 +678,15 @@ elif st.session_state.current_view == '일반계좌':
 
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {g_data.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
-    # 🎯 변수 선언 위치 오류(NameError) 방지 및 흰색 카드 제목 변경
     nm_table = {'DOM1':'키움증권(국내)', 'DOM2':'삼성증권(국내)', 'USA1':'키움증권(해외Ⅰ)', 'USA2':'키움증권(해외Ⅱ)'}
+    
+    # [수정 1] 일반계좌: [3] 계좌별 상세 내역의 종목명 타이틀 업데이트용 딕셔너리
+    nm_table_expander = {
+        'DOM1': '키움증권(국내Ⅰ) : 6312-5329',
+        'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01',
+        'USA1': '키움증권(해외Ⅰ) : 6312-5329',
+        'USA2': '키움증권(해외Ⅱ) : 6443-5993'
+    }
     
     principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
     GEN_ACC_ORDER = ['DOM1', 'DOM2', 'USA1', 'USA2']
@@ -787,11 +808,13 @@ elif st.session_state.current_view == '일반계좌':
     html_parts.append("      <div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
     html_parts.append(f"        {render_bar(p_dom1, '#b4a7d6')}{render_bar(p_dom2, '#f4b183')}{render_bar(p_usa1, '#a9d18e')}{render_bar(p_usa2, '#ffd966')}")
     html_parts.append("      </div>")
+    
+    # [수정 2] 일반계좌: 노란색 카드 막대그래프 하단 인덱스명 업데이트 (국내Ⅰ, 국내Ⅱ, 해외Ⅰ, 해외Ⅱ)
     html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>국내1. 키움</div>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>국내2. 삼성</div>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>해외1. 키움</div>")
-    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>해외2. 키움</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>키움증권(국내Ⅰ)</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>삼성증권(국내Ⅱ)</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>키움증권(해외Ⅰ)</div>")
+    html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>키움증권(해외Ⅱ)</div>")
     html_parts.append("      </div>")
     html_parts.append("      <div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>")
     html_parts.append("        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>")
@@ -968,16 +991,27 @@ elif st.session_state.current_view == '일반계좌':
         is_usa = 'USA' in k
         nm = nm_table[k]
         
-        with st.expander(f"📂 [ {nm} ] 종목별 현황", expanded=False):
+        # [수정 1 반영] Expand 명칭을 변경된 nm_table_expander 딕셔너리로 적용
+        with st.expander(f"📂 [ {nm_table_expander[k]} ] 종목별 현황", expanded=False):
             s_data = next((i for i in a.get('상세', []) if i.get('종목명') == "[ 합  계 ]"), {})
             curr_asset = a.get('총자산_KRW', 0); a_prof = a.get('총수익_KRW', 0)
             a_rate = (a_prof / principals[k] * 100) if principals[k] else 0
             
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
             
-            mode = "KRW"
             rate_val = g_data.get('환율', 1443.1)
-            u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
+            
+            # [수정 3] 일반계좌: 단위 표기를 조건부로 분기 처리 (해외인 경우 토글 버튼 출력)
+            if is_usa:
+                u_c1, u_c2, u_c3, u_c4, u_c5 = st.columns([6.8, 1.4, 0.2, 1.4, 0.2])
+                with u_c1: st.markdown("<div style='text-align:right;font-size:13.5px;color:#555;margin-top:6px;font-weight:bold;'>단위 :</div>", unsafe_allow_html=True)
+                with u_c2: st.button("KRW ( ● )" if st.session_state.usa_show_krw else "KRW ( ○ )", key=f"btn_k_{k}", on_click=toggle_usa_krw, use_container_width=True)
+                with u_c3: st.markdown("<div style='text-align:center;font-size:14px;color:#ccc;margin-top:6px;'>/</div>", unsafe_allow_html=True)
+                with u_c4: st.button("USD ( ● )" if st.session_state.usa_show_usd else "USD ( ○ )", key=f"btn_u_{k}", on_click=toggle_usa_usd, use_container_width=True)
+                # 토글을 직접 렌더링했으므로 u_html 변수는 비워둠
+                u_html = ""
+            else:
+                u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
             if st.session_state.gen_show_change_rate:
                 code_th = "<th rowspan='2'>종목코드</th>" if st.session_state.show_code else ""
@@ -1012,6 +1046,27 @@ elif st.session_state.current_view == '일반계좌':
             elif st.session_state.gen_sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
             elif st.session_state.gen_sort_mode == 'rate': items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
             
+            # [수정 3] 일반계좌: KRW / USD 선택 상태에 따라 표 내의 통화 표기를 변환해 주는 공통 함수 추가
+            def fmt_dual(val_raw, sign=False):
+                if val_raw == '-': return '-'
+                if not is_usa: return fmt(val_raw, sign)
+                
+                val_krw = val_raw * rate_val
+                val_usd = val_raw
+                show_k = st.session_state.usa_show_krw
+                show_u = st.session_state.usa_show_usd
+                
+                s_krw = fmt(val_krw, sign)
+                # 달러 표기 시 소수점 4자리 명시 반영
+                s_usd = fmt(val_usd, sign, decimal=4) 
+                
+                if show_k and show_u:
+                    return f"{s_krw}<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({s_usd})</span>"
+                elif show_u:
+                    return s_usd
+                else:
+                    return s_krw
+
             for i in ([s_data] + items + [cash_item]):
                 if i.get('종목명') == "예수금" and i.get('총자산', 0) == 0 and s_data.get('총자산', 0) > 0: continue 
                 is_s = (i.get('종목명') == "[ 합  계 ]")
@@ -1019,21 +1074,21 @@ elif st.session_state.current_view == '일반계좌':
                 row += f"<td>{i.get('종목명', '')}</td>"
                 if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>"
                 
-                def cv(val): return (val * rate_val) if (is_usa and mode == 'KRW' and val != '-') else val
-                
-                ia = cv(i.get('총자산', 0)); ip = cv(i.get('평가손익', 0))
-                ibuy = cv(i.get('매입가', '-')) if i.get('매입가') != '-' else '-'
-                icurr = cv(i.get('현재가', '-')) if i.get('현재가') != '-' else '-'
+                # [수정 3 로직] fmt_dual 함수를 적용하여 달러/원화 데이터 포맷팅
+                ia = fmt_dual(i.get('총자산', 0))
+                ip = fmt_dual(i.get('평가손익', 0), True)
+                ibuy = fmt_dual(i.get('매입가', '-'))
+                icurr = fmt_dual(i.get('현재가', '-'))
                 
                 pct = (i.get('총자산', 0) / s_data.get('총자산', 1) * 100) if s_data.get('총자산', 1) > 0 else 0
                 d_rate = safe_float(i.get('전일비', 0))
                 curr_price = safe_float(i.get('현재가', 0))
                 
-                diff_amt = cv((curr_price - (curr_price / (1 + d_rate / 100)))) if curr_price > 0 and d_rate != 0 else 0
-                diff_amt_str = fmt(diff_amt, True) if diff_amt != 0 else "0"
+                diff_amt_raw = (curr_price - (curr_price / (1 + d_rate / 100))) if curr_price > 0 and d_rate != 0 else 0
+                diff_amt_str = fmt_dual(diff_amt_raw, True) if diff_amt_raw != 0 else "0"
                 d_rate_str = "-" if is_s else fmt_p(d_rate); d_class = "" if is_s else col(d_rate)
                 
-                row += f"<td>{pct:.1f}%</td><td>{fmt(ia)}</td><td class='{col(ip)}'>{fmt(ip, True)}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td><td>{fmt(i.get('수량', '-'))}</td><td>{fmt(ibuy)}</td><td>{fmt(icurr)}</td>"
+                row += f"<td>{pct:.1f}%</td><td>{ia}</td><td class='{col(i.get('평가손익', 0))}'>{ip}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td><td>{fmt(i.get('수량', '-'))}</td><td>{ibuy}</td><td>{icurr}</td>"
                 
                 if st.session_state.gen_show_change_rate:
                     if is_s or i.get('종목명') == '예수금': row += "<td>-</td>"
