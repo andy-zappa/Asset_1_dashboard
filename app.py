@@ -265,21 +265,30 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# 🚨 [중요 버그 수정] 앱 초기화 시 절세계좌 + 일반계좌 모두 강제 생성 로직 추가
-if 'init' not in st.session_state:
-    with st.spinner("데이터 초기 업데이트 중... 잠시만 기다려주세요 🚀"):
-        try: 
+# =========================================================
+# 🚨 [생명유지장치] 앱 켜질 때 JSON 파일 자동 복구 로직
+# =========================================================
+@st.cache_data(ttl=60)
+def load():
+    try:
+        if not os.path.exists('assets.json') or os.path.getsize('assets.json') == 0:
             andy_pension_v2.generate_asset_data()
-        except Exception as e: 
-            print(f"Pension Data Init Error: {e}")
-            
-        try: 
+        with open('assets.json', 'r', encoding='utf-8') as f: 
+            return json.load(f)
+    except: return {}
+
+@st.cache_data(ttl=60)
+def load_gen():
+    try:
+        if not os.path.exists('assets_general.json') or os.path.getsize('assets_general.json') == 0:
             andy_general_v1.generate_general_data()
-        except Exception as e: 
-            print(f"General Data Init Error: {e}")
-            
-    st.session_state['init'] = True
-    st.cache_data.clear()
+        with open('assets_general.json', 'r', encoding='utf-8') as f: 
+            return json.load(f)
+    except: return {}
+
+data = load()
+g_data = load_gen()
+tot = data.get("_total", {})
 
 def safe_float(val):
     try:
@@ -309,22 +318,6 @@ def col(v):
     except: return ""
 
 def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
-
-@st.cache_data(ttl=60)
-def load():
-    try:
-        with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-@st.cache_data(ttl=60)
-def load_gen():
-    try:
-        with open('assets_general.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-data = load()
-g_data = load_gen()
-tot = data.get("_total", {})
 
 # =========================================================
 # 📍 사이드바 렌더링 및 퀵뷰 
@@ -388,7 +381,7 @@ with st.sidebar:
              label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
 
 # =========================================================
-# 🔀 라우팅 제어 로직
+# 🔀 라우팅 제어 로직 (대시보드 / 절세계좌 / 일반계좌 등)
 # =========================================================
 if st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 ZAPPA 통합 포트폴리오 비중 (Treemap)</h3>", unsafe_allow_html=True)
@@ -590,9 +583,9 @@ elif st.session_state.current_view == '절세계좌':
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True):
-            with st.spinner("절세계좌 데이터 업데이트 중..."):
+            with st.spinner("데이터 업데이트 중..."):
                 try: andy_pension_v2.generate_asset_data()
-                except Exception as e: st.error(f"오류: {e}")
+                except: pass
             st.cache_data.clear(); st.rerun()
 
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
@@ -1392,6 +1385,7 @@ elif st.session_state.current_view == '일반계좌':
                 
                 orig_nm = '피그마' if i.get('종목명') == 'Figma' else i.get('종목명', '')
                 
+                # 🎯 로고 적용 로직 (예수금은 지폐, 일반 종목은 기업 로고)
                 if is_s:
                     row += f"<td>{orig_nm}</td>"
                 elif '예수금' in orig_nm or '현금' in orig_nm:
