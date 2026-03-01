@@ -24,7 +24,7 @@ html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container 
 /* 🎯 사이드바 최상단 여백 제거 (DashBoard 버튼 위로 올리기) */
 section[data-testid="stSidebar"] .block-container { padding-top: 1.5rem !important; gap: 0 !important; }
 
-/* 🎯 대시보드 호버(Hover) 버튼 애니메이션 및 다이나믹 효과 (흔들림 제거, 스르륵 위로) */
+/* 🎯 대시보드 호버(Hover) 버튼 애니메이션 및 다이나믹 효과 */
 [data-testid="stSidebar"] button[kind="secondary"] {
     background-color: #ffffff;
     border: 1.5px solid #dcdcdc;
@@ -35,7 +35,6 @@ section[data-testid="stSidebar"] .block-container { padding-top: 1.5rem !importa
     width: 100% !important;
     margin-bottom: 5px !important;
 }
-/* 🎯 로봇 아이콘 유채색 강제 출력 설정 */
 [data-testid="stSidebar"] button[kind="secondary"] p {
     font-size: 20px !important;
     font-weight: bold !important;
@@ -79,7 +78,6 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
     border-right: 1px solid #dcdcdc !important;  
     vertical-align: middle; 
 }
-/* 모서리 밖으로 테두리 겹침 방지 */
 .main-table tr th:last-child, .main-table tr td:last-child { border-right: none !important; }
 .main-table tr:last-child th, .main-table tr:last-child td { border-bottom: none !important; }
 .main-table th.th-eval { border-right: none !important; }
@@ -107,13 +105,12 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
 
-/* 라디오 버튼 2x2 격자 배치 CSS */
 div[role="radiogroup"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 0px !important; }
 div[role="radiogroup"] label { font-size: 14.5px !important; margin-bottom: 0px !important; }
 
-/* 컴팩트 Selectbox CSS */
-div[data-baseweb="select"] { min-height: 32px !important; font-size: 13.5px !important; }
-div[data-baseweb="select"] > div { padding: 2px 8px !important; border-radius: 6px !important; min-height: 32px !important; }
+/* 🎯 [수정 1] 컴팩트 Selectbox CSS 강화 (사이즈 축소) */
+div[data-baseweb="select"] { min-height: 28px !important; font-size: 12px !important; }
+div[data-baseweb="select"] > div { padding: 0px 8px !important; border-radius: 6px !important; min-height: 28px !important; }
 
 .zappa-icon { font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important; font-size: 26px !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) { position: fixed !important; bottom: 30px !important; right: 30px !important; left: auto !important; transform: none !important; width: max-content !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.98) !important; padding: 10px 25px !important; border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important; z-index: 999999 !important; display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; gap: 4px !important; }
@@ -127,7 +124,7 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="
 """
 st.markdown(css, unsafe_allow_html=True)
 
-# 🎯 React 기반의 Streamlit에서 스무스 스크롤을 강제 적용하는 완벽 JS 스크립트
+# 🎯 스무스 스크롤 강제 적용 JS
 components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -269,28 +266,27 @@ with st.sidebar:
     total_orig = tot.get('원금합', 1) + g_orig_all
     total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
-    # ⚡, ⏳, 🌱 아이콘 추가 적용 완료
     st.markdown(f"<div style='background-color: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 12px; color: #ffffff;'><div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>⚡ 총 자산 통합 (KRW)</div><div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)}</div><div style='font-size:13.5px; margin-top:2px; color:#cccccc;'><span style='font-weight:bold; color: {'#ff4b4b' if total_profit > 0 else '#4b8bf5'};'>{fmt(total_profit, True)}</span> ({fmt_p(total_rate)})</div></div>", unsafe_allow_html=True)
     st.markdown(f"<div style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)}</div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span>&nbsp;({fmt_p(p_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div></div>", unsafe_allow_html=True)
     st.markdown(f"<div style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 15px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)}</div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span>&nbsp;({fmt_p(g_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div></div>", unsafe_allow_html=True)
 
 # =========================================================
-# 🔀 라우팅 제어 로직
+# 🔀 라우팅 제어 로직 (대시보드 / 절세계좌 / 일반계좌 등)
 # =========================================================
 if st.session_state.current_view == '대시보드':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 통합 자산 포트폴리오 (Treemap)</h3>", unsafe_allow_html=True)
+    # 🎯 [수정 4] Dashboard Treemap 적용 (Plotly 활용)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 ZAPPA 통합 포트폴리오 비중 (Treemap)</h3>", unsafe_allow_html=True)
     
-    # 🎯 Plotly Treemap 렌더링을 위한 데이터 로직
     try:
         import pandas as pd
-        import plotly.express as px
         import plotly.graph_objects as go
         HAS_PLOTLY = True
     except ImportError:
         HAS_PLOTLY = False
-        st.warning("Plotly 및 Pandas 라이브러리가 필요합니다. 설치 후 확인해주세요. (pip install plotly pandas)")
+        st.warning("대시보드 차트를 보려면 plotly와 pandas 라이브러리 설치가 필요합니다. (pip install plotly pandas)")
 
     if HAS_PLOTLY:
+        # 중복 종목을 합산하여 트립맵 데이터를 생성하는 함수
         def get_treemap_data(account_keys, data_source, is_usa=False):
             items_dict = {}
             for k in account_keys:
@@ -299,17 +295,15 @@ if st.session_state.current_view == '대시보드':
                 for item in data_source[k].get('상세', []):
                     nm = item.get('종목명', '').strip()
                     if nm in ['[ 합  계 ]']: continue
-                    
-                    # Figma 명칭 병합 처리 
-                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    if nm.upper() == 'FIGMA': nm = '피그마' # 명칭 보정
                     
                     asset = safe_float(item.get('총자산', item.get('총 자산', 0))) * fx
                     if asset <= 0: continue
                     
                     d_rate = safe_float(item.get('전일비', 0))
-                    # 원금(base_amt) 역산으로 가중 평균 등락률 산출
                     base_amt = asset / (1 + d_rate/100) if d_rate != -100 else asset
                     
+                    # 동일 종목명 합산 (중복 처리)
                     if nm in items_dict:
                         items_dict[nm]['asset'] += asset
                         items_dict[nm]['base_amt'] += base_amt
@@ -324,13 +318,14 @@ if st.session_state.current_view == '대시보드':
                 res.append({'종목명': nm, '자산': cur_asset, '전일비': calc_rate})
             return res
 
+        # 다크 테마 트리맵 렌더링 함수
         def render_treemap(data_list, title):
             if not data_list: return None
             df = pd.DataFrame(data_list)
-            # 색상 매핑 (상승=Red, 하락=Blue 기반 한국 주식시장 색상)
-            df['color'] = df['전일비'].apply(lambda x: '#e84141' if x > 0.05 else ('#3170e3' if x < -0.05 else '#6b7280'))
-            df['text_asset'] = df['자산'].apply(lambda x: f"{int(x):,}")
-            df['text_rate'] = df['전일비'].apply(lambda x: f"▲{x:.2f}%" if x > 0 else (f"▼{abs(x):.2f}%" if x < 0 else "0.00%"))
+            # 한국 주식시장 & 요청 이미지 컬러 매핑 (Red: 상승, Green: 하락)
+            df['color'] = df['전일비'].apply(lambda x: '#d94141' if x > 0.05 else ('#2c8c4a' if x < -0.05 else '#555555'))
+            df['text_asset'] = df['자산'].apply(lambda x: f"₩{int(x):,}")
+            df['text_rate'] = df['전일비'].apply(lambda x: f"{x:+.1f}%" if x != 0 else "0.0%")
             df['display_text'] = "<b>" + df['종목명'] + "</b><br>" + df['text_rate'] + "<br>" + df['text_asset']
             
             fig = go.Figure(go.Treemap(
@@ -342,28 +337,29 @@ if st.session_state.current_view == '대시보드':
                 marker_colors=df['color'],
                 hovertemplate="<b>%{label}</b><br>자산: %{value:,.0f}원<br>등락률: %{customdata:.2f}%<extra></extra>",
                 customdata=df['전일비'],
-                textfont=dict(size=14, color='white')
+                textfont=dict(size=14, color='white', family='Arial')
             ))
+            
             fig.update_layout(
-                margin=dict(t=45, l=15, r=15, b=15),
-                title=dict(text=title, font=dict(size=18, color='#111', family='sans-serif'), x=0.01, y=0.98),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                height=380
+                margin=dict(t=40, l=10, r=10, b=10),
+                title=dict(text=title, font=dict(size=17, color='#ffffff', family='sans-serif'), x=0.02, y=0.97),
+                paper_bgcolor='#1e222d',
+                plot_bgcolor='#1e222d',
+                height=420 # 노란색 카드 사이즈에 맞춤
             )
             return fig
 
-        # 🎯 3개의 뷰어 (트리맵) 출력
-        st.markdown("<div class='insight-bottom-box' style='padding: 10px 15px;'>", unsafe_allow_html=True)
+        # 3개의 구역으로 나누어 출력
+        st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
         pension_data = get_treemap_data(['DC', 'IRP', 'PENSION', 'ISA'], data)
         if pension_data:
-            fig_pension = render_treemap(pension_data, "⏳ 절세계좌 전체 포트폴리오 비중")
+            fig_pension = render_treemap(pension_data, "⏳ 절세계좌 통합 포트폴리오")
             st.plotly_chart(fig_pension, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("<div class='insight-bottom-box' style='padding: 10px 15px;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
             dom_data = get_treemap_data(['DOM1', 'DOM2'], g_data)
             if dom_data:
                 fig_dom = render_treemap(dom_data, "🌱 일반계좌 (한국) 포트폴리오")
@@ -371,7 +367,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown("</div>", unsafe_allow_html=True)
             
         with c2:
-            st.markdown("<div class='insight-bottom-box' style='padding: 10px 15px;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
             usa_data = get_treemap_data(['USA1', 'USA2'], g_data, is_usa=True)
             if usa_data:
                 fig_usa = render_treemap(usa_data, "🌱 일반계좌 (미국) 포트폴리오")
@@ -476,9 +472,9 @@ elif st.session_state.current_view == '절세계좌':
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-        # 🎯 [수정 1] 절세계좌 도넛 라벨 미세 좌표 이동
+        # 🎯 [수정 3] 절세계좌 도넛 라벨 텍스트 (+5px) 상향 이동 (bottom: 27px)
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
-        donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 48px; right: -5px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 20px; left: -10px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
+        donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 48px; right: -5px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
@@ -762,12 +758,19 @@ elif st.session_state.current_view == '일반계좌':
 
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {g_data.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
 
-    # 🎯 [수정 2 반영] 일반계좌 전체 통합 명칭 테이블 (국내Ⅰ, 국내Ⅱ 형식으로 일괄 적용)
+    # 🎯 일반계좌 전체 통합 명칭 테이블 (국내Ⅰ, 국내Ⅱ 형식으로 일괄 적용)
     nm_table = {
         'DOM1': '키움증권(국내Ⅰ)',
         'DOM2': '삼성증권(국내Ⅱ)',
         'USA1': '키움증권(해외Ⅰ)',
         'USA2': '키움증권(해외Ⅱ)'
+    }
+    
+    nm_table_expander = {
+        'DOM1': '키움증권(국내Ⅰ) : 6312-5329',
+        'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01',
+        'USA1': '키움증권(해외Ⅰ) : 6312-5329',
+        'USA2': '키움증권(해외Ⅱ) : 6443-5993'
     }
     
     principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
@@ -801,7 +804,6 @@ elif st.session_state.current_view == '일반계좌':
                 if item.get('종목명') == '[ 합  계 ]': continue
                 it_copy = item.copy()
                 
-                # 🎯 [수정 3] 만약 데이터에 Figma가 있으면 피그마로 보정
                 if it_copy.get('종목명') == 'Figma': it_copy['종목명'] = '피그마'
                 
                 it_copy['계좌'] = short_nm; it_copy['_k'] = k
@@ -858,9 +860,9 @@ elif st.session_state.current_view == '일반계좌':
     p_ovs_donut = (ovs_total/t_asset*100) if t_asset>0 else 0
     p_dom_donut = (dom_total/t_asset*100) if t_asset>0 else 0
     
-    # 🎯 [수정 1] 일반계좌 도넛 라벨 미세 좌표 이동
+    # 🎯 [수정 2] 일반계좌 도넛 라벨 텍스트 (+8px) 상향 이동 (bottom: 33px)
     donut_css = f"background: conic-gradient(#ffffff 0% {p_cash_donut}%, #d9d9d9 {p_cash_donut}% {p_cash_donut+p_ovs_donut}%, #8c8c8c {p_cash_donut+p_ovs_donut}% 100%);"
-    donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash_donut:.0f}%<br>현금성자산</div><div style='position: absolute; top: 55px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs_donut:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 25px; left: -25px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom_donut:.0f}%<br>국내투자</div></div>"
+    donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash_donut:.0f}%<br>현금성자산</div><div style='position: absolute; top: 55px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs_donut:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 33px; left: -25px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom_donut:.0f}%<br>국내투자</div></div>"
 
     html_parts = []
     html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
@@ -895,8 +897,6 @@ elif st.session_state.current_view == '일반계좌':
     html_parts.append("      <div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>")
     html_parts.append(f"        {render_bar(p_dom1, '#b4a7d6')}{render_bar(p_dom2, '#f4b183')}{render_bar(p_usa1, '#a9d18e')}{render_bar(p_usa2, '#ffd966')}")
     html_parts.append("      </div>")
-    
-    # 🎯 [수정 2] 일반계좌: 노란색 카드 막대그래프 하단 인덱스명 업데이트
     html_parts.append("      <div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'>")
     html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>키움증권(국내Ⅰ)</div>")
     html_parts.append("        <div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>삼성증권(국내Ⅱ)</div>")
@@ -1068,7 +1068,6 @@ elif st.session_state.current_view == '일반계좌':
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 🎯 계좌별 상단 계좌번호 연동용 딕셔너리
     acc_num_map = {'DOM1': '6312-5329', 'DOM2': '7162669785-01', 'USA1': '6312-5329', 'USA2': '6443-5993'}
 
     for k in GEN_ACC_ORDER:
@@ -1077,8 +1076,7 @@ elif st.session_state.current_view == '일반계좌':
         is_usa = 'USA' in k
         nm = nm_table[k]
         
-        # 🎯 [수정 1] 익스팬더 타이틀명 일괄 보정
-        with st.expander(f"📂 [ {nm} : {acc_num_map[k]} ] 종목별 현황", expanded=False):
+        with st.expander(f"📂 [ {nm_table_expander[k]} ] 종목별 현황", expanded=False):
             s_data = next((i for i in a.get('상세', []) if i.get('종목명') == "[ 합  계 ]"), {})
             curr_asset = a.get('총자산_KRW', 0); a_prof = a.get('총수익_KRW', 0)
             a_rate = (a_prof / principals[k] * 100) if principals[k] else 0
@@ -1087,20 +1085,20 @@ elif st.session_state.current_view == '일반계좌':
             
             rate_val = g_data.get('환율', 1443.1)
             
-            # 🎯 [수정 4] 해외계좌 통화 단위 표기를 컴팩트한 Selectbox (드롭다운)로 변경
+            # 🎯 [수정 1] 해외계좌 통화 단위 표기를 컴팩트한 Selectbox(드롭다운)로 변경
             if is_usa:
-                u_c1, u_c2 = st.columns([8.5, 1.5])
+                u_c1, u_c2 = st.columns([8.8, 1.2])
                 with u_c2:
                     currency_mode = st.selectbox(
                         "표기단위",
-                        options=["KRW (원화)", "USD (달러)", "KRW / USD 병기"],
-                        index=2, # 기본값: 병기
+                        options=["[ 원화(₩) ]", "[ 달러($) ]", "[원화 / 달러]"],
+                        index=2,
                         label_visibility="collapsed",
                         key=f"curr_sel_box_{k}"
                     )
                 u_html = ""
             else:
-                currency_mode = "KRW (원화)"
+                currency_mode = "[ 원화(₩) ]"
                 u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
             if st.session_state.gen_show_change_rate:
@@ -1136,7 +1134,7 @@ elif st.session_state.current_view == '일반계좌':
             elif st.session_state.gen_sort_mode == 'profit': items.sort(key=lambda x: x.get('평가손익', 0), reverse=True)
             elif st.session_state.gen_sort_mode == 'rate': items.sort(key=lambda x: x.get('수익률(%)', 0), reverse=True)
             
-            # 🎯 컴팩트 Selectbox 선택값에 따른 분기 로직 적용
+            # 🎯 선택값에 따른 분기 로직 적용
             def fmt_dual(val_raw, sign=False):
                 if val_raw == '-': return '-'
                 if not is_usa: return fmt(val_raw, sign)
@@ -1147,9 +1145,9 @@ elif st.session_state.current_view == '일반계좌':
                 s_krw = fmt(val_krw, sign)
                 s_usd = fmt(val_usd, sign, decimal=4) 
                 
-                if currency_mode == "KRW / USD 병기":
+                if currency_mode == "[원화 / 달러]":
                     return f"{s_krw}<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({s_usd})</span>"
-                elif currency_mode == "USD (달러)":
+                elif currency_mode == "[ 달러($) ]":
                     return s_usd
                 else:
                     return s_krw
@@ -1159,7 +1157,6 @@ elif st.session_state.current_view == '일반계좌':
                 is_s = (i.get('종목명') == "[ 합  계 ]")
                 row = f"<tr class='sum-row'>" if is_s else "<tr>"
                 
-                # 🎯 [수정 3 적용] 앱 단에서 피그마 명칭 한글 보정
                 display_nm = '피그마' if i.get('종목명') == 'Figma' else i.get('종목명', '')
                 row += f"<td>{display_nm}</td>"
                 
