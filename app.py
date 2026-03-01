@@ -207,14 +207,25 @@ setInterval(bindSidebarClicks, 1000);
 """, height=0)
 
 # =========================================================
-# 🎯 글로벌 로고/아이콘 매핑 로직
+# 🎯 [핵심] 글로벌 로고/아이콘 완벽 매핑 (Google Favicon + 순수 CSS)
 # =========================================================
 GUARANTEED_LOGOS = {
+    # 미국 주식
     "알파벳 A": "google.com", "팔란티어 테크": "palantir.com", "TSMC(ADR)": "tsmc.com",
     "QQQ 레버리지 3X ETF": "invesco.com", "테슬라": "tesla.com", "마이크로소프트": "microsoft.com",
     "애플": "apple.com", "미국 반도체 3X ETF": "direxion.com", "엔비디아": "nvidia.com",
     "아이온큐": "ionq.com", "리케티 컴퓨팅": "rigetti.com", "디 웨이브 퀀텀": "dwavesys.com",
-    "아이렌": "iren.com", "피그마": "figma.com"
+    "아이렌": "iren.com", "피그마": "figma.com",
+    # 한국 주식 & ETF 추가 (운용사 도메인 매핑)
+    "삼성전자": "samsung.com", "현대차": "hyundai.com", "CJ": "cj.net", 
+    "두산에너빌리티": "doosanenerbility.com", "한화오션": "hanwhaocean.com",
+    "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com",
+    "KODEX 레버리지": "samsungfund.com", "KODEX 200": "samsungfund.com",
+    "KODEX 미국나스닥100": "samsungfund.com", "KODEX 200타겟위클리커버드콜": "samsungfund.com",
+    "KODEX 미국AI테크TOP10타겟": "samsungfund.com", "KODEX 미국나스닥100데일리": "samsungfund.com",
+    "TIGER 미국S&P500": "tigeretf.com", "TIGER 미국필라델피아반도체나스닥": "tigeretf.com",
+    "TIGER 미국배당다우존스": "tigeretf.com", "PLUS 고배당주": "hanwhafund.com",
+    "RISE 200위클리커버드콜": "kbstarfund.com"
 }
 
 def get_logo_html(nm):
@@ -223,14 +234,21 @@ def get_logo_html(nm):
     domain = GUARANTEED_LOGOS.get(nm)
     
     if domain:
-        img_url = f"https://logo.clearbit.com/{domain}?size=40"
+        # 방화벽 차단이 없는 구글 파비콘 API 사용
+        img_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
+        return f"<img src='{img_url}' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:8px; margin-bottom:2px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); background-color:white; object-fit:contain;'>"
     else:
+        # 로고가 없을 경우, 100% 엑스박스가 안뜨는 '순수 CSS 텍스트 뱃지' 즉석 생성
         clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', nm)
-        short_str = clean_nm[:2] if clean_nm else "Z"
-        safe_nm = urllib.parse.quote(short_str)
-        img_url = f"https://ui-avatars.com/api/?name={safe_nm}&background=f1f5f9&color=334155&rounded=true&size=40&font-size=0.45&bold=true"
+        short_str = clean_nm[:1] if clean_nm else "Z"
         
-    return f"<img src='{img_url}' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:8px; margin-bottom:2px; box-shadow: 0 1px 2px rgba(0,0,0,0.15);'>"
+        colors = ["#e6f2ff", "#e6ffe6", "#ffe6e6", "#fff0e6", "#f0e6ff", "#ffe6f9", "#e6ffff", "#f5ffe6"]
+        text_colors = ["#0066cc", "#006600", "#cc0000", "#cc5200", "#5200cc", "#cc00a3", "#00cccc", "#669900"]
+        idx = sum(ord(c) for c in short_str) % len(colors)
+        bg_color = colors[idx]
+        txt_color = text_colors[idx]
+        
+        return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{bg_color}; color:{txt_color}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{short_str}</span>"
 
 
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
@@ -266,7 +284,7 @@ def on_menu_change():
         st.session_state.current_view = st.session_state.menu_sel
 
 # =========================================================
-# 🚨 [생명유지장치] 앱 켜질 때 JSON 파일 자동 복구 로직
+# 🚨 앱 켜질 때 JSON 파일 자동 복구 로직 (에러 완벽 차단)
 # =========================================================
 @st.cache_data(ttl=60)
 def load():
@@ -381,7 +399,7 @@ with st.sidebar:
              label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
 
 # =========================================================
-# 🔀 라우팅 제어 로직 (대시보드 / 절세계좌 / 일반계좌 등)
+# 🔀 라우팅 제어 로직
 # =========================================================
 if st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 ZAPPA 통합 포트폴리오 비중 (Treemap)</h3>", unsafe_allow_html=True)
@@ -575,7 +593,7 @@ elif st.session_state.current_view == '암호화폐':
     st.info("💡 비트코인 등 가상자산 포트폴리오 모니터링 화면이 구축될 예정입니다.")
 
 # =========================================================
-# [ Part 2 ] 절세계좌 대시보드 (로직 혼합 금지)
+# [ Part 2 ] 절세계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -583,9 +601,9 @@ elif st.session_state.current_view == '절세계좌':
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True):
-            with st.spinner("데이터 업데이트 중..."):
+            with st.spinner("절세계좌 데이터 업데이트 중..."):
                 try: andy_pension_v2.generate_asset_data()
-                except: pass
+                except Exception as e: st.error(f"오류: {e}")
             st.cache_data.clear(); st.rerun()
 
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
@@ -1153,7 +1171,7 @@ elif st.session_state.current_view == '일반계좌':
         html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
     html_parts.append("    </table>")
     
-    html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [국내] 손익률 부진종목 <span style='font-size:12px; color:#888; font-weight:normal;'>(+5% 미만)</span></div>")
+    html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [국내] 손익률 부진종목</div>")
     html_parts.append("    <table class='main-table' style='margin-bottom: 25px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
     for idx, it in enumerate(dom_worst): 
         c_p = safe_float(it.get('현재가', 0))
@@ -1385,7 +1403,7 @@ elif st.session_state.current_view == '일반계좌':
                 
                 orig_nm = '피그마' if i.get('종목명') == 'Figma' else i.get('종목명', '')
                 
-                # 🎯 로고 적용 로직 (예수금은 지폐, 일반 종목은 기업 로고)
+                # 🎯 로고 적용 로직 (예수금은 지폐, 일반 종목은 기업/운용사 로고 및 뱃지)
                 if is_s:
                     row += f"<td>{orig_nm}</td>"
                 elif '예수금' in orig_nm or '현금' in orig_nm:
