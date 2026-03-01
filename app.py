@@ -108,7 +108,7 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 div[role="radiogroup"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 0px !important; }
 div[role="radiogroup"] label { font-size: 14.5px !important; margin-bottom: 0px !important; }
 
-/* 🎯 [수정 1] 컴팩트 Selectbox CSS - 텍스트 잘림 현상 방지 및 13.5px 고정 */
+/* 🎯 컴팩트 Selectbox CSS - 텍스트 잘림 현상 방지 및 13.5px 고정 */
 div[data-baseweb="select"] { min-height: 34px !important; font-size: 13.5px !important; }
 div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 6px !important; min-height: 34px !important; }
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
@@ -151,6 +151,19 @@ if 'gen_sort_mode' not in st.session_state: st.session_state.gen_sort_mode = 'in
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
 if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_change_rate = False
+
+if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
+if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
+
+def toggle_usa_krw():
+    st.session_state.usa_show_krw = not st.session_state.usa_show_krw
+    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
+        st.session_state.usa_show_usd = True
+
+def toggle_usa_usd():
+    st.session_state.usa_show_usd = not st.session_state.usa_show_usd
+    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
+        st.session_state.usa_show_krw = True
 
 # 🎯 대시보드 버튼 클릭 시 뷰 충돌 버그 방지를 위한 세션 라우팅 로직
 if 'current_view' not in st.session_state:
@@ -283,7 +296,6 @@ with st.sidebar:
 # 🔀 라우팅 제어 로직 (대시보드 / 절세계좌 / 일반계좌 등)
 # =========================================================
 if st.session_state.current_view == '대시보드':
-    # 🎯 [수정 4] Dashboard Treemap 완벽 연동
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 ZAPPA 통합 포트폴리오 비중 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -294,7 +306,6 @@ if st.session_state.current_view == '대시보드':
         HAS_PLOTLY = False
 
     if HAS_PLOTLY:
-        # 중복 종목을 합산하여 트립맵 데이터를 생성하는 함수
         def get_treemap_data(account_keys, data_source, is_usa=False):
             items_dict = {}
             for k in account_keys:
@@ -303,7 +314,7 @@ if st.session_state.current_view == '대시보드':
                 for item in data_source[k].get('상세', []):
                     nm = item.get('종목명', '').strip()
                     if nm in ['[ 합  계 ]']: continue
-                    if nm.upper() == 'FIGMA': nm = '피그마' # 명칭 보정
+                    if nm.upper() == 'FIGMA': nm = '피그마'
                     
                     asset = safe_float(item.get('총자산', item.get('총 자산', 0))) * fx
                     if asset <= 0: continue
@@ -311,7 +322,6 @@ if st.session_state.current_view == '대시보드':
                     d_rate = safe_float(item.get('전일비', 0))
                     base_amt = asset / (1 + d_rate/100) if d_rate != -100 else asset
                     
-                    # 🎯 동일 종목명 합산 로직 (중복 자동 병합)
                     if nm in items_dict:
                         items_dict[nm]['asset'] += asset
                         items_dict[nm]['base_amt'] += base_amt
@@ -326,11 +336,9 @@ if st.session_state.current_view == '대시보드':
                 res.append({'종목명': nm, '자산': cur_asset, '전일비': calc_rate})
             return res
 
-        # 다크 테마 트리맵 렌더링 함수
         def render_treemap(data_list, title):
             if not data_list: return None
             df = pd.DataFrame(data_list)
-            # 한국 주식시장 & 요청 이미지 컬러 매핑 (Red: 상승, Green: 하락)
             df['color'] = df['전일비'].apply(lambda x: '#d94141' if x > 0.05 else ('#2c8c4a' if x < -0.05 else '#555555'))
             df['text_asset'] = df['자산'].apply(lambda x: f"₩{int(x):,}")
             df['text_rate'] = df['전일비'].apply(lambda x: f"{x:+.1f}%" if x != 0 else "0.0%")
@@ -353,20 +361,22 @@ if st.session_state.current_view == '대시보드':
                 title=dict(text=title, font=dict(size=17, color='#ffffff', family='sans-serif'), x=0.02, y=0.97),
                 paper_bgcolor='#1e222d',
                 plot_bgcolor='#1e222d',
-                height=420 # 노란색 카드 사이즈에 맞춤
+                height=420
             )
             return fig
 
-        # 3개의 구역으로 나누어 출력
-        st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
-        pension_data = get_treemap_data(['DC', 'IRP', 'PENSION', 'ISA'], data)
-        if pension_data:
-            fig_pension = render_treemap(pension_data, "⏳ 절세계좌 통합 포트폴리오")
-            st.plotly_chart(fig_pension, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        # 🎯 3개의 구역을 나란히 배치하여 크기를 완벽하게 통일 (st.columns(3))
+        c1, c2, c3 = st.columns(3)
         
-        c1, c2 = st.columns(2)
         with c1:
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+            pension_data = get_treemap_data(['DC', 'IRP', 'PENSION', 'ISA'], data)
+            if pension_data:
+                fig_pension = render_treemap(pension_data, "⏳ 절세계좌 통합 포트폴리오")
+                st.plotly_chart(fig_pension, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        with c2:
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
             dom_data = get_treemap_data(['DOM1', 'DOM2'], g_data)
             if dom_data:
@@ -374,7 +384,7 @@ if st.session_state.current_view == '대시보드':
                 st.plotly_chart(fig_dom, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
             
-        with c2:
+        with c3:
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
             usa_data = get_treemap_data(['USA1', 'USA2'], g_data, is_usa=True)
             if usa_data:
@@ -482,9 +492,8 @@ elif st.session_state.current_view == '절세계좌':
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-        # 🎯 [수정 3] 절세계좌 도넛 라벨 텍스트 (+5px) 상향 이동 (bottom: 27px)
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
-        donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 48px; right: -5px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 32px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
+        donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 48px; right: -5px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
@@ -868,7 +877,6 @@ elif st.session_state.current_view == '일반계좌':
     p_ovs_donut = (ovs_total/t_asset*100) if t_asset>0 else 0
     p_dom_donut = (dom_total/t_asset*100) if t_asset>0 else 0
     
-    # 🎯 [수정 2] 일반계좌 도넛 라벨 텍스트 (+8px) 상향 이동 (bottom: 32px), 우로 3px 이동 (left: -22px)
     donut_css = f"background: conic-gradient(#ffffff 0% {p_cash_donut}%, #d9d9d9 {p_cash_donut}% {p_cash_donut+p_ovs_donut}%, #8c8c8c {p_cash_donut+p_ovs_donut}% 100%);"
     donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash_donut:.0f}%<br>현금성자산</div><div style='position: absolute; top: 55px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs_donut:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 32px; left: -22px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom_donut:.0f}%<br>국내투자</div></div>"
 
@@ -1076,6 +1084,8 @@ elif st.session_state.current_view == '일반계좌':
 
     st.markdown("<br>", unsafe_allow_html=True)
     
+    acc_num_map = {'DOM1': '6312-5329', 'DOM2': '7162669785-01', 'USA1': '6312-5329', 'USA2': '6443-5993'}
+
     for k in GEN_ACC_ORDER:
         if k not in g_data: continue
         a = g_data[k]
@@ -1091,9 +1101,8 @@ elif st.session_state.current_view == '일반계좌':
             
             rate_val = g_data.get('환율', 1443.1)
             
-            # 🎯 [수정 1] 해외계좌 통화 단위 표기 텍스트 변경 및 컴팩트 박스 적용
             if is_usa:
-                u_c1, u_c2 = st.columns([8.8, 1.2]) # 박스 사이즈를 작게 축소
+                u_c1, u_c2 = st.columns([8.8, 1.2])
                 with u_c2:
                     currency_mode = st.selectbox(
                         "표기단위",
