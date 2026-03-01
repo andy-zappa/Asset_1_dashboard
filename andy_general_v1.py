@@ -63,7 +63,7 @@ def generate_general_data():
         {"종목명": "한국항공우주", "코드": "047810", "수량": 35, "매입가": 177646, "현재가": 192600, "전일비": 4.73},
         {"종목명": "POSCO홀딩스", "코드": "005490", "수량": 15, "매입가": 392467, "현재가": 415000, "전일비": 1.84},
         {"종목명": "셀트리온", "코드": "068270", "수량": 6, "매입가": 241417, "현재가": 237500, "전일비": -1.86},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496} # 👈 예수금 업데이트
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496} 
     ]
 
     dom2 = [
@@ -132,17 +132,20 @@ def generate_general_data():
             "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
         })
         
-        # 💡 DB가 없어 추적이 불가능한 과거 데이터 공간 추가 (임시값)
         krw_profit = (sum_profit * usd_krw) if is_usa else sum_profit
         return {
             "상세": processed,
             "총자산_KRW": (sum_asset * usd_krw) if is_usa else sum_asset,
             "총수익_KRW": krw_profit,
             "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy,
-            "평가손익(7일전)": krw_profit * 0.95, # 추후 DB 연동 시 교체
+            "평가손익(7일전)": krw_profit * 0.95, 
             "평가손익(15일전)": krw_profit * 0.90,
             "평가손익(30일전)": krw_profit * 0.85
         }
+
+    now = datetime.now()
+    weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
+    time_str = now.strftime(f"%Y/%m/%d({weekdays_kr[now.weekday()]}) / %H:%M:%S")
 
     final_data = {
         "DOM1": process_and_update(dom1), 
@@ -150,13 +153,11 @@ def generate_general_data():
         "USA1": process_and_update(usa1, True), 
         "USA2": process_and_update(usa2, True),
         "환율": usd_krw, 
-        "조회시간": datetime.now().strftime("%Y/%m/%d(%a) / %H:%M:%S")
+        "조회시간": time_str
     }
     
     with open('assets_general.json', 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
-        
-    print("✅ ZAPPA 데이터 추출 완료 및 저장 성공!")
 
 if __name__ == "__main__":
     generate_general_data()
