@@ -120,7 +120,7 @@ div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
 div[data-testid="stSelectbox"] label { display: none !important; }
 
-/* 플로팅 배너 CSS 수정 */
+/* 🎯 플로팅 배너 CSS 수정 (상단 우측 고정, 호버 시 밝은 회색 배경 적용) */
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) { 
     position: fixed !important; 
     top: 55px !important; 
@@ -145,9 +145,10 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-tes
 }
 div.element-container:has(span#zappa-floating-menu) { display: none !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 26px !important; min-height: 26px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 13.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; white-space: nowrap !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background: transparent !important; }
+/* 플로팅 버튼 호버 액션 */
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background-color: #e5e7eb !important; border-radius: 4px !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
 """
@@ -207,7 +208,7 @@ setInterval(bindSidebarClicks, 1000);
 """, height=0)
 
 # =========================================================
-# 🎯 [핵심] 글로벌 로고/아이콘 완벽 매핑 (Google Favicon + 순수 CSS)
+# 🎯 글로벌 로고/아이콘 매핑 로직
 # =========================================================
 GUARANTEED_LOGOS = {
     # 미국 주식
@@ -234,11 +235,9 @@ def get_logo_html(nm):
     domain = GUARANTEED_LOGOS.get(nm)
     
     if domain:
-        # 방화벽 차단이 없는 구글 파비콘 API 사용
         img_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=64"
         return f"<img src='{img_url}' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:8px; margin-bottom:2px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); background-color:white; object-fit:contain;'>"
     else:
-        # 로고가 없을 경우, 100% 엑스박스가 안뜨는 '순수 CSS 텍스트 뱃지' 즉석 생성
         clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', nm)
         short_str = clean_nm[:1] if clean_nm else "Z"
         
@@ -283,9 +282,7 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# =========================================================
-# 🚨 앱 켜질 때 JSON 파일 자동 복구 로직 (에러 완벽 차단)
-# =========================================================
+# 🚨 앱 켜질 때 JSON 파일 자동 복구 로직
 @st.cache_data(ttl=60)
 def load():
     try:
@@ -593,7 +590,7 @@ elif st.session_state.current_view == '암호화폐':
     st.info("💡 비트코인 등 가상자산 포트폴리오 모니터링 화면이 구축될 예정입니다.")
 
 # =========================================================
-# [ Part 2 ] 절세계좌 대시보드
+# [ Part 2 ] 절세계좌 대시보드 (로직 혼합 금지)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -795,7 +792,9 @@ elif st.session_state.current_view == '절세계좌':
         unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
         
         st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
+        
+        # 🎯 [수정 반영] 제목에 KRW 추가
+        st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
 
         h1_table = """
         <table class='main-table'>
@@ -827,7 +826,9 @@ elif st.session_state.current_view == '절세계좌':
         ag_tot = t_asset - t_buy_total
         ay_tot = (ag_tot / t_buy_total * 100) if t_buy_total > 0 else 0
         st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
+        
+        # 🎯 [수정 반영] 제목에 KRW 추가
+        st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
         h2_table = """
         <table class='main-table'>
@@ -896,7 +897,8 @@ elif st.session_state.current_view == '절세계좌':
                             safe_pct += item.get('비중', 0)
                     extra_info_html = f"<div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 🔴 위험자산 : {100.0 - safe_pct:.1f}%&nbsp;&nbsp;/&nbsp;&nbsp;🟢 안전자산 : {safe_pct:.1f}% ]</div>"
                 
-                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
+                # 🎯 [수정 반영] 제목에 KRW 추가
+                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
                 if st.session_state.show_change_rate:
                     code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
@@ -967,7 +969,7 @@ elif st.session_state.current_view == '절세계좌':
                 st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 3 ] 일반계좌 대시보드 (로직 혼합 금지)
+# [ Part 3 ] 일반계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -1232,8 +1234,10 @@ elif st.session_state.current_view == '일반계좌':
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
     unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
+    
     st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
+    # 🎯 표 상단 요약에 KRW 추가
+    st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
 
     h1_table = """
     <table class='main-table'>
@@ -1263,7 +1267,8 @@ elif st.session_state.current_view == '일반계좌':
     ag_tot = t_asset - t_buy_total
     ay_tot = (ag_tot / t_buy_total * 100) if t_buy_total > 0 else 0
     st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='summary-text'>● 총자산 : <span class='summary-val'>{fmt(t_asset)}</span> / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
+    # 🎯 표 상단 요약에 KRW 추가
+    st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
     h2_table = """
     <table class='main-table'>
@@ -1327,7 +1332,8 @@ elif st.session_state.current_view == '일반계좌':
             curr_asset = a.get('총자산_KRW', 0); a_prof = a.get('총수익_KRW', 0)
             a_rate = (a_prof / principals[k] * 100) if principals[k] else 0
             
-            st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
+            # 🎯 [수정 반영] 제목에 KRW 추가
+            st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
             
             rate_val = g_data.get('환율', 1443.1)
             
@@ -1403,7 +1409,6 @@ elif st.session_state.current_view == '일반계좌':
                 
                 orig_nm = '피그마' if i.get('종목명') == 'Figma' else i.get('종목명', '')
                 
-                # 🎯 로고 적용 로직 (예수금은 지폐, 일반 종목은 기업/운용사 로고 및 뱃지)
                 if is_s:
                     row += f"<td>{orig_nm}</td>"
                 elif '예수금' in orig_nm or '현금' in orig_nm:
