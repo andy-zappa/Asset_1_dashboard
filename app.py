@@ -221,7 +221,7 @@ GUARANTEED_LOGOS = {
     "애플": "apple.com", "미국 반도체 3X ETF": "direxion.com", "엔비디아": "nvidia.com",
     "아이온큐": "ionq.com", "리케티 컴퓨팅": "rigetti.com", "디 웨이브 퀀텀": "dwavesys.com",
     "아이렌": "iren.com", "피그마": "figma.com",
-    # 한국 주식 & ETF 추가 (운용사 도메인 매핑)
+    # 한국 주식 & ETF 추가
     "삼성전자": "samsung.com", "현대차": "hyundai.com", "CJ": "cj.net", 
     "두산에너빌리티": "doosanenerbility.com", "한화오션": "hanwhaocean.com",
     "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com",
@@ -286,21 +286,16 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# =========================================================
 # 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직 (증권사 충돌 방지)
-# =========================================================
 if 'init' not in st.session_state:
     with st.spinner("ZAPPA AI가 Andy님의 최신 자산 데이터를 안전하게 동기화하고 있습니다. 잠시만 기다려주세요... ✨"):
-        # 1. 절세계좌 업데이트
         try: 
             andy_pension_v2.generate_asset_data()
         except: 
             pass
         
-        # 한국투자증권 API 동시 호출 차단(Rate Limit) 방지용 대기시간
         time.sleep(1.5)
         
-        # 2. 일반계좌 업데이트
         try: 
             andy_general_v1.generate_general_data()
         except: 
@@ -410,7 +405,11 @@ with st.sidebar:
     total_orig = tot.get('원금합', 1) + g_orig_all
     total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
-    st.markdown(f"<div id='card-total' class='sidebar-card sidebar-card-dark' style='background-color: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 12px; color: #ffffff;'><div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>⚡ 총 자산 통합 (KRW)</div><div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)}</div><div style='font-size:13.5px; margin-top:2px; color:#cccccc;'><span style='font-weight:bold; color: {'#ff4b4b' if total_profit > 0 else '#4b8bf5'};'>{fmt(total_profit, True)}</span> ({fmt_p(total_rate)})</div></div>", unsafe_allow_html=True)
+    # 🎯 30억 달성 프로젝트 진행률
+    grand_goal = 3000000000
+    grand_progress = (total_asset / grand_goal) * 100 if grand_goal > 0 else 0
+
+    st.markdown(f"<div id='card-total' class='sidebar-card sidebar-card-dark' style='background-color: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 12px; color: #ffffff;'><div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>⚡ 총 자산 통합 (KRW)</div><div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)}</div><div style='font-size:13.5px; margin-top:2px; color:#cccccc;'><span style='font-weight:bold; color: {'#ff4b4b' if total_profit > 0 else '#4b8bf5'};'>{fmt(total_profit, True)}</span> ({fmt_p(total_rate)})</div><div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 12.5px; color: #999; font-weight: normal;'>🎯 30억 달성 프로젝트</span><span style='font-size: 13px; font-weight: bold; color: #e8c368;'>{grand_progress:.1f}%</span></div><div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'><div style='width: {grand_progress}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div></div></div></div>", unsafe_allow_html=True)
     st.markdown(f"<div id='card-pension' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)}</div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span>&nbsp;({fmt_p(p_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div></div>", unsafe_allow_html=True)
     st.markdown(f"<div id='card-general' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 15px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)}</div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span>&nbsp;({fmt_p(g_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div></div>", unsafe_allow_html=True)
 
@@ -987,7 +986,7 @@ elif st.session_state.current_view == '절세계좌':
                 st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 3 ] 일반계좌 대시보드 (로직 혼합 금지)
+# [ Part 3 ] 일반계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     c1, c2 = st.columns([8.5, 1.5])
