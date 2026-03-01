@@ -300,12 +300,19 @@ if st.session_state.current_view == '대시보드':
     
     try:
         import pandas as pd
+        import plotly.express as px
         import plotly.graph_objects as go
         HAS_PLOTLY = True
     except ImportError:
         HAS_PLOTLY = False
 
     if HAS_PLOTLY:
+        # 데이터 통합 추출을 위한 리스트
+        all_data_list = []
+        pension_acc_name_map = {'DC': '퇴직연금(DC)', 'IRP': '퇴직연금(IRP)', 'PENSION': '연금저축', 'ISA': 'ISA중개형'}
+        gen_acc_name_map = {'DOM1': '키움증권(국내)', 'DOM2': '삼성증권(국내)', 'USA1': '키움증권(해외)', 'USA2': '키움증권(해외)'}
+
+        # 중복 종목을 합산하여 트립맵 데이터를 생성하는 함수
         def get_treemap_data(account_keys, data_source, is_usa=False):
             items_dict = {}
             for k in account_keys:
@@ -335,6 +342,34 @@ if st.session_state.current_view == '대시보드':
                 calc_rate = ((cur_asset - cur_base) / cur_base * 100) if cur_base > 0 else 0
                 res.append({'종목명': nm, '자산': cur_asset, '전일비': calc_rate})
             return res
+        
+        # 전체 데이터를 하나의 데이터프레임으로 구축 (추가 차트용)
+        for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+            if k in data:
+                for item in data[k].get('상세', []):
+                    nm = item.get('종목명', '').strip()
+                    if nm in ['[ 합  계 ]']: continue
+                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    asset = safe_float(item.get('총자산', item.get('총 자산', 0)))
+                    d_rate = safe_float(item.get('전일비', 0))
+                    if asset > 0:
+                        all_data_list.append({'대분류': '절세계좌', '계좌명': pension_acc_name_map.get(k, k), '종목명': nm, '자산': asset, '전일비': d_rate})
+
+        for k in ['DOM1', 'DOM2', 'USA1', 'USA2']:
+            if k in g_data:
+                is_usa = 'USA' in k
+                fx = g_data.get('환율', 1443.1) if is_usa else 1
+                main_cat = '일반계좌(미국)' if is_usa else '일반계좌(한국)'
+                for item in g_data[k].get('상세', []):
+                    nm = item.get('종목명', '').strip()
+                    if nm in ['[ 합  계 ]']: continue
+                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    asset = safe_float(item.get('총자산', 0)) * fx
+                    d_rate = safe_float(item.get('전일비', 0))
+                    if asset > 0:
+                        all_data_list.append({'대분류': main_cat, '계좌명': gen_acc_name_map.get(k, k), '종목명': nm, '자산': asset, '전일비': d_rate})
+
+        df_all = pd.DataFrame(all_data_list)
 
         def render_treemap(data_list, title):
             if not data_list: return None
@@ -391,6 +426,65 @@ if st.session_state.current_view == '대시보드':
                 fig_usa = render_treemap(usa_data, "🌱 일반계좌 (미국) 포트폴리오")
                 st.plotly_chart(fig_usa, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # 🎯 [추가 요청] 트리맵 하단에 다른 시각화 예시 2종 추가 
+        st.markdown("<h4 style='margin-top: 15px; margin-bottom: 15px;'>💡 추가 포트폴리오 시각화 인사이트</h4>", unsafe_allow_html=True)
+        
+        if not df_all.empty:
+            cb1, cb2 = st.columns(2)
+            
+            # 1. 썬버스트 차트 (계좌별/종목별 비중 구조)
+            with cb1:
+                st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+                fig_sun = px.sunburst(
+                    df_all, path=['대분류', '계좌명', '종목명'], values='자산',
+                    color='대분류', color_discrete_map={'절세계좌':'#b4a7d6', '일반계좌(한국)':'#f4b183', '일반계좌(미국)':'#a9d18e'}
+                )
+                fig_sun.update_layout(
+                    margin=dict(t=40, l=10, r=10, b=10),
+                    title=dict(text="🔄 자산 계층별 구조 한눈에 보기 (Sunburst)", font=dict(size=16, color='#ffffff')),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white'),
+                    height=380
+                )
+                fig_sun.update_traces(hovertemplate='<b>%{label}</b><br>자산: %{value:,.0f}원')
+                st.plotly_chart(fig_sun, use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+            # 2. 바 차트 (일간 등락률 상위/하위 종목)
+            with cb2:
+                st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+                # 예수금 등 현금성 자산 제외 후 종목별 전일비 평균(또는 단일값) 추출
+                df_perf = df_all[~df_all['종목명'].str.contains('예수금|현금|MMF|이율보증')].groupby('종목명').agg({'자산':'sum', '전일비':'mean'}).reset_index()
+                df_perf = df_perf.sort_values('전일비', ascending=False)
+                
+                # 상위 4개, 하위 4개 추출
+                top4 = df_perf.head(4)
+                bot4 = df_perf.tail(4)
+                df_tb = pd.concat([bot4, top4]).sort_values('전일비', ascending=True)
+                df_tb['color'] = df_tb['전일비'].apply(lambda x: '#d94141' if x > 0 else ('#2c8c4a' if x < 0 else '#555555'))
+                
+                fig_bar = go.Figure(go.Bar(
+                    x=df_tb['전일비'], y=df_tb['종목명'], orientation='h',
+                    marker_color=df_tb['color'], 
+                    text=df_tb['전일비'].apply(lambda x: f"{x:+.2f}%"), 
+                    textposition='outside',
+                    textfont=dict(color='white')
+                ))
+                fig_bar.update_layout(
+                    margin=dict(t=40, l=10, r=40, b=10),
+                    title=dict(text="📈 금일 등락률 효자 vs 아픈손가락 Top 4", font=dict(size=16, color='#ffffff')),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white'),
+                    xaxis=dict(showgrid=False, zeroline=True, showticklabels=False, zerolinecolor='#555'),
+                    yaxis=dict(showgrid=False, zeroline=False),
+                    height=380
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+
     else:
         st.error("🚨 **대시보드 차트 렌더링 오류**\n\n'plotly' 및 'pandas' 라이브러리가 설치되어 있지 않습니다. 명령 프롬프트(터미널)에서 아래 명령어를 실행하여 설치해 주세요.\n\n`pip install plotly pandas`")
 
@@ -488,7 +582,7 @@ elif st.session_state.current_view == '절세계좌':
         acc_rates = sorted([(pension_acc_name_map.get(k, k), data[k].get('수익률(%)', 0)) for k in FIXED_ACCOUNT_ORDER if k in data], key=lambda x: x[1], reverse=True)
         best_acc_name = acc_rates[0][0] if acc_rates else "전체"
         
-        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_profit)}'><strong>{fmt(t_profit, True)}</strong></span> (<span class='{col(t_rate)}'><strong>{fmt_p(t_rate)}</strong></span>) 이며, <strong>{best_acc_name}</strong>가 계좌별 수익률 1위를 기록 중입니다. 개별 종목에서는 <strong>{short_name(best_5[0]['종목명']) if best_5 else '주도 종목'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(worst_5[0]['종목명']) if worst_5 else '부진 종목'}</strong> 등은 단기 조정을 겪고 있습니다. 총 <strong>{len(tradeable_items)}개</strong> 종목 중 전일비 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합 <strong>{flat_cnt}개</strong> 입니다.<br><span style='font-size:13.5px; color:#555;'>※ 상승종목 : {str_rise}<br>※ 하락종목 : {str_fall}</span></div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략</span><div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익을 실현하여 <strong>현재 {p_cash:.1f}%인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다.</div></div></div>"
+        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_profit)}'><strong>{fmt(t_profit, True)}</strong></span> (<span class='{col(t_rate)}'><strong>{fmt_p(t_rate)}</strong></span>) 이며, <strong>{best_acc_name}</strong>가 계좌별 수익률 1위를 기록 중입니다. 개별 종목에서는 <strong>{short_name(best_5[0]['종목명']) if best_5 else '주도 종목'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(worst_5[0]['종목명']) if worst_5 else '부진 종목'}</strong> 등은 단기 조정을 겪고 있습니다. 총 <strong>{len(tradeable_items)}개</strong> 종목 중 전일비 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합 <strong>{flat_cnt}개</strong> 입니다.<br><span style='font-size:13.5px; color:#555;'>※ 상승종목 : {str_rise}<br>※ 하락종목 : {str_fall}</span></div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략</span><div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익 실현하여 <strong>현재 {p_cash:.1f}%인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다.</div></div></div>"
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
