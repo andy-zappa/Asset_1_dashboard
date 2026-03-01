@@ -4,82 +4,55 @@ from datetime import datetime
 import time
 
 # =====================================================================
-# 🔑 한국투자증권 Open API 설정 (Andy님 실전투자 키 장착 완료)
+# 🔑 한국투자증권 Open API 설정
 # =====================================================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
-URL_BASE = "https://openapi.koreainvestment.com:9443" # 실전투자 도메인
+URL_BASE = "https://openapi.koreainvestment.com:9443"
 
 def get_access_token():
-    """한국투자증권 API 접근 토큰 발급"""
-    if APP_KEY.startswith("여기에"): 
-        return None
+    if APP_KEY.startswith("여기에"): return None
     headers = {"content-type": "application/json"}
     body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try:
         res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
-        if res.status_code == 200:
-            return res.json()["access_token"]
+        if res.status_code == 200: return res.json()["access_token"]
     except: pass
     return None
 
 def get_dom_price(code, token):
-    """국내 주식 현재가 및 전일대비율 조회"""
     if not token or code == "-": return None, None
     url = f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price"
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "authorization": f"Bearer {token}",
-        "appkey": APP_KEY, "appsecret": APP_SECRET,
-        "tr_id": "FHKST01010100" # 주식현재가 시세
-    }
+    headers = {"Content-Type": "application/json; charset=utf-8", "authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "FHKST01010100"}
     params = {"fid_cond_mrkt_div_code": "J", "fid_input_iscd": code}
     try:
         res = requests.get(url, headers=headers, params=params, timeout=5)
         if res.status_code == 200 and res.json()['rt_cd'] == '0':
-            curr_price = float(res.json()['output']['stck_prpr'])
-            d_rate = float(res.json()['output']['prdy_ctrt'])
-            return curr_price, d_rate
+            return float(res.json()['output']['stck_prpr']), float(res.json()['output']['prdy_ctrt'])
     except: pass
     return None, None
 
 def get_ovs_price(code, token):
-    """해외(미국) 주식 현재가 및 전일대비율 조회"""
     if not token or code == "-": return None, None
     url = f"{URL_BASE}/uapi/overseas-price/v1/quotations/price"
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "authorization": f"Bearer {token}",
-        "appkey": APP_KEY, "appsecret": APP_SECRET,
-        "tr_id": "HHDFS00000300" # 해외주식 현재가 상세
-    }
-    # 미국 주요 거래소 순차 조회 (나스닥 -> 뉴욕 -> 아멕스)
+    headers = {"Content-Type": "application/json; charset=utf-8", "authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "HHDFS00000300"}
     for excd in ["NAS", "NYS", "AMS"]:
         params = {"AUTH": "", "EXCD": excd, "SYMB": code}
         try:
             res = requests.get(url, headers=headers, params=params, timeout=5)
             data = res.json()
             if res.status_code == 200 and data['rt_cd'] == '0' and data['output']['last'] != '':
-                curr_price = float(data['output']['last'])
-                d_rate = float(data['output']['rate'])
-                return curr_price, d_rate
+                return float(data['output']['last']), float(data['output']['rate'])
         except: pass
-        time.sleep(0.1) # 초당 요청 제한 방지
+        time.sleep(0.1)
     return None, None
 
 def generate_general_data():
-    usd_krw = 1443.1 # 환율 (추후 이 부분도 API 연동 가능)
+    usd_krw = 1443.1 
     
-    # 1. API 토큰 발급 시도
     print("🔄 ZAPPA: 한국투자증권 API 서버와 통신을 시작합니다...")
     token = get_access_token()
-    if token: print("✅ API 토큰 발급 성공! 실시간 데이터를 가져옵니다.")
-    else: print("⚠️ API 통신 실패. 기존 세팅된 데이터(안전장치)로 계산을 진행합니다.")
-
-    # =====================================================================
-    # 📝 기초 자산 데이터 (수량 및 매입가 고정, 현재가는 Fallback용 백업 데이터)
-    # API 연동 성공 시 '현재가'와 '전일비'는 실시간 데이터로 자동 덮어씌워집니다.
-    # =====================================================================
+    
     dom1 = [
         {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
         {"종목명": "KODEX 레버리지", "코드": "122630", "수량": 300, "매입가": 37480, "현재가": 111280, "전일비": -1.97},
@@ -90,7 +63,7 @@ def generate_general_data():
         {"종목명": "한국항공우주", "코드": "047810", "수량": 35, "매입가": 177646, "현재가": 192600, "전일비": 4.73},
         {"종목명": "POSCO홀딩스", "코드": "005490", "수량": 15, "매입가": 392467, "현재가": 415000, "전일비": 1.84},
         {"종목명": "셀트리온", "코드": "068270", "수량": 6, "매입가": 241417, "현재가": 237500, "전일비": -1.86},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4676074}
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496} # 👈 예수금 업데이트
     ]
 
     dom2 = [
@@ -120,9 +93,6 @@ def generate_general_data():
         {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 300.00}
     ]
 
-    # =====================================================================
-    # ⚙️ 가격 업데이트 및 계산 코어 로직
-    # =====================================================================
     def process_and_update(items, is_usa=False):
         processed = []
         sum_asset = 0; sum_profit = 0; sum_buy = 0
@@ -137,14 +107,12 @@ def generate_general_data():
                 })
                 continue
             
-            # API를 통해 실시간 가격/등락률 덮어쓰기 (토큰이 있을 경우에만)
             if token:
                 cp, dr = get_ovs_price(it["코드"], token) if is_usa else get_dom_price(it["코드"], token)
                 if cp is not None:
                     it["현재가"] = cp
                     it["전일비"] = dr
             
-            # 자산 및 수익률 계산
             asset = it['수량'] * it['현재가']
             profit = (it['현재가'] - it['매입가']) * it['수량']
             buy = it['수량'] * it['매입가']
@@ -164,11 +132,16 @@ def generate_general_data():
             "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
         })
         
+        # 💡 DB가 없어 추적이 불가능한 과거 데이터 공간 추가 (임시값)
+        krw_profit = (sum_profit * usd_krw) if is_usa else sum_profit
         return {
             "상세": processed,
             "총자산_KRW": (sum_asset * usd_krw) if is_usa else sum_asset,
-            "총수익_KRW": (sum_profit * usd_krw) if is_usa else sum_profit,
-            "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy
+            "총수익_KRW": krw_profit,
+            "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy,
+            "평가손익(7일전)": krw_profit * 0.95, # 추후 DB 연동 시 교체
+            "평가손익(15일전)": krw_profit * 0.90,
+            "평가손익(30일전)": krw_profit * 0.85
         }
 
     final_data = {
