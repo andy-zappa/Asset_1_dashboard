@@ -6,6 +6,7 @@ import andy_pension_v2
 import andy_general_v1
 import os
 import re
+import time
 from datetime import datetime
 import urllib.parse  
 
@@ -17,6 +18,10 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 # =========================================================
 css = """
 <style>
+/* 🎯 Streamlit 기본 시스템 UI 숨기기 (로딩 텍스트 및 우측 상단 툴바 제거) */
+[data-testid="stStatusWidget"] { display: none !important; }
+.stApp [data-testid="stToolbar"] { display: none !important; }
+
 /* 🎯 스무스 스크롤 전역 강제 적용 */
 html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { 
     scroll-behavior: smooth !important; 
@@ -120,7 +125,7 @@ div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
 div[data-testid="stSelectbox"] label { display: none !important; }
 
-/* 🎯 플로팅 배너 CSS 수정 (상단 우측 고정, 호버 시 밝은 회색 배경 적용) */
+/* 플로팅 배너 CSS 수정 */
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) { 
     position: fixed !important; 
     top: 55px !important; 
@@ -145,9 +150,8 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-tes
 }
 div.element-container:has(span#zappa-floating-menu) { display: none !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 26px !important; min-height: 26px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 13.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; white-space: nowrap !important; }
-/* 플로팅 버튼 호버 액션 */
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background-color: #e5e7eb !important; border-radius: 4px !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
@@ -282,7 +286,29 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# 🚨 앱 켜질 때 JSON 파일 자동 복구 로직
+# =========================================================
+# 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직 (증권사 충돌 방지)
+# =========================================================
+if 'init' not in st.session_state:
+    with st.spinner("ZAPPA AI가 Andy님의 최신 자산 데이터를 안전하게 동기화하고 있습니다. 잠시만 기다려주세요... ✨"):
+        # 1. 절세계좌 업데이트
+        try: 
+            andy_pension_v2.generate_asset_data()
+        except: 
+            pass
+        
+        # 한국투자증권 API 동시 호출 차단(Rate Limit) 방지용 대기시간
+        time.sleep(1.5)
+        
+        # 2. 일반계좌 업데이트
+        try: 
+            andy_general_v1.generate_general_data()
+        except: 
+            pass
+            
+    st.session_state['init'] = True
+    st.cache_data.clear()
+
 @st.cache_data(ttl=60)
 def load():
     try:
@@ -579,9 +605,6 @@ if st.session_state.current_view == '대시보드':
                 st.plotly_chart(fig_bar, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-    else:
-        st.error("🚨 **대시보드 차트 렌더링 오류**\n\n'plotly' 및 'pandas' 라이브러리가 설치되어 있지 않습니다. 명령 프롬프트(터미널)에서 아래 명령어를 실행하여 설치해 주세요.\n\n`pip install plotly pandas`")
-
 elif st.session_state.current_view == '퀀트매매':
     st.markdown("<h3 style='margin-top: 5px;'>🤖 Quant 매매 (ZAPPA Bot)</h3>", unsafe_allow_html=True)
     st.info("💡 ZAPPA 단기/퀀트 트레이딩 봇의 실시간 매매 현황 및 알고리즘 성과를 모니터링하는 화면입니다.")
@@ -590,7 +613,7 @@ elif st.session_state.current_view == '암호화폐':
     st.info("💡 비트코인 등 가상자산 포트폴리오 모니터링 화면이 구축될 예정입니다.")
 
 # =========================================================
-# [ Part 2 ] 절세계좌 대시보드 (로직 혼합 금지)
+# [ Part 2 ] 절세계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -680,7 +703,7 @@ elif st.session_state.current_view == '절세계좌':
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-        donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
+        donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}%, #d9d9d9 {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 43px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
         html_parts = []
@@ -792,8 +815,6 @@ elif st.session_state.current_view == '절세계좌':
         unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
         
         st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-        
-        # 🎯 [수정 반영] 제목에 KRW 추가
         st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
 
         h1_table = """
@@ -826,8 +847,6 @@ elif st.session_state.current_view == '절세계좌':
         ag_tot = t_asset - t_buy_total
         ay_tot = (ag_tot / t_buy_total * 100) if t_buy_total > 0 else 0
         st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-        
-        # 🎯 [수정 반영] 제목에 KRW 추가
         st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
         h2_table = """
@@ -897,7 +916,6 @@ elif st.session_state.current_view == '절세계좌':
                             safe_pct += item.get('비중', 0)
                     extra_info_html = f"<div style='font-size:14.5px; font-weight:normal; color:#555;'>[ 🔴 위험자산 : {100.0 - safe_pct:.1f}%&nbsp;&nbsp;/&nbsp;&nbsp;🟢 안전자산 : {safe_pct:.1f}% ]</div>"
                 
-                # 🎯 [수정 반영] 제목에 KRW 추가
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
                 if st.session_state.show_change_rate:
@@ -969,7 +987,7 @@ elif st.session_state.current_view == '절세계좌':
                 st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 3 ] 일반계좌 대시보드
+# [ Part 3 ] 일반계좌 대시보드 (로직 혼합 금지)
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -1210,7 +1228,7 @@ elif st.session_state.current_view == '일반계좌':
         html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0)*fx_rate)}'>{fmt(it.get('평가손익', 0)*fx_rate, True)}</td>{diff_html}</tr>")
     html_parts.append("    </table>")
     
-    html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [해외] 손익률 부진종목 <span style='font-size:12px; color:#888; font-weight:normal;'>(+5% 미만)</span></div>")
+    html_parts.append("    <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [해외] 손익률 부진종목</div>")
     html_parts.append("    <table class='main-table' style='margin-bottom: 0px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>")
     for idx, it in enumerate(ovs_worst): 
         c_p = safe_float(it.get('현재가', 0))
@@ -1234,9 +1252,7 @@ elif st.session_state.current_view == '일반계좌':
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
     unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
-    
     st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-    # 🎯 표 상단 요약에 KRW 추가
     st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
 
     h1_table = """
@@ -1267,7 +1283,6 @@ elif st.session_state.current_view == '일반계좌':
     ag_tot = t_asset - t_buy_total
     ay_tot = (ag_tot / t_buy_total * 100) if t_buy_total > 0 else 0
     st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-    # 🎯 표 상단 요약에 KRW 추가
     st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(ag_tot)}'>{fmt(ag_tot, True)} ({fmt_p(ay_tot)})</span></div>", unsafe_allow_html=True)
 
     h2_table = """
@@ -1332,7 +1347,6 @@ elif st.session_state.current_view == '일반계좌':
             curr_asset = a.get('총자산_KRW', 0); a_prof = a.get('총수익_KRW', 0)
             a_rate = (a_prof / principals[k] * 100) if principals[k] else 0
             
-            # 🎯 [수정 반영] 제목에 KRW 추가
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
             
             rate_val = g_data.get('환율', 1443.1)
