@@ -13,7 +13,6 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 # =========================================================
 # [ Part 1 ] 공통 설정 및 CSS 디자인
 # =========================================================
-# ※ 주의: 이 부분의 CSS는 절세계좌와 일반계좌 모두에 공통으로 적용됩니다.
 css = """
 <style>
 .block-container { padding-top: 3rem !important; padding-bottom: 7rem !important; }
@@ -226,15 +225,14 @@ elif menu == "2. 절세 계좌":
         acc_rates = sorted([(pension_acc_name_map.get(k, k), data[k].get('수익률(%)', 0)) for k in FIXED_ACCOUNT_ORDER if k in data], key=lambda x: x[1], reverse=True)
         best_acc_name = acc_rates[0][0] if acc_rates else "전체"
         
-        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석</span><div>현재 <strong>{best_acc_name}가 전체 수익률(<span class='{col(acc_rates[0][1] if acc_rates else 0)}' style='font-weight:bold;'>{fmt_p(acc_rates[0][1] if acc_rates else 0)}</span>) 1위</strong>를 기록 중입니다. 개별 종목에서는 <strong>{short_name(best_5[0]['종목명']) if best_5 else '주도 종목'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(worst_5[0]['종목명']) if worst_5 else '부진 종목'}</strong> 등은 단기 조정을 겪고 있습니다. 총 <strong>{len(tradeable_items)}개</strong> 종목 중 전일비 상승 <strong>{rise_cnt}개</strong>, 하락 <strong>{fall_cnt}개</strong>, 보합 <strong>{flat_cnt}개</strong> 입니다.<br><span style='font-size:13.5px; color:#555;'>※ 상승 종목 : {str_rise}<br>※ 하락 종목 : {str_fall}</span></div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략</span><div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익을 실현하여 <strong>현재 {p_cash:.1f}%인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다.</div></div></div>"
+        # 🎯 수익률 텍스트에 컬러 및 '상승종목', '하락종목', '보합' 명칭 반영 완료
+        zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_profit)}'><strong>{fmt(t_profit, True)}</strong></span> (<span class='{col(t_rate)}'><strong>{fmt_p(t_rate)}</strong></span>) 이며, <strong>{best_acc_name}</strong>가 계좌별 수익률 1위를 기록 중입니다. 개별 종목에서는 <strong>{short_name(best_5[0]['종목명']) if best_5 else '주도 종목'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(worst_5[0]['종목명']) if worst_5 else '부진 종목'}</strong> 등은 단기 조정을 겪고 있습니다. 총 <strong>{len(tradeable_items)}개</strong> 종목 중 전일비 상승 <strong>{rise_cnt}개</strong>, 하락 <strong>{fall_cnt}개</strong>, 보합 <strong>{flat_cnt}개</strong> 입니다.<br><span style='font-size:13.5px; color:#555;'>※ 상승종목 : {str_rise}<br>※ 하락종목 : {str_fall}</span></div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략</span><div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익을 실현하여 <strong>현재 {p_cash:.1f}%인 현금 비중을 선제적으로 확대</strong>할 필요가 있습니다.</div></div></div>"
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [절세계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
 
-        # 🎯 도넛 크기 120px 변경 및 라벨 위치 미세 조정 (국내투자 위로 10, 해외투자 아래로 20)
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}% {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 2%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 15px; right: -5px; font-size: 13.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 0px; left: -2px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
-        # 🎯 카드 HTML 구조를 일반계좌와 100% 동일하게 맞춰서 높이 동기화
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -322,7 +320,8 @@ elif menu == "2. 절세 계좌":
             html_parts.append(f"<tr><td>{idx+1}</td><td>{short_name(it.get('종목명', ''))}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
         html_parts.append("    </table></div>")
         
-        html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.2%p &lt; 횡보 &lt; +0.2%p ]</div></div>")
+        # 🎯 우측 하단 인사이트 '보합' 명칭 반영
+        html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.2%p &lt; 보합 &lt; +0.2%p ]</div></div>")
         html_parts.append(f"    {zappa_html}</div></div>") 
         st.markdown("".join(html_parts), unsafe_allow_html=True)
 
@@ -366,7 +365,6 @@ elif menu == "2. 절세 계좌":
         st.markdown("<div id='account_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         
-        # 🎯 플로팅 버튼 기호 통일 (일반계좌와 동일하게 [▼], [▽] 적용)
         b1, b2, b3, b4, b5, b6 = st.columns(6)
         with b1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
@@ -538,7 +536,8 @@ elif menu == "3. 일반 계좌":
     acc_rates = sorted([(k, (g_data[k].get('총수익_KRW',0) / principals[k] * 100 if principals[k]>0 else 0)) for k in GEN_ACC_ORDER if k in g_data], key=lambda x: x[1], reverse=True)
     best_acc_name = {'DOM1':'국내1. 키움증권', 'DOM2':'국내2. 삼성증권', 'USA1':'해외1. 키움증권', 'USA2':'해외2. 키움증권'}.get(acc_rates[0][0]) if acc_rates else "전체"
 
-    zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약</span><div>현재 <strong>{best_acc_name} 계좌가 전체 수익률(<span class='{col(acc_rates[0][1] if acc_rates else 0)}' style='font-weight:bold;'>{fmt_p(acc_rates[0][1] if acc_rates else 0)}</span>) 1위</strong>를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 15px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망</span><div>최근 국내 시장은 <strong>{short_name(dom_best[0]['종목명']) if dom_best else '국내 우량주'}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{short_name(dom_worst[0]['종목명']) if dom_worst else '일부 조정주'}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망</span><div>미국 증시는 <strong>{short_name(ovs_best[0]['종목명']) if ovs_best else '빅테크 우량주'}</strong> 위주로 긍정적 흐름을 보이나, <strong>{short_name(ovs_worst[0]['종목명']) if ovs_worst else '단기 하락주'}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{(cash_total/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div></div></div>"
+    # 🎯 수익률 텍스트에 컬러 및 '상승종목', '하락종목', '보합' 명칭 반영 완료
+    zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_profit)}'><strong>{fmt(t_profit, True)}</strong></span> (<span class='{col(t_rate)}'><strong>{fmt_p(t_rate)}</strong></span>) 이며, <strong>{best_acc_name}</strong> 계좌가 계좌별 수익률 1위를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 15px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망</span><div>최근 국내 시장은 <strong>{short_name(dom_best[0]['종목명']) if dom_best else '국내 우량주'}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{short_name(dom_worst[0]['종목명']) if dom_worst else '일부 조정주'}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망</span><div>미국 증시는 <strong>{short_name(ovs_best[0]['종목명']) if ovs_best else '빅테크 우량주'}</strong> 위주로 긍정적 흐름을 보이나, <strong>{short_name(ovs_worst[0]['종목명']) if ovs_worst else '단기 하락주'}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{(cash_total/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div></div></div>"
 
     st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 ZAPPA의 [일반계좌] 자산 현황 보고</div>", unsafe_allow_html=True)
     
@@ -655,7 +654,8 @@ elif menu == "3. 일반 계좌":
         html_parts.append(f"<tr><td>{idx+1}</td><td>{short_name(it.get('종목명', ''))}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0)*fx_rate)}'>{fmt(it.get('평가손익', 0)*fx_rate, True)}</td>{diff_html}</tr>")
     html_parts.append("    </table>")
     html_parts.append("  </div>")
-    html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.5%p &lt; 횡보 &lt; +0.5%p ]</div></div>")
+    # 🎯 우측 하단 인사이트 '보합' 명칭 반영
+    html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.5%p &lt; 보합 &lt; +0.5%p ]</div></div>")
     html_parts.append(f"    {zappa_html}</div></div>") 
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
