@@ -269,10 +269,16 @@ with st.sidebar:
     g_orig = sum([110963075, 5208948, 257915999, 7457930]) 
     g_rate = (g_profit / g_orig * 100) if g_orig > 0 else 0
     
-    # 가상자산 요약 (미리 불러온 데이터 사용)
-    c_asset = my_crypto.get('total_asset', 0)
-    c_profit = my_crypto.get('total_profit', 0)
-    c_rate = my_crypto.get('total_rate', 0)
+    # 사이드바 가상자산 표시 로직 교체
+c_asset = my_crypto.get('total_asset', 0)
+c_profit = my_crypto.get('total_profit', 0)
+c_rate = my_crypto.get('total_rate', 0)
+
+st.sidebar.metric(
+    label="가상자산", 
+    value=f"{int(c_asset):,} KRW", 
+    delta=f"{int(c_profit):+,} ({c_rate:.1f}%)"
+)
     
     # 총합산
     total_all_asset = p_asset + g_asset + c_asset
@@ -1494,4 +1500,5 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)        
+
 
