@@ -15,7 +15,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
@@ -238,6 +237,22 @@ def load_gen():
 
 data = load() or {}; g_data = load_gen() or {}; tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
+# =========================================================
+# 🚨 [ 핵심 수정 ] 한국 시간(KST) 변환 함수 추가
+# =========================================================
+def to_kst(time_str):
+    try:
+        if time_str and time_str != '업데이트 필요':
+            dt = pd.to_datetime(time_str)
+            # 만약 시간대 정보가 없다면 UTC로 간주하고 KST(Asia/Seoul)로 변환
+            if dt.tzinfo is None:
+                dt = dt.tz_localize('UTC')
+            dt = dt.tz_convert('Asia/Seoul')
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        pass
+    return str(time_str)
+
 def safe_float(val):
     try: return float(val) if val not in ['-', '', None] else 0.0
     except: return 0.0
@@ -272,7 +287,7 @@ def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 
 
 # =========================================================
-# 🚨 [ 핵심 1 ] 가상자산 데이터를 맨 꼭대기에서 미리 100% 로드! (GitHub 연동)
+# 🚨 [ 핵심 수정 ] 가상자산 데이터를 깃허브에서 가져오는 로직 연동
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
@@ -281,7 +296,6 @@ def get_crypto_data():
         res = requests.get(url, timeout=5)
         if res.status_code == 200: 
             data = res.json()
-            # GitHub 데이터에서 btc_pct 등도 계산해 주어야 함
             total_asset = data.get('total_asset', 0)
             coins = data.get('coins', [])
             btc_pct = eth_pct = trx_pct = 0
@@ -427,7 +441,7 @@ with st.sidebar:
 # =========================================================
 if st.session_state.current_view == '대시보드':
     # 🎯 1. 타이틀 변경 완벽 반영
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
         import pandas as pd
@@ -573,14 +587,14 @@ if st.session_state.current_view == '대시보드':
             )
             return fig
 
-        # 🎯 2. 트리맵 2분할 (좌: 절세계좌, 우: 일반계좌 통합)
+        # 🎯 2. 트리맵 2분할 (좌: 절세계좌, 우: 일반계좌 통합) - 박스 둥근 테두리 적용!
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
-            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -777,17 +791,25 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
     
 elif st.session_state.current_view == '가상자산':
-    st.markdown("""
-        <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
-            <div style="font-size:40px;">🪙</div>
-            <div>
-                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(GitHub 연동)</span></h3>
-                <div style="font-size:14.5px; color:#666; margin-top:5px;">오라클 서버에서 수집하여 깃허브를 통해 전송된 실시간 업비트 계좌 데이터입니다.</div>
+    cc1, cc2 = st.columns([8.5, 1.5])
+    with cc1:
+        st.markdown("""
+            <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
+                <div style="font-size:40px;">🪙</div>
+                <div>
+                    <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(GitHub 연동)</span></h3>
+                    <div style="font-size:14.5px; color:#666; margin-top:5px;">오라클 서버에서 수집하여 깃허브를 통해 전송된 실시간 업비트 계좌 데이터입니다.</div>
+                </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    with cc2:
+        st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+        if st.button("🔄 업데이트", use_container_width=True, key="btn_update_crypto"):
+            with st.spinner("가상자산 데이터 업데이트 중..."):
+                get_crypto_data.clear()
+            st.rerun()
 
-    if crypto_data:
+    if crypto_data and 'total_asset' in crypto_data:
         c_tot = crypto_data['total_asset']
         c_krw = crypto_data['total_krw']
         c_buy = crypto_data['total_buy']
@@ -816,7 +838,7 @@ elif st.session_state.current_view == '가상자산':
         """, unsafe_allow_html=True)
         
         c_html = ""
-        for c in crypto_data['coins']:
+        for c in crypto_data.get('coins', []):
             c_html += f"<tr>"
             c_html += f"<td style='font-weight:bold;'>{c['name']} ({c['ticker']})</td>"
             c_html += f"<td>{c['qty']:.8f}</td>"
@@ -830,8 +852,7 @@ elif st.session_state.current_view == '가상자산':
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
         st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
-# =========================================================
-# =========================================================
+        # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
@@ -845,7 +866,8 @@ elif st.session_state.current_view == '절세계좌':
                 except Exception as e: st.error(f"오류: {e}")
             st.cache_data.clear(); st.rerun()
 
-    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {tot.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
+    # 🎯 KST 시간 변환 적용
+    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {to_kst(tot.get('조회시간', '업데이트 필요'))} ]</div>", unsafe_allow_html=True)
 
     FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
@@ -1119,7 +1141,6 @@ elif st.session_state.current_view == '절세계좌':
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
-                # 🎯 1줄짜리 헤더 구조 (표 깨짐 방지 완벽 복원)
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                 if st.session_state.show_change_rate:
                     h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
@@ -1188,7 +1209,8 @@ elif st.session_state.current_view == '일반계좌':
         st.warning("데이터가 없습니다. 업데이트 버튼을 눌러주세요.")
         st.stop()
 
-    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {g_data.get('조회시간', '업데이트 필요')} ]</div>", unsafe_allow_html=True)
+    # 🎯 KST 시간 변환 적용
+    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {to_kst(g_data.get('조회시간', '업데이트 필요'))} ]</div>", unsafe_allow_html=True)
 
     nm_table = {'DOM1': '키움증권(국내Ⅰ)', 'DOM2': '삼성증권(국내Ⅱ)', 'USA1': '키움증권(해외Ⅰ)', 'USA2': '키움증권(해외Ⅱ)'}
     nm_table_expander = {'DOM1': '키움증권(국내Ⅰ) : 6312-5329', 'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01', 'USA1': '키움증권(해외Ⅰ) : 6312-5329', 'USA2': '키움증권(해외Ⅱ) : 6443-5993'}
@@ -1242,7 +1264,6 @@ elif st.session_state.current_view == '일반계좌':
                     else: 
                         dom_total += val_krw; dom_items.append(it_copy)
 
-    # 🎯 NameError t_diff_1 에러 완벽 해결: 일반계좌 전일비는 t_diff 변수로 선언하여 활용
     t_diff = sum(acc_1d_diff.values()) 
     
     goal_amount = 1500000000
@@ -1473,7 +1494,6 @@ elif st.session_state.current_view == '일반계좌':
     """
     h2_table = re.sub(r'\n\s*', '', h2_table)
     
-    # 🎯 NameError t_diff_1 에러 완벽 해결 (sum으로 합산된 t_diff 변수 적용)
     h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff)}'>{fmt(t_diff, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(t_buy_total)}</td></tr>"]
     
     for k in GEN_ACC_ORDER:
@@ -1539,7 +1559,6 @@ elif st.session_state.current_view == '일반계좌':
                 currency_mode = "[원화(KRW)]"
                 u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
-            # 🎯 1줄짜리 헤더 구조 적용 (표 깨짐 방지 완벽 복원)
             code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
             if st.session_state.gen_show_change_rate:
                 h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
