@@ -9,7 +9,7 @@ import os
 import re
 import time
 from datetime import datetime
-import urllib.parse  
+import urllib.parse
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -243,10 +243,11 @@ def load_gen():
 
 data = load() or {}
 g_data = load_gen() or {}
-tot = data.get('_insight') or {} #
+tot = data.get('_insight') or {}
 
 # =========================================================
 # 🚨 [ 핵심 3 ] 통째로 날아갔던 왼쪽 사이드바 완벽 복구!!!
+# 에러 원인: 아래 블록의 c_asset 들여쓰기가 깨져 있었습니다. (수정 완료)
 # =========================================================
 with st.sidebar:
     st.markdown("<div style='text-align: center; margin-top: -20px;'><h2 style='margin-bottom: 0px;'>📊 ZAPPA AI</h2><p style='color:#666; margin-top:0px;'>Andy's Asset Dashboard</p></div>", unsafe_allow_html=True)
@@ -270,15 +271,15 @@ with st.sidebar:
     g_rate = (g_profit / g_orig * 100) if g_orig > 0 else 0
     
     # 사이드바 가상자산 표시 로직 교체
-c_asset = my_crypto.get('total_asset', 0)
-c_profit = my_crypto.get('total_profit', 0)
-c_rate = my_crypto.get('total_rate', 0)
+    c_asset = my_crypto.get('total_asset', 0)
+    c_profit = my_crypto.get('total_profit', 0)
+    c_rate = my_crypto.get('total_rate', 0)
 
-st.sidebar.metric(
-    label="가상자산", 
-    value=f"{int(c_asset):,} KRW", 
-    delta=f"{int(c_profit):+,} ({c_rate:.1f}%)"
-)
+    st.sidebar.metric(
+        label="가상자산", 
+        value=f"{int(c_asset):,} KRW", 
+        delta=f"{int(c_profit):+,} ({c_rate:.1f}%)"
+    )
     
     # 총합산
     total_all_asset = p_asset + g_asset + c_asset
@@ -649,78 +650,6 @@ if st.session_state.current_view == '대시보드':
         cb1, cb2 = st.columns(2)
         with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
         with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
-
-# =========================================================
-# 퀀트매매 & 가상자산 화면
-# =========================================================
-elif st.session_state.current_view == '퀀트매매':
-    st.markdown("""
-        <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
-            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
-            <div>
-                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Quant Trading <span style="font-size:18px; color:#555; font-weight:normal;">(with ZAPPA Bot)</span></h3>
-                <div style="font-size:14.5px; color:#666; margin-top:5px;">💡 ZAPPA 단기/퀀트 트레이딩 봇의 실시간 매매 현황 및 알고리즘 성과를 모니터링하는 화면입니다.</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-elif st.session_state.current_view == '가상자산':
-    st.markdown("""
-        <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
-            <div style="font-size:40px;">🪙</div>
-            <div>
-                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(GitHub 연동)</span></h3>
-                <div style="font-size:14.5px; color:#666; margin-top:5px;">오라클 서버에서 수집하여 깃허브를 통해 전송된 실시간 업비트 계좌 데이터입니다.</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 상단에서 미리 로드한 데이터 연결
-    crypto_data = my_crypto
-
-    if crypto_data and 'total_asset' in crypto_data:
-        c_tot = crypto_data['total_asset']
-        c_krw = crypto_data['total_krw']
-        c_buy = crypto_data['total_buy']
-        c_prof = crypto_data['total_profit']
-        c_rate = crypto_data['total_rate']
-        
-        st.markdown(f"""
-        <div style="display:flex; gap:20px; margin-bottom: 25px;">
-            <div style="flex:1; background-color:#fff; padding:25px; border-radius:15px; border:1px solid #ddd; box-shadow:0 2px 10px rgba(0,0,0,0.02);">
-                <div style="font-size:15px; color:#666; font-weight:bold; margin-bottom:10px;">총 보유자산</div>
-                <div style="font-size:32px; font-weight:bold; color:#111; margin-bottom:5px;">{fmt(c_tot)} <span style="font-size:18px; color:#888;">KRW</span></div>
-                <div style="font-size:16px; font-weight:bold;" class="{col(c_prof)}">{fmt(c_prof, True)} ({fmt_p(c_rate)})</div>
-            </div>
-            <div style="flex:1; background-color:#fff; padding:25px; border-radius:15px; border:1px solid #ddd; box-shadow:0 2px 10px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:center;">
-                <div style="display:flex; justify-content:space-between; font-size:16px; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">
-                    <span style="color:#666;">보유 KRW (예수금)</span><span style="font-weight:bold; color:#111;">{fmt(c_krw)} KRW</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:16px;">
-                    <span style="color:#666;">총 매수금액</span><span style="font-weight:bold; color:#111;">{fmt(c_buy)} KRW</span>
-                </div>
-            </div>
-        </div>
-        <h4 style="margin-bottom:10px;">보유 코인 목록</h4>
-        <table class="main-table">
-            <tr><th>코인명</th><th>보유수량</th><th>매수평균가</th><th>현재가</th><th>평가금액</th><th>평가손익</th><th>수익률</th></tr>
-        """, unsafe_allow_html=True)
-        
-        c_html = ""
-        for c in crypto_data.get('coins', []):
-            c_html += f"<tr>"
-            c_html += f"<td style='font-weight:bold;'>{c['name']} ({c['ticker']})</td>"
-            c_html += f"<td>{c['qty']:.8f}</td>"
-            c_html += f"<td>{fmt(c['avg_price'])}</td>"
-            c_html += f"<td>{fmt(c['curr_price'])}</td>"
-            c_html += f"<td style='font-weight:bold;'>{fmt(c['eval'])}</td>"
-            c_html += f"<td class='{col(c['profit'])}' style='font-weight:bold;'>{fmt(c['profit'], True)}</td>"
-            c_html += f"<td class='{col(c['rate'])}' style='font-weight:bold;'>{fmt_p(c['rate'])}</td>"
-            c_html += f"</tr>"
-        
-        st.markdown(c_html + "</table>", unsafe_allow_html=True)
-    else:
-        st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
 # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
@@ -801,7 +730,6 @@ elif st.session_state.current_view == '절세계좌':
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}%, #d9d9d9 {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 43px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
-        # 🎯 노란색, 흰색 카드 원본 구조 100% 보존
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -1060,7 +988,7 @@ elif st.session_state.current_view == '절세계좌':
                 st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 3 ] 일반계좌 대시보드
+# [ Part 4 ] 일반계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     c1, c2 = st.columns([8.5, 1.5])
@@ -1498,7 +1426,5 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append(row)
                 
             h3.append("</table>")
-            st.markdown("".join(h3), unsafe_allow_html=True)        
-
-
-
+            st.markdown("".join(h3), unsafe_allow_html=True)            
+    
