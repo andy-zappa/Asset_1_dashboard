@@ -33,7 +33,7 @@ def fetch_github_crypto():
 my_crypto = fetch_github_crypto()
 
 # =========================================================
-# 공통 설정 및 CSS (오리지널 유지)
+# 공통 설정 및 CSS
 # =========================================================
 css = """
 <style>
@@ -165,7 +165,7 @@ def get_logo_html(nm):
         return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{colors[idx]}; color:{text_colors[idx]}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{short_str}</span>"
 
 # =========================================================
-# 🚨 [ 핵심 2 ] 날아갔던 유틸리티 계산 함수 완벽 복원
+# 유틸리티 계산 함수
 # =========================================================
 def safe_float(val):
     if isinstance(val, (int, float)): return float(val)
@@ -244,12 +244,12 @@ def load_gen():
 data = load() or {}
 g_data = load_gen() or {}
 
-# 🚨 [중요 디버깅] AttributeError 방지: _insight가 아예 없거나 None일 경우를 무조건 방어!
+# 🚨 [ 방어막 1 ] AttributeError 완벽 차단: 데이터가 아예 비어있거나 None으로 넘어오더라도 에러가 나지 않도록 강제 방어!
 raw_insight = data.get('_insight', {})
 tot = raw_insight if isinstance(raw_insight, dict) else {}
 
 # =========================================================
-# 🚨 [ 핵심 3 ] 통째로 날아갔던 왼쪽 사이드바 완벽 복구!!!
+# 🚨 [ 방어막 2 ] 통째로 날아갔던 왼쪽 사이드바 (들여쓰기 에러 완벽 수정)
 # =========================================================
 with st.sidebar:
     st.markdown("<div style='text-align: center; margin-top: -20px;'><h2 style='margin-bottom: 0px;'>📊 ZAPPA AI</h2><p style='color:#666; margin-top:0px;'>Andy's Asset Dashboard</p></div>", unsafe_allow_html=True)
@@ -260,7 +260,7 @@ with st.sidebar:
     st.session_state.menu_sel = st.radio("메뉴 선택", menu_list, index=menu_list.index(st.session_state.current_view), on_change=on_menu_change)
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
-    # 절세계좌 요약
+    # 절세계좌 요약 (tot가 확실한 딕셔너리이므로 더 이상 에러 안 남)
     p_asset = tot.get('총 자산', 0)
     p_profit = tot.get('총 수익', 0)
     p_rate = tot.get('수익률(%)', 0)
@@ -272,7 +272,7 @@ with st.sidebar:
     g_orig = sum([110963075, 5208948, 257915999, 7457930]) 
     g_rate = (g_profit / g_orig * 100) if g_orig > 0 else 0
     
-    # 사이드바 가상자산 표시 로직 (들여쓰기 완벽 수정됨!)
+    # 사이드바 가상자산 요약 (들여쓰기 4칸 완벽하게 맞춤!)
     c_asset = my_crypto.get('total_asset', 0)
     c_profit = my_crypto.get('total_profit', 0)
     c_rate = my_crypto.get('total_rate', 0)
@@ -283,7 +283,7 @@ with st.sidebar:
         delta=f"{int(c_profit):+,} ({c_rate:.1f}%)"
     )
     
-    # 총합산 (여기서 났던 IndentationError 완벽 수정됨!)
+    # 총합산 
     total_all_asset = p_asset + g_asset + c_asset
     total_all_profit = p_profit + g_profit + c_profit
     
@@ -303,8 +303,17 @@ with st.sidebar:
         <div style='font-size:17px; font-weight:bold; color:#111; margin-bottom:2px;'>{fmt(g_asset)} <span style='font-size:11px;font-weight:normal;'>KRW</span></div>
         <div style='font-size:13px;' class='{col(g_profit)}'>{fmt(g_profit, True)} ({fmt_p(g_rate)})</div>
     </div>
-    <div id='card-crypto'
-# =========================================================
+    <div id='card-crypto' class='sidebar-card' data-binded='false'>
+        <div style='font-size:13px; color:#666; margin-bottom:4px;'>🪙 가상자산</div>
+        <div style='font-size:17px; font-weight:bold; color:#111; margin-bottom:2px;'>{fmt(c_asset)} <span style='font-size:11px;font-weight:normal;'>KRW</span></div>
+        <div style='font-size:13px;' class='{col(c_profit)}'>{fmt(c_profit, True)} ({fmt_p(c_rate)})</div>
+    </div>
+    <div id='card-quant' class='sidebar-card' data-binded='false'>
+        <div style='font-size:13px; color:#666; margin-bottom:4px;'>🤖 퀀트매매 (ZAPPA Bot)</div>
+        <div style='font-size:13px; color:#888;'>운용 상태 : 모니터링 중</div>
+    </div>
+    """, unsafe_allow_html=True)
+    # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면, 퀀트, 가상자산)
 # =========================================================
 if st.session_state.current_view == '대시보드':
@@ -1492,4 +1501,3 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
-    
