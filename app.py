@@ -284,8 +284,8 @@ def get_crypto_data():
     if not HAS_UPBIT: return None
     try:
         # 👇👇👇 여기에 본인의 실제 API 키를 입력하세요! 👇👇👇
-        access = L1ayuwPm9z4TwxdxcNv6PjAr3VfZzKxXLn9UhpT2
-        secret = 1Ow49g4zQnhnA2xnUO4Ax4xLYAyRRXngt5OMBbnB
+        access = "L1ayuwPm9z4TwxdxcNv6PjAr3VfZzKxXLn9UhpT2"
+        secret = "1Ow49g4zQnhnA2xnUO4Ax4xLYAyRRXngt5OMBbnB"
         # 👆👆👆 위에 실제 값을 붙여넣으세요 👆👆👆
         
         upbit = pyupbit.Upbit(access, secret)
@@ -1649,4 +1649,5 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
