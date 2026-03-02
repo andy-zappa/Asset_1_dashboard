@@ -30,6 +30,29 @@ html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container 
 [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }
 section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -15px !important; gap: 0 !important; }
 
+/* 🎯 사이드바 기본 버튼(암호화폐, 퀀트매매) 스타일링 */
+[data-testid="stSidebar"] button[kind="secondary"] {
+    background-color: #ffffff;
+    border: 1.5px solid #dcdcdc;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    padding: 10px !important;
+    height: auto !important;
+    width: 100% !important;
+    margin-bottom: 5px !important;
+}
+[data-testid="stSidebar"] button[kind="secondary"] p {
+    font-size: 16px !important;
+    font-weight: bold !important;
+    color: #111 !important;
+}
+[data-testid="stSidebar"] button[kind="secondary"]:hover {
+    background-color: #f8f9fa !important; 
+    border-color: #ccc !important; 
+    transform: translateY(-1px); 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+}
+
 /* 🎯 사이드바 카드 호버 및 클릭 액션 추가 */
 .sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
 .sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.12) !important; }
@@ -99,7 +122,7 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="
 """
 st.markdown(css, unsafe_allow_html=True)
 
-# 🎯 스무스 스크롤 및 사이드바 카드 클릭 라우팅 JS
+# 🎯 스무스 스크롤 및 사이드바 카드 클릭 라우팅 JS (Hidden 버튼 클릭 방식)
 components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -111,29 +134,28 @@ parentDoc.querySelectorAll('a[href^="#"]').forEach(anchor => {
         if (targetElement) { targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
 });
-
 function bindSidebarClicks() {
-    const labels = Array.from(parentDoc.querySelectorAll('div[role="radiogroup"] label'));
+    const btns = Array.from(parentDoc.querySelectorAll('button'));
     
     const cardTotal = parentDoc.getElementById('card-total');
     if (cardTotal && !cardTotal.hasAttribute('data-binded')) {
         cardTotal.setAttribute('data-binded', 'true');
         cardTotal.addEventListener('click', function() {
-            const target = labels.find(l => l.innerText.includes('대시보드')); if(target) target.click();
+            const b = btns.find(x => x.innerText === 'route_dashboard'); if(b) b.click();
         });
     }
     const cardPension = parentDoc.getElementById('card-pension');
     if (cardPension && !cardPension.hasAttribute('data-binded')) {
         cardPension.setAttribute('data-binded', 'true');
         cardPension.addEventListener('click', function() {
-            const target = labels.find(l => l.innerText.includes('절세계좌')); if(target) target.click();
+            const b = btns.find(x => x.innerText === 'route_pension'); if(b) b.click();
         });
     }
     const cardGeneral = parentDoc.getElementById('card-general');
     if (cardGeneral && !cardGeneral.hasAttribute('data-binded')) {
         cardGeneral.setAttribute('data-binded', 'true');
         cardGeneral.addEventListener('click', function() {
-            const target = labels.find(l => l.innerText.includes('일반계좌')); if(target) target.click();
+            const b = btns.find(x => x.innerText === 'route_general'); if(b) b.click();
         });
     }
 }
@@ -175,27 +197,16 @@ def get_logo_html(nm):
         idx = sum(ord(c) for c in short_str) % len(colors)
         return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{colors[idx]}; color:{text_colors[idx]}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{short_str}</span>"
 
+# Session States
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
 if 'gen_sort_mode' not in st.session_state: st.session_state.gen_sort_mode = 'init'
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
 if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_change_rate = False
+if 'current_view' not in st.session_state: st.session_state.current_view = '대시보드'
 
 if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
 if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
-
-def toggle_usa_krw():
-    st.session_state.usa_show_krw = not st.session_state.usa_show_krw
-    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
-        st.session_state.usa_show_usd = True
-
-def toggle_usa_usd():
-    st.session_state.usa_show_usd = not st.session_state.usa_show_usd
-    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd:
-        st.session_state.usa_show_krw = True
-
-if 'current_view' not in st.session_state: st.session_state.current_view = '대시보드'
-if 'menu_sel' not in st.session_state: st.session_state.menu_sel = None
 
 def go_home():
     st.session_state.current_view = '대시보드'
@@ -205,7 +216,9 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직
+# =========================================================
+# 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직 
+# =========================================================
 if 'init' not in st.session_state:
     with st.spinner("Andy님의 최신 자산 데이터를 안전하게 동기화하고 있습니다. 잠시만 기다려주세요... ✨"):
         try: andy_pension_v2.generate_asset_data()
@@ -253,7 +266,7 @@ def fmt_p(v):
         return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
     except: return str(v)
 
-# 🎯 카드용 소수점 1자리 제어 함수 (0.xx 인 경우만 2자리)
+# 🎯 카드용 소수점 1자리 렌더링 함수 (0.xx 인 경우만 2자리)
 def fmt_p1(v):
     try:
         val = float(v)
@@ -276,10 +289,12 @@ def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 # 📍 사이드바 렌더링
 # =========================================================
 with st.sidebar:
-    # 🎯 콤포넌트 단추를 2x2 라디오 버튼으로 교체 (대시보드는 숨김 처리됨)
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "암호화폐", "퀀트매매 🤖"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    
-    st.markdown("<hr style='margin:12px 0 15px 0; border: none; border-top: 1px dashed #ccc;'>", unsafe_allow_html=True)
+    # 🎯 숨겨진 라우팅 버튼 (JavaScript가 클릭함)
+    st.markdown("<div style='display:none;'>", unsafe_allow_html=True)
+    if st.button("route_dashboard"): st.session_state.current_view = '대시보드'
+    if st.button("route_pension"): st.session_state.current_view = '절세계좌'
+    if st.button("route_general"): st.session_state.current_view = '일반계좌'
+    st.markdown("</div>", unsafe_allow_html=True)
 
     p_asset_all = tot.get('총 자산', 0); p_profit_all = tot.get('총 수익', 0); p_rate_all = tot.get('수익률(%)', 0)
     p_cash_tot, p_ovs_tot, p_dom_tot = 0, 0, 0
@@ -321,10 +336,17 @@ with st.sidebar:
     total_orig = tot.get('원금합', 1) + g_orig_all
     total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
-    # 🎯 30억 달성 프로젝트 진행률 및 카드 텍스트 우측 정렬 반영
+    # 🎯 카드 숫자 우측 정렬 및 소수점 1자리 적용
     st.markdown(f"<div id='card-total' class='sidebar-card sidebar-card-dark' style='background-color: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 12px; color: #ffffff;'><div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div><div style='text-align: right;'><div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)}<span style='font-size:15px; font-weight:normal; margin-left:4px; color:#ddd;'>KRW</span></div><div style='font-size:13.5px; margin-top:2px; color:#cccccc;'><span style='font-weight:bold; color: {'#ff4b4b' if total_profit > 0 else '#4b8bf5'};'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div></div><div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 12.5px; color: #999; font-weight: normal;'>🎯 30억 달성 프로젝트</span><span style='font-size: 13px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span></div><div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'><div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div></div></div></div>", unsafe_allow_html=True)
     st.markdown(f"<div id='card-pension' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div><div style='text-align: right;'><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)}<span style='font-size:14px; font-weight:normal; margin-left:3px; color:#555;'>KRW</span></div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span>&nbsp;({fmt_p1(p_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div></div></div>", unsafe_allow_html=True)
     st.markdown(f"<div id='card-general' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 25px;'><div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div><div style='text-align: right;'><div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)}<span style='font-size:14px; font-weight:normal; margin-left:3px; color:#555;'>KRW</span></div><div style='font-size:13.5px; margin-top:2px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span>&nbsp;({fmt_p1(g_rate_all)})</div><div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div></div></div>", unsafe_allow_html=True)
+    
+    # 🎯 하단 버튼 2개만 남기기
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🪙 암호화폐", use_container_width=True): st.session_state.current_view = '암호화폐'
+    with c2:
+        if st.button("🤖 퀀트매매", use_container_width=True): st.session_state.current_view = '퀀트매매'
 
 # =========================================================
 # 🔀 라우팅 제어 로직
@@ -591,7 +613,6 @@ elif st.session_state.current_view == '절세계좌':
         html_parts.append("          <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>")
         html_parts.append("          <div style='text-align: right;'>")
         html_parts.append(f"            <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
-        # 🎯 5개 요약카드 수익률 1자리 적용
         html_parts.append(f"            <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate)}'>{fmt_p1(t_rate)}</div>")
         html_parts.append("          </div>")
         html_parts.append("        </div>")
@@ -627,7 +648,6 @@ elif st.session_state.current_view == '절세계좌':
                 acc_name = pension_acc_name_map.get(k, k)
                 acc_asset = a.get('총 자산', 0); acc_profit = a.get('총 수익', 0); acc_rate = a.get('수익률(%)', 0)
                 item_count = len([i for i in a.get('상세', []) if i.get('종목명') != '[ 합  계 ]' and '현금성자산' not in i.get('종목명', '') and 'MMF' not in i.get('종목명', '') and '이율보증' not in i.get('종목명', '')])
-                # 🎯 5개 요약카드 수익률 1자리 적용 (fmt_p1)
                 html_parts.append(f"<a href='#account_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{OPEN_DATES.get(k, '')}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{acc_name}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(acc_asset)}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(acc_profit)}' style='font-size: 16px; font-weight: normal;'>{fmt(acc_profit, True)}</div><div class='{col(acc_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p1(acc_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(a.get('원금',0))}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
         html_parts.append("</div></div></div>") 
         
@@ -997,7 +1017,6 @@ elif st.session_state.current_view == '일반계좌':
     html_parts.append("          <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>")
     html_parts.append("          <div style='text-align: right;'>")
     html_parts.append(f"            <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div>")
-    # 🎯 5개 요약카드 수익률 1자리 적용
     html_parts.append(f"            <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate)}'>{fmt_p1(t_rate)}</div>")
     html_parts.append("          </div>")
     html_parts.append("        </div>")
@@ -1032,7 +1051,6 @@ elif st.session_state.current_view == '일반계좌':
             a = g_data[k]
             acc_num_map = {'DOM1': '[ 6312-5329 ]', 'DOM2': '[ 7162669785-01 ]', 'USA1': '[ 6312-5329 ]', 'USA2': '[ 6443-5993 ]'}
             item_count = len([i for i in a.get('상세', []) if i.get('종목명') not in ['[ 합  계 ]', '예수금']])
-            # 🎯 5개 요약카드 수익률 1자리 적용
             html_parts.append(f"<a href='#gen_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{acc_num_map[k]}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{nm_table[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(a.get('총자산_KRW', 0))}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a.get('총수익_KRW', 0))}' style='font-size: 16px; font-weight: normal;'>{fmt(a.get('총수익_KRW', 0), True)}</div><div class='{col(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p1(a.get('총수익_KRW',0)/principals[k]*100 if principals[k] else 0)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(principals[k])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
     html_parts.append("</div></div></div>") 
     
@@ -1167,7 +1185,7 @@ elif st.session_state.current_view == '일반계좌':
         </tr>
     """
     h2_table = re.sub(r'\n\s*', '', h2_table)
-    h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(t_buy_total)}</td></tr>"]
+    h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff)}'>{fmt(t_diff, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(t_buy_total)}</td></tr>"]
     for k in GEN_ACC_ORDER:
         if k in g_data:
             a = g_data[k]
@@ -1175,6 +1193,7 @@ elif st.session_state.current_view == '일반계좌':
             ay_acc = (ag_acc / a.get('매입금액_KRW', 1) * 100) if a.get('매입금액_KRW', 1) > 0 else 0
             diff_7_acc = a.get('총수익_KRW', 0) - a.get('평가손익(7일전)', 0)
             diff_30_acc = a.get('총수익_KRW', 0) - a.get('평가손익(30일전)', 0)
+            # 🎯 NameError를 유발했던 t_diff_1 변수를 올바른 acc_1d_diff 변수로 원상복구
             h2.append(f"<tr><td>{nm_table[k]}</td><td>{fmt(a.get('총자산_KRW',0))}</td><td class='{col(ag_acc)}'>{fmt(ag_acc, True)}</td><td class='{col(acc_1d_diff.get(k, 0))}'>{fmt(acc_1d_diff.get(k, 0), True)}</td><td class='{col(diff_7_acc)}'>{fmt(diff_7_acc, True)}</td><td class='{col(diff_30_acc)}'>{fmt(diff_30_acc, True)}</td><td class='{col(ay_acc)}'>{fmt_p(ay_acc)}</td><td>{fmt(a.get('매입금액_KRW', 0))}</td></tr>")
     h2.append("</table>")
     st.markdown("".join(h2), unsafe_allow_html=True)
