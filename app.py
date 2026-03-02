@@ -449,7 +449,7 @@ with st.sidebar:
 # 🔀 라우팅 제어 로직 (대시보드 화면, 퀀트, 가상자산)
 # =========================================================
 if st.session_state.current_view == '대시보드':
-    # 🎯 1. 타이틀 변경 반영
+    # 🎯 1. 타이틀 변경 완벽 반영
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>📊 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -468,11 +468,11 @@ if st.session_state.current_view == '대시보드':
             if any(x in nm_u for x in ['삼성전자', '엔비디아', 'NVIDIA', 'TSMC', 'TSM', '반도체']): return '반도체'
             if any(x in nm_u for x in ['애플', 'AAPL', '마이크로소프트', 'MSFT', '알파벳', 'GOOGL', '피그마']): return '빅테크'
             if any(x in nm_u for x in ['아이온큐', 'IONQ', '리케티', 'RGTI', '디 웨이브', 'QBTS', '아이렌', 'IREN', '팔란티어', 'PLTR']): return 'AI / 컴퓨팅'
-            if any(x in nm_u for x in ['테슬라', 'TSLA', '현대차', '한국항공우주', '한화오션']): return '모빌리티 / 우주항공'
+            if any(x in nm_u for x in ['테슬라', 'TSLA', '현대차', '한국항공우주', '한화오션']): return '모빌리티 / 산업재'
             if any(x in nm_u for x in ['예수금', '현금', 'MMF', '이율보증']): return '현금성 자산'
-            return '산업재 / 기타'
+            return '기타 / 금융'
 
-        # 🎯 긴 텍스트 줄바꿈 함수 (모서리 깨짐 방지)
+        # 🎯 긴 텍스트 줄바꿈 함수 (모서리 폰트 깨짐 방지)
         def wrap_text(name):
             if len(name) > 10 and ' ' not in name:
                 match = re.search(r'\d+', name)
@@ -516,28 +516,65 @@ if st.session_state.current_view == '대시보드':
                             '매입가': safe_float(item.get('매입가', 0)) * fx, '현재가': safe_float(item.get('현재가', 0)) * fx
                         })
 
-        # 🎯 고급 트리맵 렌더링 함수
+        # 🎯 트리맵 백지(Blank) 에러 완벽 해결 렌더링 함수
         def render_treemap(data_list, title):
             if not data_list: return None
             df = pd.DataFrame(data_list)
-            df = df.groupby(['카테고리', '종목명']).sum().reset_index()
+            # 중복 종목 병합 처리
+            df = df.groupby(['카테고리', '종목명']).agg({
+                '자산': 'sum', '평가손익': 'sum', '수량': 'sum', 
+                '매입가': 'mean', '현재가': 'mean', '전일비': 'mean', '수익률': 'mean'
+            }).reset_index()
+            
             total_sum = df['자산'].sum()
-            df['비중'] = (df['자산'] / total_sum) * 100
-            
-            # 고급 색상 적용 (수익: 빨강, 손실: 초록, 현금: 짙은 회색)
-            df['color'] = df.apply(lambda x: '#424242' if x['카테고리']=='현금성 자산' else ('#D32F2F' if x['전일비'] > 0 else ('#388E3C' if x['전일비'] < 0 else '#616161')), axis=1)
-            df['text_asset'] = df['자산'].apply(lambda x: f"₩{int(x):,}")
-            df['text_rate'] = df['전일비'].apply(lambda x: f"▲{x:.1f}%" if x > 0 else (f"▼{abs(x):.1f}%" if x < 0 else "-"))
-            df['display_nm'] = df['종목명'].apply(wrap_text)
-            
-            # 볼드 태그(b) 제거 및 span 스타일로 글자 렌더링 (글자 깨짐 방지)
-            df['display_text'] = "<span style='font-size:13.5px;'>" + df['display_nm'] + "</span><br><span style='font-size:12.5px;'>" + df['text_rate'] + "</span><br><span style='font-size:12px; opacity:0.8;'>" + df['text_asset'] + "</span>"
-            
-            custom_data = np.stack((df['비중'], df['평가손익'], df['수익률'], df['수량'], df['매입가'], df['현재가'], df['전일비']), axis=-1)
-            
+
+            # Plotly Treemap의 필수 계층 구조(Root -> Category -> Item) 수동 생성
+            labels = ["포트폴리오"]
+            parents = [""]
+            values = [0]  # Plotly 계산을 위해 부모 노드는 0으로 설정
+            colors = ["#1e222d"]
+            texts = [""]
+            custom_data = [[0,0,0,0,0,0,0]]
+
+            # 카테고리 노드 추가
+            for cat in df['카테고리'].unique():
+                labels.append(cat)
+                parents.append("포트폴리오")
+                values.append(0)
+                colors.append("#2a2e39")
+                texts.append(f"<b style='font-size:14px; color:#e2e8f0;'>{cat}</b>")
+                custom_data.append([0,0,0,0,0,0,0])
+
+            # 개별 종목 노드 추가
+            for _, r in df.iterrows():
+                labels.append(r['종목명'])
+                parents.append(r['카테고리'])
+                values.append(r['자산'])
+                
+                # 고급 색상 적용 (수익: 빨강, 손실: 초록, 현금: 짙은 회색)
+                if r['카테고리'] == '현금성 자산': c_color = '#4b5563'
+                elif r['전일비'] > 0: c_color = '#D32F2F'
+                elif r['전일비'] < 0: c_color = '#388E3C'
+                else: c_color = '#616161'
+                colors.append(c_color)
+
+                nm_wrap = wrap_text(r['종목명'])
+                t_rate = f"▲{r['전일비']:.1f}%" if r['전일비'] > 0 else (f"▼{abs(r['전일비']):.1f}%" if r['전일비'] < 0 else "-")
+                t_asset = f"₩{int(r['자산']):,}"
+                
+                # 볼드(b) 태그 제거 및 span 적용으로 모서리 깨짐 현상 완벽 방지
+                texts.append(f"<span style='font-size:13.5px;'>{nm_wrap}</span><br><span style='font-size:12.5px;'>{t_rate}</span><br><span style='font-size:11.5px; opacity:0.8;'>{t_asset}</span>")
+                
+                pct = (r['자산'] / total_sum) * 100 if total_sum > 0 else 0
+                custom_data.append([pct, r['평가손익'], r['수익률'], r.get('수량',0), r.get('매입가',0), r.get('현재가',0), r['전일비']])
+
             fig = go.Figure(go.Treemap(
-                labels=df['종목명'], parents=df['카테고리'], values=df['자산'], text=df['display_text'], textinfo="text",
-                marker_colors=df['color'], 
+                labels=labels,
+                parents=parents,
+                values=values,
+                text=texts,
+                textinfo="text",
+                marker_colors=colors,
                 customdata=custom_data,
                 hovertemplate=(
                     "<b style='font-size:16px;'>%{label}</b><br><br>"
@@ -549,7 +586,8 @@ if st.session_state.current_view == '대시보드':
                     "<extra></extra>"
                 ),
                 textfont=dict(color='white', family='Arial', size=13),
-                pathbar_textfont=dict(size=14, color='#fff'), root_color="#1e222d"
+                pathbar_textfont=dict(size=14, color='#fff'),
+                root_color="#1e222d"
             ))
             
             fig.update_layout(
@@ -570,7 +608,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown("</div>", unsafe_allow_html=True)
 
         # =========================================================
-        # 🎯 3. 파이차트 2분할 (좌: 한국 상세비중, 우: 해외 상세비중)
+        # 🎯 3. 파이차트 2분할 (좌: 한국 상세, 우: 미국 상세)
         # =========================================================
         st.markdown("<h3 style='margin-top: 20px; margin-bottom: 15px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
         
@@ -602,7 +640,6 @@ if st.session_state.current_view == '대시보드':
             if df_pie.empty: return
             
             donut_colors = ['#D32F2F','#F57C00','#FBC02D','#388E3C','#1976D2','#7B1FA2', '#0097A7', '#689F38', '#C2185B', '#E64A19', '#303F9F', '#455A64']
-            chart_data = [{"value": float(row['총자산']), "name": row['종목명']} for idx, row in df_pie.iterrows()]
             total_asset = df_pie['총자산'].sum()
             
             items_js = []
@@ -623,7 +660,6 @@ if st.session_state.current_view == '대시보드':
                 list_html += f"<div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:4px;'><div class='leg-left' style='display:flex; align-items:center;'><div class='leg-color' style='width:14px; height:14px; border-radius:4px; margin-right:10px; background-color:{c_code};'></div>{logo}<span class='leg-name' style='color:#e2e8f0; font-size:15px; font-weight:500;'>{row['종목명']}</span></div><span class='leg-pct' style='color:#94a3b8; font-size:15px; font-weight:bold;'>{pct:.1f}%</span></div>"
                 
             js_data = json.dumps(items_js, ensure_ascii=False)
-            js_chart_data = json.dumps(chart_data, ensure_ascii=False)
             
             html_code = f"""
             <!DOCTYPE html>
@@ -662,7 +698,6 @@ if st.session_state.current_view == '대시보드':
                 </div>
                 <script>
                     var itemsData = {js_data};
-                    var chartData = {js_chart_data};
                     var chart = echarts.init(document.getElementById('pie-chart'));
                     
                     function updateHover(idx) {{
@@ -710,7 +745,7 @@ if st.session_state.current_view == '대시보드':
                                 itemStyle: {{ shadowBlur: 20, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.6)' }} 
                             }},
                             labelLine: {{ show: false }},
-                            data: chartData
+                            data: itemsData 
                         }}]
                     }};
                     chart.setOption(option);
@@ -744,8 +779,8 @@ if st.session_state.current_view == '대시보드':
             components.html(html_code, height=520)
 
         cb1, cb2 = st.columns(2)
-        with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세 비중 (한국)")
-        with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세 비중 (해외)")
+        with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
+        with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
 
 # =========================================================
 # 퀀트매매 & 가상자산 화면
@@ -895,7 +930,7 @@ elif st.session_state.current_view == '절세계좌':
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}%, #d9d9d9 {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 43px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
-        # 🎯 오리지널 레이아웃 완벽 복원 (노란색 1개 + 흰색 4개 grid 구조)
+        # 🎯 노란색, 흰색 카드 원본 구조 100% 보존
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -1104,9 +1139,8 @@ elif st.session_state.current_view == '절세계좌':
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
+                # 🎯 1줄짜리 헤더 구조 적용 (표 깨짐 방지 완벽 복원)
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
-                
-                # 🎯 상세 종목 표 1줄 헤더 구조 적용
                 if st.session_state.show_change_rate:
                     h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
                 else:
@@ -1228,7 +1262,7 @@ elif st.session_state.current_view == '일반계좌':
                     else: 
                         dom_total += val_krw; dom_items.append(it_copy)
 
-    # 🎯 t_diff_1 에러 완벽 해결: 일간 전일비의 총합을 t_diff 변수로 선언하고 테이블에 사용
+    # 🎯 NameError t_diff_1 에러 해결: 일반계좌 전일비는 t_diff 변수로 선언
     t_diff = sum(acc_1d_diff.values()) 
     
     goal_amount = 1500000000
@@ -1459,8 +1493,9 @@ elif st.session_state.current_view == '일반계좌':
     """
     h2_table = re.sub(r'\n\s*', '', h2_table)
     
-    # 🎯 NameError t_diff_1 에러 완벽 해결 (올바른 변수명 t_diff 적용)
+    # 🎯 NameError t_diff_1 에러 완벽 해결 (sum으로 합산된 t_diff 변수 적용)
     h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff)}'>{fmt(t_diff, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(t_buy_total)}</td></tr>"]
+    
     for k in GEN_ACC_ORDER:
         if k in g_data:
             a = g_data[k]
@@ -1514,16 +1549,17 @@ elif st.session_state.current_view == '일반계좌':
                 with u_c2:
                     currency_mode = st.selectbox(
                         "표기단위",
-                        options=["[ 원화(₩) ]", "[ 달러($) ]", "[원화/달러]"],
+                        options=["[원화(KRW)]", "[달러(USD)]", "[원화/달러]"],
                         index=2,
                         label_visibility="collapsed",
                         key=f"curr_sel_box_{k}"
                     )
                 u_html = ""
             else:
-                currency_mode = "[ 원화(₩) ]"
+                currency_mode = "[원화(KRW)]"
                 u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
+            # 🎯 표 깨짐 방지: 1줄짜리 헤더 구조 완벽 통일
             code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
             if st.session_state.gen_show_change_rate:
                 h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
@@ -1550,7 +1586,7 @@ elif st.session_state.current_view == '일반계좌':
                 
                 if currency_mode == "[원화/달러]":
                     return f"{s_krw}<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({s_usd})</span>"
-                elif currency_mode == "[ 달러($) ]":
+                elif currency_mode == "[달러(USD)]":
                     return s_usd
                 else:
                     return s_krw
