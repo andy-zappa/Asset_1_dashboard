@@ -1,4 +1,4 @@
-import request
+import requests
 import streamlit as st
 import streamlit.components.v1 as components
 import json
@@ -14,7 +14,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import requests # 🎯 웹에서 JSON 데이터를 읽어오기 위해 추가
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
@@ -391,8 +390,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
             if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
-
-        # =========================================================
+            # =========================================================
         # 🎯 3. 파이차트 2분할 (좌: 한국 상세, 우: 미국 상세)
         # =========================================================
         st.markdown("<h3 style='margin-top: 20px; margin-bottom: 15px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
@@ -595,6 +593,19 @@ elif st.session_state.current_view == '가상자산':
         </div>
     """, unsafe_allow_html=True)
 
+    # --- 🚨 FIX: 가상자산 데이터를 화면에 뿌리기 전에 '먼저' 읽어오도록 위치 수정 ---
+    import requests
+    github_raw_url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/refs/heads/main/crypto_data.json"
+    crypto_data = {}
+
+    try:
+        response = requests.get(github_raw_url, timeout=5)
+        if response.status_code == 200:
+            crypto_data = response.json()
+    except Exception as e:
+        st.error(f"가상자산 데이터 연동 실패: {e}")
+    # -------------------------------------------------------
+
     if crypto_data and 'total_asset' in crypto_data:
         c_tot = crypto_data['total_asset']
         c_krw = crypto_data['total_krw']
@@ -622,19 +633,6 @@ elif st.session_state.current_view == '가상자산':
         <table class="main-table">
             <tr><th>코인명</th><th>보유수량</th><th>매수평균가</th><th>현재가</th><th>평가금액</th><th>평가손익</th><th>수익률</th></tr>
         """, unsafe_allow_html=True)
-
-# --- 가상자산 데이터를 깃허브에서 직접 읽어오기 (추가 부분) ---
-import requests
-github_raw_url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/refs/heads/main/crypto_data.json"
-crypto_data = {}
-
-try:
-    response = requests.get(github_raw_url, timeout=5)
-    if response.status_code == 200:
-        crypto_data = response.json()
-except Exception as e:
-    st.error(f"가상자산 데이터 연동 실패: {e}")
-# -------------------------------------------------------
         
         c_html = ""
         for c in crypto_data.get('coins', []):
@@ -650,10 +648,8 @@ except Exception as e:
         
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
-        # st.info("🔄 오라클 서버에서 가상자산 데이터를 불러오는 중이거나, 연결할 GitHub URL을 아직 입력하지 않았습니다.")
-pass
-
-# =========================================================
+        st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
+        # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
@@ -1435,5 +1431,3 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
-
-
