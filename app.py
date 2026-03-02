@@ -156,7 +156,7 @@ function bindSidebarClicks() {
     bindClick('card-pension', '절세계좌');
     bindClick('card-general', '일반계좌');
     bindClick('card-crypto', '가상자산');
-    bindClick('card-quant', '퀀트매매 봇');
+    bindClick('card-quant', '퀀트매매');
 }
 setInterval(bindSidebarClicks, 1000);
 </script>
@@ -347,7 +347,7 @@ crypto_data = get_crypto_data()
 # 📍 사이드바 렌더링 (폰트 통일, 비율 추가 적용)
 # =========================================================
 with st.sidebar:
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매 봇"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     p_asset_all = tot.get('총 자산', 0); p_profit_all = tot.get('총 수익', 0); p_rate_all = tot.get('수익률(%)', 0)
     p_cash_tot, p_ovs_tot, p_dom_tot = 0, 0, 0
@@ -1649,6 +1649,7 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
