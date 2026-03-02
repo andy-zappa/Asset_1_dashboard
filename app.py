@@ -1,4 +1,3 @@
-import requests
 import streamlit as st
 import streamlit.components.v1 as components
 import json
@@ -8,6 +7,7 @@ import andy_general_v1
 import os
 import re
 import time
+import requests
 from datetime import datetime
 import urllib.parse
 import pandas as pd
@@ -15,38 +15,48 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
+
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# 🚨 [ 핵심 1 ] 가상자산 데이터를 맨 꼭대기에서 미리 100% 로드!
-# =========================================================
-@st.cache_data(ttl=60)
-def fetch_github_crypto():
-    url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/main/crypto_data.json"
-    try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200: return res.json()
-    except: pass
-    return {}
-
-my_crypto = fetch_github_crypto()
-
-# =========================================================
-# 공통 설정 및 CSS
+# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
 # =========================================================
 css = """
 <style>
+/* 🎯 Streamlit 우측 상단 툴바(연필 아이콘 등) 표시되도록 숨김 처리 제거함 */
 [data-testid="stStatusWidget"] { display: none !important; }
 html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { scroll-behavior: smooth !important; }
+
+/* 🎯 사이드바 최상단 여백 극한으로 끌어올리기 */
 [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }
 section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -15px !important; gap: 0 !important; }
 
-.sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px; }
-.sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; border-color: #ccc !important; }
-.sidebar-card-dark { background-color: #1a1a1a !important; color: #ffffff !important; border: none !important; }
-.sidebar-card-dark:hover { box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; }
+/* 🎯 사이드바 카드 디자인 (오리지널 고급 회색/검은색 + 호버 애니메이션) */
+.sidebar-card { 
+    transition: transform 0.2s ease, box-shadow 0.2s ease; 
+    cursor: pointer; 
+    background-color: #f8f9fa; 
+    border-radius: 12px; 
+    padding: 15px; 
+    border: 1px solid #eaeaea; 
+    margin-bottom: 12px; 
+}
+.sidebar-card:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; 
+    border-color: #ccc !important; 
+}
+.sidebar-card-dark { 
+    background-color: #1a1a1a !important; 
+    color: #ffffff !important; 
+    border: none !important; 
+}
+.sidebar-card-dark:hover { 
+    box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; 
+}
 
+/* 🎯 타이틀 및 메인 테이블 스타일 */
 .block-container { padding-top: 3rem !important; padding-bottom: 7rem !important; }
 h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; padding-bottom: 0px; }
 .sub-title { font-size: 22px !important; font-weight: bold; margin: 12px 0 10px; }
@@ -61,12 +71,14 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 .main-table th.th-week { border-left: 1px solid #dcdcdc !important; border-top: 1px solid #dcdcdc !important; font-size: 13.5px; }
 
 .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
-.red { color: #D32F2F !important; }
-.blue { color: #1976D2 !important; }
+.red { color: #D32F2F !important; }  /* 웹디자인 관점의 고급스러운 빨강 */
+.blue { color: #1976D2 !important; } /* 고급스러운 파랑 */
 
+/* 🎯 노란색/흰색 카드 구조 완벽 보존 */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 1; display: flex; flex-direction: column; }
+
 .card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 18px 22px 15px 22px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
 .card-inner { background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 10px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s ease; cursor: default; }
 .card-inner:hover { background-color: #f8f9fa !important; border-color: #bbb !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
@@ -75,18 +87,22 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 .card-sub { background: #fff; border: 1.5px solid #dcdcdc; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 10px 15px; transition: background-color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s; cursor: pointer; }
 .card-sub:hover { background-color: #f2f2f2 !important; border-color: #ccc !important; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .insight-bottom-box { background: #fff; border: 1.5px solid #dcdcdc; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
+
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
 
+/* 🎯 라디오 버튼 숨김 처리 */
 div[role="radiogroup"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 0px !important; }
 div[role="radiogroup"] label { font-size: 14.5px !important; margin-bottom: 0px !important; }
 div[data-testid="stRadio"] { display: none !important; } 
 
+/* 🎯 컴팩트 Selectbox CSS */
 div[data-baseweb="select"] { min-height: 34px !important; font-size: 13.5px !important; }
 div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 6px !important; min-height: 34px !important; }
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
 div[data-testid="stSelectbox"] label { display: none !important; }
 
+/* 🎯 플로팅 배너 CSS 수정 */
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) { 
     position: fixed !important; top: 55px !important; right: 20px !important; bottom: auto !important; left: auto !important; 
     transform: none !important; width: max-content !important; min-width: 0 !important; 
@@ -105,6 +121,7 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="
 """
 st.markdown(css, unsafe_allow_html=True)
 
+# 🎯 스무스 스크롤 및 사이드바 카드 클릭 라우팅 JS
 components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -116,6 +133,7 @@ parentDoc.querySelectorAll('a[href^="#"]').forEach(anchor => {
         if (targetElement) { targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     });
 });
+
 function bindSidebarClicks() {
     const labels = Array.from(parentDoc.querySelectorAll('div[role="radiogroup"] label'));
     const bindClick = (cardId, routeName) => {
@@ -138,17 +156,23 @@ setInterval(bindSidebarClicks, 1000);
 </script>
 """, height=0)
 
+# =========================================================
+# 🎯 글로벌 로고/아이콘 매핑 로직
+# =========================================================
 GUARANTEED_LOGOS = {
-    "알파벳 A": "google.com", "팔란티어 테크": "palantir.com", "TSMC(ADR)": "tsmc.com", "QQQ 레버리지 3X ETF": "invesco.com",
-    "테슬라": "tesla.com", "마이크로소프트": "microsoft.com", "애플": "apple.com", "미국 반도체 3X ETF": "direxion.com",
-    "엔비디아": "nvidia.com", "아이온큐": "ionq.com", "리케티 컴퓨팅": "rigetti.com", "디 웨이브 퀀텀": "dwavesys.com",
-    "아이렌": "iren.com", "피그마": "figma.com", "삼성전자": "samsung.com", "현대차": "hyundai.com", "CJ": "cj.net",
-    "두산에너빌리티": "doosanenerbility.com", "한화오션": "hanwhaocean.com", "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr",
-    "셀트리온": "celltrion.com", "KODEX 레버리지": "samsungfund.com", "KODEX 200": "samsungfund.com",
+    "알파벳 A": "google.com", "팔란티어 테크": "palantir.com", "TSMC(ADR)": "tsmc.com",
+    "QQQ 레버리지 3X ETF": "invesco.com", "테슬라": "tesla.com", "마이크로소프트": "microsoft.com",
+    "애플": "apple.com", "미국 반도체 3X ETF": "direxion.com", "엔비디아": "nvidia.com",
+    "아이온큐": "ionq.com", "리케티 컴퓨팅": "rigetti.com", "디 웨이브 퀀텀": "dwavesys.com",
+    "아이렌": "iren.com", "피그마": "figma.com", "삼성전자": "samsung.com", "현대차": "hyundai.com", 
+    "CJ": "cj.net", "두산에너빌리티": "doosanenerbility.com", "한화오션": "hanwhaocean.com",
+    "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com",
+    "KODEX 레버리지": "samsungfund.com", "KODEX 200": "samsungfund.com",
     "KODEX 미국나스닥100": "samsungfund.com", "KODEX 200타겟위클리커버드콜": "samsungfund.com",
     "KODEX 미국AI테크TOP10타겟": "samsungfund.com", "KODEX 미국나스닥100데일리": "samsungfund.com",
-    "TIGER 미국S&P500": "tigeretf.com", "TIGER 미국필라델피아반도체나스닥": "tigeretf.com", "TIGER 미국배당다우존스": "tigeretf.com",
-    "PLUS 고배당주": "hanwhafund.com", "RISE 200위클리커버드콜": "kbstarfund.com"
+    "TIGER 미국S&P500": "tigeretf.com", "TIGER 미국필라델피아반도체나스닥": "tigeretf.com",
+    "TIGER 미국배당다우존스": "tigeretf.com", "PLUS 고배당주": "hanwhafund.com",
+    "RISE 200위클리커버드콜": "kbstarfund.com"
 }
 
 def get_logo_html(nm):
@@ -164,44 +188,14 @@ def get_logo_html(nm):
         idx = sum(ord(c) for c in short_str) % len(colors)
         return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{colors[idx]}; color:{text_colors[idx]}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{short_str}</span>"
 
-# =========================================================
-# 유틸리티 계산 함수
-# =========================================================
-def safe_float(val):
-    if isinstance(val, (int, float)): return float(val)
-    try: return float(str(val).replace(',', '').replace('%', '').strip())
-    except: return 0.0
-
-def col(val):
-    v = safe_float(val)
-    if v > 0: return "red"
-    elif v < 0: return "blue"
-    return ""
-
-def fmt(val, sign=False, decimal=0):
-    if val == '-': return '-'
-    v = safe_float(val)
-    if decimal > 0: 
-        fmt_str = f"{{:,.{decimal}f}}"
-        return f"+{fmt_str.format(v)}" if sign and v > 0 else fmt_str.format(v)
-    return f"+{int(v):,}" if sign and v > 0 else f"{int(v):,}"
-
-def fmt_p(val):
-    if val == '-': return '-'
-    v = safe_float(val)
-    return f"+{v:.2f}%" if v > 0 else f"{v:.2f}%"
-
-def short_name(nm):
-    if not nm: return ""
-    nm = str(nm)
-    return nm.split()[0] if len(nm) > 10 else nm
-
+# Session States
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
 if 'gen_sort_mode' not in st.session_state: st.session_state.gen_sort_mode = 'init'
 if 'show_code' not in st.session_state: st.session_state.show_code = False
 if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
 if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_change_rate = False
 if 'current_view' not in st.session_state: st.session_state.current_view = '대시보드'
+
 if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
 if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
 
@@ -217,6 +211,7 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
+# 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직
 if 'init' not in st.session_state:
     with st.spinner("ZAPPA AI가 Andy님의 최신 자산 데이터를 동기화하고 있습니다... ✨"):
         try: andy_pension_v2.generate_asset_data()
@@ -237,80 +232,194 @@ def load():
 @st.cache_data(ttl=60)
 def load_gen():
     try:
-        if not os.path.exists('general_assets.json') or os.path.getsize('general_assets.json') == 0: andy_general_v1.generate_general_data()
-        with open('general_assets.json', 'r', encoding='utf-8') as f: return json.load(f)
+        if not os.path.exists('assets_general.json') or os.path.getsize('assets_general.json') == 0: andy_general_v1.generate_general_data()
+        with open('assets_general.json', 'r', encoding='utf-8') as f: return json.load(f)
     except: return {}
 
-data = load() or {}
-g_data = load_gen() or {}
+data = load() or {}; g_data = load_gen() or {}; tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
-# 🚨 [ 방어막 1 ] AttributeError 완벽 차단: 데이터가 아예 비어있거나 None으로 넘어오더라도 에러가 나지 않도록 강제 방어!
-raw_insight = data.get('_insight', {})
-tot = raw_insight if isinstance(raw_insight, dict) else {}
+def safe_float(val):
+    try: return float(val) if val not in ['-', '', None] else 0.0
+    except: return 0.0
+
+def fmt(v, sign=False, decimal=0):
+    if v == '-': return '-'
+    try:
+        f_val = float(v)
+        val_str = f"{f_val:,.{decimal}f}" if decimal > 0 else f"{int(round(f_val)):,}"
+        return f"+{val_str}" if sign and f_val > 0 else val_str
+    except: return str(v)
+
+def fmt_p(v):
+    try:
+        val = float(v)
+        return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
+    except: return str(v)
+
+def fmt_p1(v):
+    try:
+        val = float(v)
+        abs_val = abs(val)
+        if abs_val < 1.0 and abs_val != 0.0: return f"▲{val:.2f}%" if val > 0 else f"▼{abs_val:.2f}%"
+        else: return f"▲{val:.1f}%" if val > 0 else (f"▼{abs_val:.1f}%" if val < 0 else "0.0%")
+    except: return str(v)
+
+def col(v):
+    try: return "red" if float(v) > 0 else ("blue" if float(v) < 0 else "gray")
+    except: return ""
+
+def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
+
 
 # =========================================================
-# 🚨 [ 방어막 2 ] 통째로 날아갔던 왼쪽 사이드바 (들여쓰기 에러 완벽 수정)
+# 🚨 [ 핵심 1 ] 가상자산 데이터를 맨 꼭대기에서 미리 100% 로드! (GitHub 연동)
+# =========================================================
+@st.cache_data(ttl=60)
+def get_crypto_data():
+    url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/main/crypto_data.json"
+    try:
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200: 
+            data = res.json()
+            # GitHub 데이터에서 btc_pct 등도 계산해 주어야 함
+            total_asset = data.get('total_asset', 0)
+            coins = data.get('coins', [])
+            btc_pct = eth_pct = trx_pct = 0
+            if total_asset > 0:
+                for c in coins:
+                    if c['ticker'] == 'BTC': btc_pct = (c['eval'] / total_asset) * 100
+                    elif c['ticker'] == 'ETH': eth_pct = (c['eval'] / total_asset) * 100
+                    elif c['ticker'] == 'TRX': trx_pct = (c['eval'] / total_asset) * 100
+            data['btc_pct'] = btc_pct
+            data['eth_pct'] = eth_pct
+            data['trx_pct'] = trx_pct
+            return data
+    except: pass
+    return None
+
+crypto_data = get_crypto_data()
+
+# =========================================================
+# 📍 사이드바 렌더링
 # =========================================================
 with st.sidebar:
-    st.markdown("<div style='text-align: center; margin-top: -20px;'><h2 style='margin-bottom: 0px;'>📊 ZAPPA AI</h2><p style='color:#666; margin-top:0px;'>Andy's Asset Dashboard</p></div>", unsafe_allow_html=True)
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
-    menu_list = ['대시보드', '절세계좌', '일반계좌', '가상자산', '퀀트매매']
-    if st.session_state.current_view not in menu_list: st.session_state.current_view = '대시보드'
+    p_asset_all = tot.get('총 자산', 0); p_profit_all = tot.get('총 수익', 0); p_rate_all = tot.get('수익률(%)', 0)
+    p_cash_tot, p_ovs_tot, p_dom_tot = 0, 0, 0
+    for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+        if k in data:
+            for item in data[k].get('상세', []):
+                if item.get('종목명') == '[ 합  계 ]': continue
+                val = item.get('총 자산', 0); nm = item.get('종목명', '').upper()
+                if '현금' in nm or 'MMF' in nm: p_cash_tot += val
+                elif any(kw in nm for kw in ['미국', 'S&P', '나스닥', '필라델피아', '다우지수']): p_ovs_tot += val
+                else: p_dom_tot += val
     
-    st.session_state.menu_sel = st.radio("메뉴 선택", menu_list, index=menu_list.index(st.session_state.current_view), on_change=on_menu_change)
-    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
-    
-    # 절세계좌 요약 (tot가 확실한 딕셔너리이므로 더 이상 에러 안 남)
-    p_asset = tot.get('총 자산', 0)
-    p_profit = tot.get('총 수익', 0)
-    p_rate = tot.get('수익률(%)', 0)
-    
-    # 일반계좌 요약
-    GEN_ACC_ORDER = ['DOM1', 'DOM2', 'USA1', 'USA2']
-    g_asset = sum(g_data[k].get("총자산_KRW", 0) for k in GEN_ACC_ORDER if k in g_data)
-    g_profit = sum(g_data[k].get("총수익_KRW", 0) for k in GEN_ACC_ORDER if k in g_data)
-    g_orig = sum([110963075, 5208948, 257915999, 7457930]) 
-    g_rate = (g_profit / g_orig * 100) if g_orig > 0 else 0
-    
-    # 사이드바 가상자산 요약 (들여쓰기 4칸 완벽하게 맞춤!)
-    c_asset = my_crypto.get('total_asset', 0)
-    c_profit = my_crypto.get('total_profit', 0)
-    c_rate = my_crypto.get('total_rate', 0)
+    p_dom_pct = (p_dom_tot / p_asset_all * 100) if p_asset_all > 0 else 0
+    p_ovs_pct = (p_ovs_tot / p_asset_all * 100) if p_asset_all > 0 else 0
 
-    st.sidebar.metric(
-        label="가상자산", 
-        value=f"{int(c_asset):,} KRW", 
-        delta=f"{int(c_profit):+,} ({c_rate:.1f}%)"
-    )
-    
-    # 총합산 
-    total_all_asset = p_asset + g_asset + c_asset
-    total_all_profit = p_profit + g_profit + c_profit
-    
+    GEN_ACC_ORDER_Q = ['DOM1', 'DOM2', 'USA1', 'USA2']
+    g_principals_q = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    g_orig_all = sum(g_principals_q.values())
+    g_asset_all = sum(g_data[k].get("총자산_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
+    g_profit_all = sum(g_data[k].get("총수익_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
+    g_rate_all = (g_profit_all / g_orig_all * 100) if g_orig_all > 0 else 0
+
+    g_cash_tot, g_ovs_tot, g_dom_tot = 0, 0, 0
+    for k in GEN_ACC_ORDER_Q:
+        if k in g_data:
+            is_usa = 'USA' in k; fx = g_data.get('환율', 1443.1) if is_usa else 1
+            for item in g_data[k].get('상세', []):
+                if item.get('종목명') == '[ 합  계 ]': continue
+                val_krw = item.get('총자산', 0) * fx; nm = item.get('종목명', '').upper()
+                if nm == '예수금' or '현금' in nm: g_cash_tot += val_krw
+                elif is_usa: g_ovs_tot += val_krw
+                else: g_dom_tot += val_krw
+                
+    g_dom_pct = (g_dom_tot / g_asset_all * 100) if g_asset_all > 0 else 0
+    g_ovs_pct = (g_ovs_tot / g_asset_all * 100) if g_asset_all > 0 else 0
+
+
+    # 가상자산을 총 자산에 합산
+    c_tot_sum = crypto_data.get('total_asset', 0) if crypto_data else 0
+    c_prof_sum = crypto_data.get('total_profit', 0) if crypto_data else 0
+
+    total_asset = p_asset_all + g_asset_all + c_tot_sum
+    total_profit = p_profit_all + g_profit_all + c_prof_sum
+    total_orig = tot.get('원금합', 1) + g_orig_all
+    total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
+
+    # 1. 🌎 총 자산 통합
     st.markdown(f"""
-    <div id='card-total' class='sidebar-card sidebar-card-dark' data-binded='false'>
-        <div style='font-size:13px; color:#aaa; margin-bottom:4px;'>Total Asset</div>
-        <div style='font-size:20px; font-weight:bold; margin-bottom:2px;'>{fmt(total_all_asset)} <span style='font-size:12px;font-weight:normal;'>KRW</span></div>
-        <div style='font-size:14px; color:{"#ff5252" if total_all_profit>0 else "#448aff"};'>{fmt(total_all_profit, True)}</div>
+    <div id='card-total' class='sidebar-card sidebar-card-dark'>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
+        <div style='text-align: right;'>
+            <div style='font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:15px; font-weight:normal; color:#ddd;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#cccccc;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
+        </div>
+        <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
+                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 30억 달성 프로젝트</span>
+                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
+            </div>
+            <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
+                <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
+            </div>
+        </div>
     </div>
-    <div id='card-pension' class='sidebar-card' data-binded='false'>
-        <div style='font-size:13px; color:#666; margin-bottom:4px;'>⏳ 절세계좌</div>
-        <div style='font-size:17px; font-weight:bold; color:#111; margin-bottom:2px;'>{fmt(p_asset)} <span style='font-size:11px;font-weight:normal;'>KRW</span></div>
-        <div style='font-size:13px;' class='{col(p_profit)}'>{fmt(p_profit, True)} ({fmt_p(p_rate)})</div>
+    """, unsafe_allow_html=True)
+    
+    # 2. ⏳ 절세계좌
+    st.markdown(f"""
+    <div id='card-pension' class='sidebar-card'>
+        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
+        <div style='text-align: right;'>
+            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> ({fmt_p1(p_rate_all)})</div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
+        </div>
     </div>
-    <div id='card-general' class='sidebar-card' data-binded='false'>
-        <div style='font-size:13px; color:#666; margin-bottom:4px;'>🌱 일반계좌</div>
-        <div style='font-size:17px; font-weight:bold; color:#111; margin-bottom:2px;'>{fmt(g_asset)} <span style='font-size:11px;font-weight:normal;'>KRW</span></div>
-        <div style='font-size:13px;' class='{col(g_profit)}'>{fmt(g_profit, True)} ({fmt_p(g_rate)})</div>
+    """, unsafe_allow_html=True)
+    
+    # 3. 🌱 일반계좌
+    st.markdown(f"""
+    <div id='card-general' class='sidebar-card'>
+        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🌱 일반계좌</div>
+        <div style='text-align: right;'>
+            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
+        </div>
     </div>
-    <div id='card-crypto' class='sidebar-card' data-binded='false'>
-        <div style='font-size:13px; color:#666; margin-bottom:4px;'>🪙 가상자산</div>
-        <div style='font-size:17px; font-weight:bold; color:#111; margin-bottom:2px;'>{fmt(c_asset)} <span style='font-size:11px;font-weight:normal;'>KRW</span></div>
-        <div style='font-size:13px;' class='{col(c_profit)}'>{fmt(c_profit, True)} ({fmt_p(c_rate)})</div>
+    """, unsafe_allow_html=True)
+    
+    # 4. 🪙 가상자산
+    c_tot = crypto_data['total_asset'] if crypto_data else 0
+    c_prof = crypto_data['total_profit'] if crypto_data else 0
+    c_rate = crypto_data['total_rate'] if crypto_data else 0
+    c_btc = crypto_data['btc_pct'] if crypto_data else 0
+    c_eth = crypto_data['eth_pct'] if crypto_data else 0
+    c_trx = crypto_data['trx_pct'] if crypto_data else 0
+
+    st.markdown(f"""
+    <div id='card-crypto' class='sidebar-card'>
+        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
+        <div style='text-align: right;'>
+            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span> ({fmt_p1(c_rate)})</div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
+        </div>
     </div>
-    <div id='card-quant' class='sidebar-card' data-binded='false'>
-        <div style='font-size:13px; color:#666; margin-bottom:4px;'>🤖 퀀트매매 (ZAPPA Bot)</div>
-        <div style='font-size:13px; color:#888;'>운용 상태 : 모니터링 중</div>
+    """, unsafe_allow_html=True)
+    
+    # 5. 🤖 퀀트매매
+    st.markdown(f"""
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
+        <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
+            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:36px; height:36px; object-fit:contain;'> 
+            퀀트매매
+        </div>
     </div>
     """, unsafe_allow_html=True)
     # =========================================================
@@ -678,10 +787,7 @@ elif st.session_state.current_view == '가상자산':
         </div>
     """, unsafe_allow_html=True)
 
-    # 상단에서 미리 로드한 데이터 연결
-    crypto_data = my_crypto
-
-    if crypto_data and 'total_asset' in crypto_data:
+    if crypto_data:
         c_tot = crypto_data['total_asset']
         c_krw = crypto_data['total_krw']
         c_buy = crypto_data['total_buy']
@@ -710,7 +816,7 @@ elif st.session_state.current_view == '가상자산':
         """, unsafe_allow_html=True)
         
         c_html = ""
-        for c in crypto_data.get('coins', []):
+        for c in crypto_data['coins']:
             c_html += f"<tr>"
             c_html += f"<td style='font-weight:bold;'>{c['name']} ({c['ticker']})</td>"
             c_html += f"<td>{c['qty']:.8f}</td>"
@@ -724,7 +830,8 @@ elif st.session_state.current_view == '가상자산':
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
         st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
-        # =========================================================
+# =========================================================
+# =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
@@ -1012,6 +1119,7 @@ elif st.session_state.current_view == '절세계좌':
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
+                # 🎯 1줄짜리 헤더 구조 (표 깨짐 방지 완벽 복원)
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                 if st.session_state.show_change_rate:
                     h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
@@ -1134,6 +1242,7 @@ elif st.session_state.current_view == '일반계좌':
                     else: 
                         dom_total += val_krw; dom_items.append(it_copy)
 
+    # 🎯 NameError t_diff_1 에러 완벽 해결: 일반계좌 전일비는 t_diff 변수로 선언하여 활용
     t_diff = sum(acc_1d_diff.values()) 
     
     goal_amount = 1500000000
@@ -1364,6 +1473,7 @@ elif st.session_state.current_view == '일반계좌':
     """
     h2_table = re.sub(r'\n\s*', '', h2_table)
     
+    # 🎯 NameError t_diff_1 에러 완벽 해결 (sum으로 합산된 t_diff 변수 적용)
     h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(ag_tot)}'>{fmt(ag_tot, True)}</td><td class='{col(t_diff)}'>{fmt(t_diff, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(ay_tot)}'>{fmt_p(ay_tot)}</td><td>{fmt(t_buy_total)}</td></tr>"]
     
     for k in GEN_ACC_ORDER:
@@ -1429,6 +1539,7 @@ elif st.session_state.current_view == '일반계좌':
                 currency_mode = "[원화(KRW)]"
                 u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
+            # 🎯 1줄짜리 헤더 구조 적용 (표 깨짐 방지 완벽 복원)
             code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
             if st.session_state.gen_show_change_rate:
                 h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
