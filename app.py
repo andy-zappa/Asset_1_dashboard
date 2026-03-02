@@ -675,8 +675,7 @@ elif st.session_state.current_view == '가상자산':
         </div>
     """, unsafe_allow_html=True)
 
-    # 🚨 [ 핵심 4 ] 아래쪽에서 에러를 뿜던 다운로드 로직은 싹 지우고, 
-    # Part 1 최상단에서 이미 받아둔 my_crypto를 바로 연결합니다!
+    # 상단에서 미리 로드한 데이터 연결
     crypto_data = my_crypto
 
     if crypto_data and 'total_asset' in crypto_data:
@@ -1500,5 +1499,6 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)        
+
 
 
