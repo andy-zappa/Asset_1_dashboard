@@ -8,18 +8,12 @@ import os
 import re
 import time
 from datetime import datetime
-import urllib.parse
+import urllib.parse  
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-
-# 🚨 업비트 API 연동 라이브러리 (터미널에서 pip install pyupbit 실행 필수)
-try:
-    import pyupbit
-    HAS_UPBIT = True
-except ImportError:
-    HAS_UPBIT = False
+import requests # 🎯 웹에서 JSON 데이터를 읽어오기 위해 추가
 
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
@@ -29,8 +23,10 @@ st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 # =========================================================
 css = """
 <style>
-/* 🎯 Streamlit 우측 상단 툴바(연필 아이콘 등) 표시되도록 숨김 처리 제거함 */
+/* 🎯 Streamlit 기본 시스템 UI 숨기기 (로딩 텍스트만 숨김) */
 [data-testid="stStatusWidget"] { display: none !important; }
+/* 🚨 우측 상단 툴바(연필 모양 등)는 보이도록 숨김 해제 처리했습니다! */
+
 html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { scroll-behavior: smooth !important; }
 
 /* 🎯 사이드바 최상단 여백 극한으로 끌어올리기 */
@@ -232,235 +228,8 @@ def load():
     try:
         if not os.path.exists('assets.json') or os.path.getsize('assets.json') == 0: andy_pension_v2.generate_asset_data()
         with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-@st.cache_data(ttl=60)
-def load_gen():
-    try:
-        if not os.path.exists('assets_general.json') or os.path.getsize('assets_general.json') == 0: andy_general_v1.generate_general_data()
-        with open('assets_general.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-data = load(); g_data = load_gen(); tot = data.get("_total", {})
-
-def safe_float(val):
-    try: return float(val) if val not in ['-', '', None] else 0.0
-    except: return 0.0
-
-def fmt(v, sign=False, decimal=0):
-    if v == '-': return '-'
-    try:
-        f_val = float(v)
-        val_str = f"{f_val:,.{decimal}f}" if decimal > 0 else f"{int(round(f_val)):,}"
-        return f"+{val_str}" if sign and f_val > 0 else val_str
-    except: return str(v)
-
-def fmt_p(v):
-    try:
-        val = float(v)
-        return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
-    except: return str(v)
-
-def fmt_p1(v):
-    try:
-        val = float(v)
-        abs_val = abs(val)
-        if abs_val < 1.0 and abs_val != 0.0: return f"▲{val:.2f}%" if val > 0 else f"▼{abs_val:.2f}%"
-        else: return f"▲{val:.1f}%" if val > 0 else (f"▼{abs_val:.1f}%" if val < 0 else "0.0%")
-    except: return str(v)
-
-def col(v):
-    try: return "red" if float(v) > 0 else ("blue" if float(v) < 0 else "gray")
-    except: return ""
-
-def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
-
-# =========================================================
-# 🪙 업비트 가상자산 API 데이터 연동 함수
-# =========================================================
-@st.cache_data(ttl=30)
-def get_crypto_data():
-    if not HAS_UPBIT: return None
-    try:
-        # 👇👇👇 여기에 본인의 실제 API 키를 입력하세요! 👇👇👇
-        access = "YOUR_ACCESS_KEY_HERE"
-        secret = "YOUR_SECRET_KEY_HERE"
-        # 👆👆👆 위에 실제 값을 붙여넣으세요 👆👆👆
-        
-        upbit = pyupbit.Upbit(access, secret)
-        balances = upbit.get_balances()
-        if not balances: return None
-        
-        tickers = ["KRW-" + b['currency'] for b in balances if b['currency'] != 'KRW']
-        curr_prices = pyupbit.get_current_price(tickers) if tickers else {}
-        
-        total_buy, total_eval, krw_bal = 0, 0, 0
-        coins = []
-        
-        for b in balances:
-            if b['currency'] == 'KRW':
-                krw_bal = float(b['balance'])
-                continue
-            
-            qty = float(b['balance'])
-            buy_p = float(b['avg_buy_price'])
-            buy_amt = qty * buy_p
-            ticker = f"KRW-{b['currency']}"
-            curr_p = curr_prices.get(ticker, buy_p)
-            eval_amt = qty * curr_p
-            pnl = eval_amt - buy_amt
-            pnl_rate = (pnl / buy_amt * 100) if buy_amt > 0 else 0
-            
-            total_buy += buy_amt
-            total_eval += eval_amt
-            coins.append({
-                'name': b['currency'], 'ticker': b['currency'], 
-                'qty': qty, 'eval': eval_amt, 'buy': buy_amt, 
-                'profit': pnl, 'rate': pnl_rate, 'avg_price': buy_p, 'curr_price': curr_p
-            })
-            
-        coins.sort(key=lambda x: x['eval'], reverse=True)
-        total_asset = krw_bal + total_eval
-        total_pnl = total_eval - total_buy
-        total_rate = (total_pnl / total_buy * 100) if total_buy > 0 else 0
-        
-        # 🎯 사이드바에 표시할 각 코인의 자산 비중 계산
-        btc_pct = eth_pct = trx_pct = 0
-        if total_asset > 0:
-            for c in coins:
-                if c['ticker'] == 'BTC': btc_pct = (c['eval'] / total_asset) * 100
-                elif c['ticker'] == 'ETH': eth_pct = (c['eval'] / total_asset) * 100
-                elif c['ticker'] == 'TRX': trx_pct = (c['eval'] / total_asset) * 100
-                
-        return {
-            'total_krw': krw_bal, 'total_asset': total_asset, 'total_buy': total_buy,
-            'total_profit': total_pnl, 'total_rate': total_rate, 'coins': coins,
-            'btc_pct': btc_pct, 'eth_pct': eth_pct, 'trx_pct': trx_pct
-        }
-    except Exception as e:
-        return None
-
-crypto_data = get_crypto_data()
-
-# =========================================================
-# 📍 사이드바 렌더링
-# =========================================================
-with st.sidebar:
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    
-    p_asset_all = tot.get('총 자산', 0); p_profit_all = tot.get('총 수익', 0); p_rate_all = tot.get('수익률(%)', 0)
-    p_cash_tot, p_ovs_tot, p_dom_tot = 0, 0, 0
-    for k in ['DC', 'IRP', 'PENSION', 'ISA']:
-        if k in data:
-            for item in data[k].get('상세', []):
-                if item.get('종목명') == '[ 합  계 ]': continue
-                val = item.get('총 자산', 0); nm = item.get('종목명', '').upper()
-                if '현금' in nm or 'MMF' in nm: p_cash_tot += val
-                elif any(kw in nm for kw in ['미국', 'S&P', '나스닥', '필라델피아', '다우지수']): p_ovs_tot += val
-                else: p_dom_tot += val
-    
-    p_dom_pct = (p_dom_tot / p_asset_all * 100) if p_asset_all > 0 else 0
-    p_ovs_pct = (p_ovs_tot / p_asset_all * 100) if p_asset_all > 0 else 0
-
-    GEN_ACC_ORDER_Q = ['DOM1', 'DOM2', 'USA1', 'USA2']
-    g_principals_q = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
-    g_orig_all = sum(g_principals_q.values())
-    g_asset_all = sum(g_data[k].get("총자산_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
-    g_profit_all = sum(g_data[k].get("총수익_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
-    g_rate_all = (g_profit_all / g_orig_all * 100) if g_orig_all > 0 else 0
-
-    g_cash_tot, g_ovs_tot, g_dom_tot = 0, 0, 0
-    for k in GEN_ACC_ORDER_Q:
-        if k in g_data:
-            is_usa = 'USA' in k; fx = g_data.get('환율', 1443.1) if is_usa else 1
-            for item in g_data[k].get('상세', []):
-                if item.get('종목명') == '[ 합  계 ]': continue
-                val_krw = item.get('총자산', 0) * fx; nm = item.get('종목명', '').upper()
-                if nm == '예수금' or '현금' in nm: g_cash_tot += val_krw
-                elif is_usa: g_ovs_tot += val_krw
-                else: g_dom_tot += val_krw
-                
-    g_dom_pct = (g_dom_tot / g_asset_all * 100) if g_asset_all > 0 else 0
-    g_ovs_pct = (g_ovs_tot / g_asset_all * 100) if g_asset_all > 0 else 0
-
-    total_asset = p_asset_all + g_asset_all
-    total_profit = p_profit_all + g_profit_all
-    total_orig = tot.get('원금합', 1) + g_orig_all
-    total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
-
-    # 1. 🌎 총 자산 통합
-    st.markdown(f"""
-    <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
-        <div style='text-align: right;'>
-            <div style='font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:15px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#cccccc;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
-        </div>
-        <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
-                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 30억 달성 프로젝트</span>
-                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
-            </div>
-            <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
-                <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 2. ⏳ 절세계좌
-    st.markdown(f"""
-    <div id='card-pension' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> ({fmt_p1(p_rate_all)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 3. 🌱 일반계좌
-    st.markdown(f"""
-    <div id='card-general' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🌱 일반계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 4. 🪙 가상자산
-    c_tot = crypto_data['total_asset'] if crypto_data else 0
-    c_prof = crypto_data['total_profit'] if crypto_data else 0
-    c_rate = crypto_data['total_rate'] if crypto_data else 0
-    c_btc = crypto_data['btc_pct'] if crypto_data else 0
-    c_eth = crypto_data['eth_pct'] if crypto_data else 0
-    c_trx = crypto_data['trx_pct'] if crypto_data else 0
-
-    st.markdown(f"""
-    <div id='card-crypto' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span> ({fmt_p1(c_rate)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 5. 🤖 퀀트매매
-    st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
-        <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
-            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:36px; height:36px; object-fit:contain;'> 
-            퀀트매매
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-# =========================================================
+    except: return
+        # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면, 퀀트, 가상자산)
 # =========================================================
 if st.session_state.current_view == '대시보드':
@@ -819,13 +588,13 @@ elif st.session_state.current_view == '가상자산':
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <div style="font-size:40px;">🪙</div>
             <div>
-                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(Upbit 연동)</span></h3>
-                <div style="font-size:14.5px; color:#666; margin-top:5px;">실시간 업비트 내 계좌 데이터 연동 현황입니다.</div>
+                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(GitHub 연동)</span></h3>
+                <div style="font-size:14.5px; color:#666; margin-top:5px;">오라클 서버에서 수집하여 깃허브를 통해 전송된 실시간 업비트 계좌 데이터입니다.</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    if crypto_data:
+    if crypto_data and 'total_asset' in crypto_data:
         c_tot = crypto_data['total_asset']
         c_krw = crypto_data['total_krw']
         c_buy = crypto_data['total_buy']
@@ -854,7 +623,7 @@ elif st.session_state.current_view == '가상자산':
         """, unsafe_allow_html=True)
         
         c_html = ""
-        for c in crypto_data['coins']:
+        for c in crypto_data.get('coins', []):
             c_html += f"<tr>"
             c_html += f"<td style='font-weight:bold;'>{c['name']} ({c['ticker']})</td>"
             c_html += f"<td>{c['qty']:.8f}</td>"
@@ -867,7 +636,8 @@ elif st.session_state.current_view == '가상자산':
         
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
-        st.error("🚨 업비트 API 데이터를 불러올 수 없거나 라이브러리(pyupbit)가 설치되지 않았습니다. (보안을 위해 코드 내 API 키는 'YOUR_ACCESS_KEY_HERE'로 마스킹되어 있습니다. 본인의 키를 넣어주세요.)")
+        st.info("🔄 오라클 서버에서 가상자산 데이터를 불러오는 중이거나, 연결할 GitHub URL을 아직 입력하지 않았습니다.")
+
 # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
@@ -948,7 +718,7 @@ elif st.session_state.current_view == '절세계좌':
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}%, #d9d9d9 {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 43px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
-        # 🎯 노란색, 흰색 카드 원본 구조 완벽 보존
+        # 🎯 노란색, 흰색 카드 원본 구조 100% 보존
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
