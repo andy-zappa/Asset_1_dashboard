@@ -283,9 +283,11 @@ def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 def get_crypto_data():
     if not HAS_UPBIT: return None
     try:
-        # 실제 API 키 교체 권장!
-        access = "L1ayuwPm9z4TwxdxcNv6PjAr3VfZzKxXLn9UhpT2"
-        secret = "1Ow49g4zQnhnA2xnUO4Ax4xLYAyRRXngt5OMBbnB"
+        # 👇👇👇 여기에 본인의 실제 API 키를 입력하세요! 👇👇👇
+        access = "YOUR_ACCESS_KEY_HERE"
+        secret = "YOUR_SECRET_KEY_HERE"
+        # 👆👆👆 위에 실제 값을 붙여넣으세요 👆👆👆
+        
         upbit = pyupbit.Upbit(access, secret)
         balances = upbit.get_balances()
         if not balances: return None
@@ -323,9 +325,18 @@ def get_crypto_data():
         total_pnl = total_eval - total_buy
         total_rate = (total_pnl / total_buy * 100) if total_buy > 0 else 0
         
+        # 🎯 사이드바에 표시할 각 코인의 자산 비중 계산
+        btc_pct = eth_pct = trx_pct = 0
+        if total_asset > 0:
+            for c in coins:
+                if c['ticker'] == 'BTC': btc_pct = (c['eval'] / total_asset) * 100
+                elif c['ticker'] == 'ETH': eth_pct = (c['eval'] / total_asset) * 100
+                elif c['ticker'] == 'TRX': trx_pct = (c['eval'] / total_asset) * 100
+                
         return {
             'total_krw': krw_bal, 'total_asset': total_asset, 'total_buy': total_buy,
-            'total_profit': total_pnl, 'total_rate': total_rate, 'coins': coins
+            'total_profit': total_pnl, 'total_rate': total_rate, 'coins': coins,
+            'btc_pct': btc_pct, 'eth_pct': eth_pct, 'trx_pct': trx_pct
         }
     except Exception as e:
         return None
@@ -378,7 +389,7 @@ with st.sidebar:
     total_orig = tot.get('원금합', 1) + g_orig_all
     total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
-    # 1. 🌎 총 자산 통합 (다크테마, 폰트 사이즈 통일: KRW 15px, 손익 15px)
+    # 1. 🌎 총 자산 통합
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
@@ -398,7 +409,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 2. ⏳ 절세계좌 (고급 회색)
+    # 2. ⏳ 절세계좌
     st.markdown(f"""
     <div id='card-pension' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
@@ -422,21 +433,27 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 4. 🪙 가상자산
+    # 4. 🪙 가상자산 (API 연동 데이터 및 비중 표시)
     c_tot = crypto_data['total_asset'] if crypto_data else 0
     c_prof = crypto_data['total_profit'] if crypto_data else 0
     c_rate = crypto_data['total_rate'] if crypto_data else 0
+    
+    c_btc = crypto_data['btc_pct'] if crypto_data else 0
+    c_eth = crypto_data['eth_pct'] if crypto_data else 0
+    c_trx = crypto_data['trx_pct'] if crypto_data else 0
+
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
         <div style='text-align: right;'>
             <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
             <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span> ({fmt_p1(c_rate)})</div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # 5. 🤖 퀀트매매 (멋진 로봇 아이콘 적용)
+    # 5. 🤖 퀀트매매
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
         <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
@@ -796,7 +813,7 @@ elif st.session_state.current_view == '퀀트매매':
         </div>
     """, unsafe_allow_html=True)
     
-elif st.session_state.current_view == '암호화폐':
+elif st.session_state.current_view == '가상자산':
     st.markdown("""
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <div style="font-size:40px;">🪙</div>
@@ -849,7 +866,7 @@ elif st.session_state.current_view == '암호화폐':
         
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
-        st.error("🚨 업비트 API 데이터를 불러올 수 없거나 라이브러리(pyupbit)가 설치되지 않았습니다. (보안을 위해 코드 내 API 키는 'YOUR_ACCESS_KEY'로 마스킹되어 있습니다. 본인의 키를 넣어주세요.)")
+        st.error("🚨 업비트 API 데이터를 불러올 수 없거나 라이브러리(pyupbit)가 설치되지 않았습니다. (보안을 위해 코드 내 API 키는 'YOUR_ACCESS_KEY_HERE'로 마스킹되어 있습니다. 본인의 키를 넣어주세요.)")
         # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
@@ -930,7 +947,7 @@ elif st.session_state.current_view == '절세계좌':
         donut_css = f"background: conic-gradient(#ffffff 0% {p_cash}%, #d9d9d9 {p_cash}%, #d9d9d9 {p_cash+p_ovs}%, #8c8c8c {p_cash+p_ovs}% 100%);"
         donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash:.0f}%<br>현금성자산</div><div style='position: absolute; top: 43px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 27px; left: -5px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom:.0f}%<br>국내투자</div></div>"
 
-        # 🎯 노란색, 흰색 카드 원본 구조 100% 보존
+        # 🎯 노란색, 흰색 카드 원본 구조 완벽 보존
         html_parts = []
         html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>")
         html_parts.append("<div class='insight-container'>")
@@ -1029,7 +1046,7 @@ elif st.session_state.current_view == '절세계좌':
             html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
         html_parts.append("    </table></div>")
         
-        html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.2%p &lt; 보합 &lt; +0.2%p ]</div></div>")
+        html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.2%p < 보합 < +0.2%p ]</div></div>")
         html_parts.append(f"    {zappa_html}</div></div>") 
         st.markdown("".join(html_parts), unsafe_allow_html=True)
 
@@ -1139,7 +1156,7 @@ elif st.session_state.current_view == '절세계좌':
                 
                 st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산', 0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익', 0))}'>{fmt(s_data.get('평가손익', 0), True)} ({fmt_p(s_data.get('수익률(%)', 0))})</span></div>{extra_info_html}</div>", unsafe_allow_html=True)
                 
-                # 🎯 1줄짜리 헤더 구조 적용 (표 깨짐 방지 완벽 복원)
+                # 🎯 1줄짜리 헤더 구조 (표 깨짐 방지 완벽 복원)
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                 if st.session_state.show_change_rate:
                     h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
@@ -1262,7 +1279,7 @@ elif st.session_state.current_view == '일반계좌':
                     else: 
                         dom_total += val_krw; dom_items.append(it_copy)
 
-    # 🎯 NameError t_diff_1 에러 해결: 일반계좌 전일비는 t_diff 변수로 선언
+    # 🎯 NameError t_diff_1 에러 완벽 해결: 일반계좌 전일비는 t_diff 변수로 선언
     t_diff = sum(acc_1d_diff.values()) 
     
     goal_amount = 1500000000
@@ -1437,7 +1454,7 @@ elif st.session_state.current_view == '일반계좌':
     html_parts.append("    </table>")
     html_parts.append("  </div>")
     
-    html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.5%p &lt; 보합 &lt; +0.5%p ]</div></div>")
+    html_parts.append("  <div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.5%p < 보합 < +0.5%p ]</div></div>")
     html_parts.append(f"    {zappa_html}</div></div>") 
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
@@ -1559,7 +1576,7 @@ elif st.session_state.current_view == '일반계좌':
                 currency_mode = "[원화(KRW)]"
                 u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
             
-            # 🎯 표 깨짐 방지: 1줄짜리 헤더 구조 완벽 통일
+            # 🎯 1줄짜리 헤더 구조 적용 (표 깨짐 방지 완벽 복원)
             code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
             if st.session_state.gen_show_change_rate:
                 h3_table_html = f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th><th>등락률</th></tr>"
