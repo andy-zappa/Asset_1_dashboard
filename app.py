@@ -19,41 +19,49 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
+# [ Part 1 ] 공통 설정 및 CSS 복원
 # =========================================================
 css = """
 <style>
-/* 🎯 Streamlit 우측 상단 툴바(연필 아이콘 등) 표시되도록 숨김 처리 제거함 */
+/* 🎯 Streamlit 기본 시스템 UI 숨기기 (로딩 텍스트 및 우측 상단 툴바 제거) */
 [data-testid="stStatusWidget"] { display: none !important; }
-html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { scroll-behavior: smooth !important; }
+.stApp [data-testid="stToolbar"] { display: none !important; }
 
-/* 🎯 사이드바 최상단 여백 극한으로 끌어올리기 */
+/* 🎯 스무스 스크롤 전역 강제 적용 */
+html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { 
+    scroll-behavior: smooth !important; 
+}
+
+/* 🎯 사이드바 최상단 여백 극한으로 끌어올리기 (빈 공간 제거) */
 [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }
 section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -15px !important; gap: 0 !important; }
 
-/* 🎯 사이드바 카드 디자인 (오리지널 고급 회색/검은색 + 호버 애니메이션) */
-.sidebar-card { 
-    transition: transform 0.2s ease, box-shadow 0.2s ease; 
-    cursor: pointer; 
-    background-color: #f8f9fa; 
-    border-radius: 12px; 
-    padding: 15px; 
-    border: 1px solid #eaeaea; 
-    margin-bottom: 12px; 
+/* 🎯 대시보드 호버(Hover) 버튼 애니메이션 및 다이나믹 효과 */
+[data-testid="stSidebar"] button[kind="secondary"] {
+    background-color: #ffffff;
+    border: 1.5px solid #dcdcdc;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    padding: 10px !important;
+    height: auto !important;
+    width: 100% !important;
+    margin-bottom: 5px !important;
 }
-.sidebar-card:hover { 
-    transform: translateY(-2px); 
-    box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; 
-    border-color: #ccc !important; 
+[data-testid="stSidebar"] button[kind="secondary"] p {
+    font-size: 20px !important;
+    font-weight: bold !important;
+    color: #111 !important;
 }
-.sidebar-card-dark { 
-    background-color: #1a1a1a !important; 
-    color: #ffffff !important; 
-    border: none !important; 
+[data-testid="stSidebar"] button[kind="secondary"]:hover {
+    background-color: #f8f9fa;
+    border-color: #bbbbbb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
 }
-.sidebar-card-dark:hover { 
-    box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; 
-}
+
+.sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
+.sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.12) !important; }
+.sidebar-card-dark:hover { box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; }
 
 /* 🎯 타이틀 및 메인 테이블 스타일 */
 .block-container { padding-top: 3rem !important; padding-bottom: 7rem !important; }
@@ -70,8 +78,8 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 .main-table th.th-week { border-left: 1px solid #dcdcdc !important; border-top: 1px solid #dcdcdc !important; font-size: 13.5px; }
 
 .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
-.red { color: #D32F2F !important; }  /* 웹디자인 관점의 고급스러운 빨강 */
-.blue { color: #1976D2 !important; } /* 고급스러운 파랑 */
+.red { color: #D32F2F !important; }
+.blue { color: #1976D2 !important; }
 
 /* 🎯 노란색/흰색 카드 구조 완벽 보존 */
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
@@ -231,27 +239,33 @@ def load():
 @st.cache_data(ttl=60)
 def load_gen():
     try:
-        if not os.path.exists('assets_general.json') or os.path.getsize('assets_general.json') == 0: andy_general_v1.generate_general_data()
-        with open('assets_general.json', 'r', encoding='utf-8') as f: return json.load(f)
+        if not os.path.exists('general_assets.json') or os.path.getsize('general_assets.json') == 0: andy_general_v1.generate_general_data()
+        with open('general_assets.json', 'r', encoding='utf-8') as f: return json.load(f)
     except: return {}
 
 data = load() or {}; g_data = load_gen() or {}; tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
 # =========================================================
-# 🚨 [ 핵심 수정 ] 한국 시간(KST) 변환 함수 추가
+# 🚨 [ 핵심 수정 ] 한국 시간(KST) 변환 함수 추가 (요청 포맷 적용)
 # =========================================================
-def to_kst(time_str):
+def to_kst_format(time_str):
     try:
         if time_str and time_str != '업데이트 필요':
             dt = pd.to_datetime(time_str)
-            # 만약 시간대 정보가 없다면 UTC로 간주하고 KST(Asia/Seoul)로 변환
             if dt.tzinfo is None:
                 dt = dt.tz_localize('UTC')
             dt = dt.tz_convert('Asia/Seoul')
-            return dt.strftime('%Y-%m-%d %H:%M:%S')
+            weekdays = ['월', '화', '수', '목', '금', '토', '일']
+            weekday_kr = weekdays[dt.weekday()]
+            return dt.strftime(f'[ %Y년 %m월 %d일({weekday_kr}) / %H:%M:%S ]')
     except:
         pass
-    return str(time_str)
+    return f"[ {time_str} ]"
+
+def current_kst_str():
+    dt = pd.Timestamp.utcnow().tz_convert('Asia/Seoul')
+    weekdays = ['월', '화', '수', '목', '금', '토', '일']
+    return dt.strftime(f'[ %Y년 %m월 %d일({weekdays[dt.weekday()]}) / %H:%M:%S ]')
 
 def safe_float(val):
     try: return float(val) if val not in ['-', '', None] else 0.0
@@ -287,7 +301,7 @@ def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 
 
 # =========================================================
-# 🚨 [ 핵심 수정 ] 가상자산 데이터를 깃허브에서 가져오는 로직 연동
+# 🚨 [ 핵심 1 ] 가상자산 데이터를 맨 꼭대기에서 미리 100% 로드! (GitHub 연동)
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
@@ -314,7 +328,7 @@ def get_crypto_data():
 crypto_data = get_crypto_data()
 
 # =========================================================
-# 📍 사이드바 렌더링
+# 📍 사이드바 렌더링 (오리지널 CSS/디자인 완벽 복원)
 # =========================================================
 with st.sidebar:
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
@@ -354,7 +368,6 @@ with st.sidebar:
     g_dom_pct = (g_dom_tot / g_asset_all * 100) if g_asset_all > 0 else 0
     g_ovs_pct = (g_ovs_tot / g_asset_all * 100) if g_asset_all > 0 else 0
 
-
     # 가상자산을 총 자산에 합산
     c_tot_sum = crypto_data.get('total_asset', 0) if crypto_data else 0
     c_prof_sum = crypto_data.get('total_profit', 0) if crypto_data else 0
@@ -364,18 +377,18 @@ with st.sidebar:
     total_orig = tot.get('원금합', 1) + g_orig_all
     total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
-    # 1. 🌎 총 자산 통합
+    # 1. 🌎 총 자산 통합 (오리지널 폰트두께/색상 및 내용 수정 적용)
     st.markdown(f"""
-    <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
-        <div style='text-align: right;'>
-            <div style='font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:15px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#cccccc;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
+    <div id='card-total' class='sidebar-card sidebar-card-dark' style='background-color: #1a1a1a; border-radius: 12px; padding: 15px; margin-bottom: 12px; color: #ffffff;'>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>⚡ 총 자산 통합 (KRW)</div>
+        <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)}</div>
+        <div style='font-size:13.5px; margin-top:2px; color:#cccccc;'>
+            <span style='font-weight:bold; color: {'#ff4b4b' if total_profit > 0 else '#4b8bf5'};'>{fmt(total_profit, True)}</span> ({fmt_p(total_rate)})
         </div>
         <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
-                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 30억 달성 프로젝트</span>
-                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
+                <span style='font-size: 12.5px; color: #999; font-weight: normal;'>🎯 '금융자산' 30억 달성</span>
+                <span style='font-size: 13px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
             <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
                 <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
@@ -384,31 +397,31 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 2. ⏳ 절세계좌
+    # 2. ⏳ 절세계좌 (오리지널 디자인 이식)
     st.markdown(f"""
-    <div id='card-pension' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> ({fmt_p1(p_rate_all)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
+    <div id='card-pension' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div>
+        <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)}</div>
+        <div style='font-size:13.5px; margin-top:2px; color:#555;'>
+            <span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span>&nbsp;({fmt_p(p_rate_all)})
         </div>
+        <div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
     </div>
     """, unsafe_allow_html=True)
     
-    # 3. 🌱 일반계좌
+    # 3. 🌱 일반계좌 (오리지널 디자인 이식)
     st.markdown(f"""
-    <div id='card-general' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🌱 일반계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
+    <div id='card-general' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div>
+        <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)}</div>
+        <div style='font-size:13.5px; margin-top:2px; color:#555;'>
+            <span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span>&nbsp;({fmt_p(g_rate_all)})
         </div>
+        <div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
     </div>
     """, unsafe_allow_html=True)
     
-    # 4. 🪙 가상자산
+    # 4. 🪙 가상자산 (오리지널 계좌 카드와 완벽하게 동일한 인라인 디자인 적용)
     c_tot = crypto_data['total_asset'] if crypto_data else 0
     c_prof = crypto_data['total_profit'] if crypto_data else 0
     c_rate = crypto_data['total_rate'] if crypto_data else 0
@@ -417,13 +430,13 @@ with st.sidebar:
     c_trx = crypto_data['trx_pct'] if crypto_data else 0
 
     st.markdown(f"""
-    <div id='card-crypto' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span> ({fmt_p1(c_rate)})</div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
+    <div id='card-crypto' class='sidebar-card' style='background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px;'>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🪙 가상자산</div>
+        <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)}</div>
+        <div style='font-size:13.5px; margin-top:2px; color:#555;'>
+            <span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span>&nbsp;({fmt_p(c_rate)})
         </div>
+        <div style='font-size:12px; color:#888; font-weight:500; margin-top:8px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -436,7 +449,10 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # =========================================================
+# =========================================================
+# [ Part 2 ] 
+# =========================================================
+# =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면, 퀀트, 가상자산)
 # =========================================================
 if st.session_state.current_view == '대시보드':
@@ -587,7 +603,7 @@ if st.session_state.current_view == '대시보드':
             )
             return fig
 
-        # 🎯 2. 트리맵 2분할 (좌: 절세계좌, 우: 일반계좌 통합) - 박스 둥근 테두리 적용!
+        # 🎯 2. 트리맵 2분할 (좌: 절세계좌, 우: 일반계좌 통합) - 모서리 라운딩 CSS(overflow:hidden) 반영 완료!
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
@@ -809,6 +825,9 @@ elif st.session_state.current_view == '가상자산':
                 get_crypto_data.clear()
             st.rerun()
 
+    # 🎯 가상자산 탭 업데이트 시간 표시 (한국 시간)
+    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>{current_kst_str()}</div>", unsafe_allow_html=True)
+
     if crypto_data and 'total_asset' in crypto_data:
         c_tot = crypto_data['total_asset']
         c_krw = crypto_data['total_krw']
@@ -852,7 +871,10 @@ elif st.session_state.current_view == '가상자산':
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
         st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
-        # =========================================================
+# =========================================================
+# [ Part 3 ] 
+# =========================================================
+# =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
@@ -866,8 +888,8 @@ elif st.session_state.current_view == '절세계좌':
                 except Exception as e: st.error(f"오류: {e}")
             st.cache_data.clear(); st.rerun()
 
-    # 🎯 KST 시간 변환 적용
-    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {to_kst(tot.get('조회시간', '업데이트 필요'))} ]</div>", unsafe_allow_html=True)
+    # 🎯 KST 시간 변환 적용 (요청하신 포맷)
+    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>{to_kst_format(tot.get('조회시간', '업데이트 필요'))}</div>", unsafe_allow_html=True)
 
     FIXED_ACCOUNT_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     OPEN_DATES = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
@@ -1209,8 +1231,8 @@ elif st.session_state.current_view == '일반계좌':
         st.warning("데이터가 없습니다. 업데이트 버튼을 눌러주세요.")
         st.stop()
 
-    # 🎯 KST 시간 변환 적용
-    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>[ {to_kst(g_data.get('조회시간', '업데이트 필요'))} ]</div>", unsafe_allow_html=True)
+    # 🎯 KST 시간 변환 적용 (요청하신 포맷)
+    st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;font-weight:normal;margin:-10px 0 15px;'>{to_kst_format(g_data.get('조회시간', '업데이트 필요'))}</div>", unsafe_allow_html=True)
 
     nm_table = {'DOM1': '키움증권(국내Ⅰ)', 'DOM2': '삼성증권(국내Ⅱ)', 'USA1': '키움증권(해외Ⅰ)', 'USA2': '키움증권(해외Ⅱ)'}
     nm_table_expander = {'DOM1': '키움증권(국내Ⅰ) : 6312-5329', 'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01', 'USA1': '키움증권(해외Ⅰ) : 6312-5329', 'USA2': '키움증권(해외Ⅱ) : 6443-5993'}
@@ -1631,3 +1653,4 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+        
