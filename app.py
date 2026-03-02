@@ -243,7 +243,7 @@ def load_gen():
 
 data = load() or {}
 g_data = load_gen() or {}
-tot = data.get('_insight', {})
+tot = data.get('_insight') or {} #
 
 # =========================================================
 # 🚨 [ 핵심 3 ] 통째로 날아갔던 왼쪽 사이드바 완벽 복구!!!
@@ -1494,3 +1494,4 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)        
+
