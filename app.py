@@ -650,7 +650,8 @@ except Exception as e:
         
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
-        st.info("🔄 오라클 서버에서 가상자산 데이터를 불러오는 중이거나, 연결할 GitHub URL을 아직 입력하지 않았습니다.")
+        # st.info("🔄 오라클 서버에서 가상자산 데이터를 불러오는 중이거나, 연결할 GitHub URL을 아직 입력하지 않았습니다.")
+pass
 
 # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
@@ -1434,4 +1435,5 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
