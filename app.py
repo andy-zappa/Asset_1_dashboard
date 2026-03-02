@@ -1,3 +1,4 @@
+import request
 import streamlit as st
 import streamlit.components.v1 as components
 import json
@@ -621,6 +622,19 @@ elif st.session_state.current_view == '가상자산':
         <table class="main-table">
             <tr><th>코인명</th><th>보유수량</th><th>매수평균가</th><th>현재가</th><th>평가금액</th><th>평가손익</th><th>수익률</th></tr>
         """, unsafe_allow_html=True)
+
+# --- 가상자산 데이터를 깃허브에서 직접 읽어오기 (추가 부분) ---
+import requests
+github_raw_url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/refs/heads/main/crypto_data.json"
+crypto_data = {}
+
+try:
+    response = requests.get(github_raw_url, timeout=5)
+    if response.status_code == 200:
+        crypto_data = response.json()
+except Exception as e:
+    st.error(f"가상자산 데이터 연동 실패: {e}")
+# -------------------------------------------------------
         
         c_html = ""
         for c in crypto_data.get('coins', []):
@@ -1420,3 +1434,4 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
