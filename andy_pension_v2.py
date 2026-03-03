@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 
 # =====================================================================
-# 🔑 한국투자증권 Open API 설정 (원복 완료)
+# 🔑 한국투자증권 Open API 설정
 # =====================================================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
@@ -76,12 +76,12 @@ def generate_asset_data():
         {"종목명": "현금성자산(삼성증권)", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": 1141162, "매입금액": 1141162}
     ]
 
+    # 🎯 Andy님의 매뉴얼 수정 내역 완벽 반영
     isa_items = [
         {"종목명": "KODEX 200타겟위클리커버드콜", "코드": "498400", "수량": 1176, "매입가": 12806, "현재가": 19790, "전일비": -0.75},
         {"종목명": "RISE 200위클리커버드콜", "코드": "475720", "수량": 894, "매입가": 10069, "현재가": 13640, "전일비": -0.18},
-        {"종목명": "KODEX 미국나스닥100데일리", "코드": "494300", "수량": 770, "매입가": 9878, "현재가": 9545, "전일비": -0.37}
-        {"종목명": "KODEX 미국AI테크TOP10타겟", "코드": "483280", "수량": 285, "매입가": 12353, "현재가": 11665, "전일비": -1.10},
-
+        {"종목명": "KODEX 미국나스닥100데일리커버", "코드": "494300", "수량": 285, "매입가": 12353, "현재가": 11665, "전일비": -1.10},
+        {"종목명": "KODEX 미국AI테크TOP10타겟커버드콜", "코드": "483280", "수량": 770, "매입가": 9878, "현재가": 9545, "전일비": -0.37}
     ]
 
     def process_account(items, principal):
@@ -131,7 +131,6 @@ def generate_asset_data():
             
         for p in processed: p['비중'] = (p['총 자산'] / sum_asset * 100) if sum_asset > 0 else 0
             
-        # 🎯 [ 합  계 ] 명칭 통일 적용
         processed.append({
             "종목명": "[ 합  계 ]", "코드": "-", "비중": 100.0, "총 자산": sum_asset, "평가손익": sum_profit,
             "수익률(%)": (sum_profit / sum_buy * 100) if sum_buy else 0, "수량": "-", "매입가": "-",
@@ -175,6 +174,3 @@ def generate_asset_data():
 
 if __name__ == "__main__":
     generate_asset_data()
-
-
-
