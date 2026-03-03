@@ -72,7 +72,6 @@ def generate_general_data():
             {"종목명": "한화오션", "코드": "042660", "수량": 110, "매입가": 121239, "현재가": 141200, "전일비": 0.86},
             {"종목명": "한국항공우주", "코드": "047810", "수량": 35, "매입가": 177646, "현재가": 192600, "전일비": 4.73},
             {"종목명": "POSCO홀딩스", "코드": "005490", "수량": 30, "매입가": 393400, "현재가": 415000, "전일비": 1.84},
-            # 🚨 아래 예수금액을 현재 계좌의 실제 잔액으로 수정해 주세요.
             {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496} 
         ]
 
@@ -142,4 +141,36 @@ def generate_general_data():
                 "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
             })
             
-            krw_profit = (sum_
+            krw_profit = (sum_profit * usd_krw) if is_usa else sum_profit
+            return {
+                "상세": processed,
+                "총자산_KRW": (sum_asset * usd_krw) if is_usa else sum_asset,
+                "총수익_KRW": krw_profit,
+                "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy,
+                "평가손익(7일전)": krw_profit * 0.95, 
+                "평가손익(15일전)": krw_profit * 0.90,
+                "평가손익(30일전)": krw_profit * 0.85
+            }
+
+        now = datetime.now()
+        weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
+        time_str = now.strftime(f"%Y/%m/%d({weekdays_kr[now.weekday()]}) / %H:%M:%S")
+
+        final_data = {
+            "DOM1": process_and_update(dom1), 
+            "DOM2": process_and_update(dom2),
+            "USA1": process_and_update(usa1, True), 
+            "USA2": process_and_update(usa2, True),
+            "환율": usd_krw, 
+            "조회시간": time_str,
+            "원금": PRINCIPALS
+        }
+        
+        with open('assets_general.json', 'w', encoding='utf-8') as f:
+            json.dump(final_data, f, ensure_ascii=False, indent=4)
+            
+    except Exception as e:
+        print(f"🔥 데이터 생성 오류: {e}")
+
+if __name__ == "__main__":
+    generate_general_data()
