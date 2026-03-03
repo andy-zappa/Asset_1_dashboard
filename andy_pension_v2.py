@@ -1,53 +1,35 @@
 import json
 from datetime import datetime, timezone, timedelta
-import time
 import requests
-import yfinance as yf
 
 # =====================================================================
-# 🔑 실시간 시세 하이브리드 스크래퍼 (네이버 금융 + 야후 파이낸스 우회)
+# 🔑 실시간 시세 엔진 (네이버 금융 전용망 - 클라우드 차단 절대 없음)
 # =====================================================================
 def get_realtime_price(code):
     if code == "-": return None, None, None
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     
-    # 1️⃣ [국내 ETF] 네이버 금융 모바일 API (가장 빠르고 정확함, 차단 없음)
     try:
         url = f"https://m.stock.naver.com/api/stock/{code}/basic"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         res = requests.get(url, headers=headers, timeout=5)
         if res.status_code == 200:
             data = res.json()
             curr = float(data['closePrice'].replace(',', ''))
             dr = float(data['compareToPreviousRate'])
             
+            # 전일비 금액 계산
             prev = curr / (1 + (dr / 100)) if dr != 0 else curr
             damt = curr - prev
             return curr, dr, damt
-    except:
-        pass
-
-    # 2️⃣ [백업용] 야후 파이낸스 History
-    try:
-        t = yf.Ticker(f"{code}.KS")
-        hist = t.history(period="5d")
-        if hist.empty:
-            t = yf.Ticker(f"{code}.KQ")
-            hist = t.history(period="5d")
-        
-        if not hist.empty and len(hist) >= 2:
-            curr = float(hist['Close'].iloc[-1])
-            prev = float(hist['Close'].iloc[-2])
-            dr = ((curr - prev) / prev) * 100
-            return curr, dr, (curr - prev)
-    except:
+    except Exception as e:
+        print(f"🔥 {code} 가격 조회 실패: {e}")
         pass
         
     return None, None, None
 
 def generate_asset_data():
-    print("🔄 ZAPPA: 절세계좌 실시간 연동을 시작합니다...")
+    print("🔄 ZAPPA: 네이버 실시간 망 연동을 시작합니다...")
     
-    # 🚨 한국 표준시(KST) 강제 고정
     KST = timezone(timedelta(hours=9))
     now_date = datetime.now(KST)
     base_date = datetime(2026, 3, 1, tzinfo=KST)
