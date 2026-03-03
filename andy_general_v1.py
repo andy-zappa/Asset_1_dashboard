@@ -1,51 +1,44 @@
 import json
 from datetime import datetime, timezone, timedelta
-import time
 import requests
-import yfinance as yf
 
 # =====================================================================
-# 🔑 실시간 시세 하이브리드 스크래퍼 (네이버 금융 + 야후 파이낸스 우회)
+# 🔑 실시간 시세 하이브리드 엔진 (네이버 금융 + 미국 CNBC 실시간망)
 # =====================================================================
 def get_realtime_price(code, is_usa=False):
     if code == "-": return None, None
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     
-    # 1️⃣ [국내주식] 네이버 금융 모바일 API (가장 빠르고 정확함, IP 차단 없음)
-    if not is_usa:
-        try:
-            url = f"https://m.stock.naver.com/api/stock/{code}/basic"
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-            res = requests.get(url, headers=headers, timeout=5)
-            if res.status_code == 200:
-                data = res.json()
-                curr = float(data['closePrice'].replace(',', ''))
-                dr = float(data['compareToPreviousRate'])
-                return curr, dr
-        except:
-            pass # 네이버 조회 실패 시 야후로 넘어감
-
-    # 2️⃣ [미국주식 및 국내 백업] 야후 파이낸스 History 방식 (NXT 애프터마켓 반영, 봇 차단 우회)
     try:
-        ticker = code if is_usa else f"{code}.KS"
-        t = yf.Ticker(ticker)
-        
-        # fast_info 대신 history 방식을 써야 클라우드에서 차단당하지 않습니다.
-        hist = t.history(period="5d", prepost=is_usa) 
-        
-        if hist.empty and not is_usa:
-            ticker = f"{code}.KQ"
-            t = yf.Ticker(ticker)
-            hist = t.history(period="5d", prepost=False)
+        if is_usa:
+            # 🇺🇸 미국 주식: CNBC 실시간 API (NXT 애프터마켓 완벽 지원, 차단 없음)
+            url = f"https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols={code}&requestMethod=itv&noform=1&fund=1&exthrs=1&output=json"
+            res = requests.get(url, headers=headers, timeout=5)
+            data = res.json()
+            quote = data['FormattedQuoteResult']['FormattedQuote'][0]
             
-        if not hist.empty and len(hist) >= 2:
-            curr = float(hist['Close'].iloc[-1])
-            prev = float(hist['Close'].iloc[-2])
-            dr = ((curr - prev) / prev) * 100
+            # 애프터마켓(NXT) 데이터가 존재하면 우선 적용
+            if 'ExtendedMktQuote' in quote and quote['ExtendedMktQuote'].get('last'):
+                ext = quote['ExtendedMktQuote']
+                curr = float(ext['last'].replace(',', ''))
+                dr = float(ext['change_pct'].replace('%', ''))
+            else:
+                curr = float(quote['last'].replace(',', ''))
+                dr = float(quote['change_pct'].replace('%', ''))
             return curr, dr
-    except:
-        pass
-        
-    return None, None
+            
+        else:
+            # 🇰🇷 국내 주식: 네이버 금융 모바일 API (가장 빠르고 IP 차단 없음)
+            url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+            res = requests.get(url, headers=headers, timeout=5)
+            data = res.json()
+            curr = float(data['closePrice'].replace(',', ''))
+            dr = float(data['compareToPreviousRate'])
+            return curr, dr
+            
+    except Exception as e:
+        print(f"🔥 {code} 가격 조회 실패: {e}")
+        return None, None
 
 def generate_general_data():
     try:
@@ -58,8 +51,9 @@ def generate_general_data():
             "USA2": 7457930
         }
         
-        print("🔄 ZAPPA: 실시간 하이브리드 서버와 통신을 시작합니다...")
+        print("🔄 ZAPPA: CNBC 및 네이버 실시간 망과 통신을 시작합니다...")
         
+        # 만약 조회가 실패하더라도 뻗지 않도록 둔 기본값 (이제 CNBC가 뚫어주므로 덮어씌워짐)
         dom1 = [
             {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
             {"종목명": "KODEX 레버리지", "코드": "122630", "수량": 300, "매입가": 37480, "현재가": 111280, "전일비": -1.97},
@@ -113,7 +107,7 @@ def generate_general_data():
                     })
                     continue
                 
-                # 🎯 실시간 하이브리드 가격 호출
+                # 🎯 CNBC & 네이버 실시간 가격 호출 (과거값 덮어쓰기)
                 cp, dr = get_realtime_price(it["코드"], is_usa)
                 if cp is not None:
                     it["현재가"] = cp
