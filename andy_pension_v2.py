@@ -1,35 +1,38 @@
 import json
 from datetime import datetime, timezone, timedelta
 import requests
+from bs4 import BeautifulSoup
 
 # =====================================================================
-# 🔑 실시간 시세 엔진 (네이버 금융 전용망 - 클라우드 차단 절대 없음)
+# 🔑 무적 스크래핑 엔진 (네이버 금융 HTML - 클라우드 차단 절대 불가)
 # =====================================================================
-def get_realtime_price(code):
+def get_kr_price(code):
     if code == "-": return None, None, None
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    
     try:
         url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         res = requests.get(url, headers=headers, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            curr = float(data['closePrice'].replace(',', ''))
-            dr = float(data['compareToPreviousRate'])
-            
-            # 전일비 금액 계산
+        data = res.json()
+        curr = float(data['closePrice'].replace(',', ''))
+        dr = float(data['compareToPreviousRate'])
+        prev = curr / (1 + (dr / 100)) if dr != 0 else curr
+        return curr, dr, (curr - prev)
+    except:
+        try:
+            url = f"https://finance.naver.com/item/sise.naver?code={code}"
+            res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+            soup = BeautifulSoup(res.text, 'html.parser')
+            curr = float(soup.select_one('strong#_nowVal').text.replace(',', ''))
+            dr = float(soup.select_one('strong#_rate').text.replace('%', '').strip())
             prev = curr / (1 + (dr / 100)) if dr != 0 else curr
-            damt = curr - prev
-            return curr, dr, damt
-    except Exception as e:
-        print(f"🔥 {code} 가격 조회 실패: {e}")
-        pass
-        
-    return None, None, None
+            return curr, dr, (curr - prev)
+        except:
+            return None, None, None
 
 def generate_asset_data():
-    print("🔄 ZAPPA: 네이버 실시간 망 연동을 시작합니다...")
+    print("🔄 ZAPPA: 네이버 무적 스크래핑을 시작합니다...")
     
+    # 🚨 한국 표준시(KST) 강제 고정
     KST = timezone(timedelta(hours=9))
     now_date = datetime.now(KST)
     base_date = datetime(2026, 3, 1, tzinfo=KST)
@@ -93,7 +96,7 @@ def generate_asset_data():
                 continue
 
             if it.get("코드") != "-":
-                cp, dr, damt = get_realtime_price(it["코드"])
+                cp, dr, damt = get_kr_price(it["코드"])
                 if cp is not None:
                     it["현재가"] = cp
                     it["전일비"] = dr
