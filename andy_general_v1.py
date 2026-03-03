@@ -10,7 +10,7 @@ import yfinance as yf
 def get_realtime_price(code, is_usa=False):
     if code == "-": return None, None
     
-    # 1️⃣ [국내주식] 네이버 금융 모바일 API (가장 빠르고 정확함, 차단 없음)
+    # 1️⃣ [국내주식] 네이버 금융 모바일 API (가장 빠르고 정확함, IP 차단 없음)
     if not is_usa:
         try:
             url = f"https://m.stock.naver.com/api/stock/{code}/basic"
@@ -24,12 +24,12 @@ def get_realtime_price(code, is_usa=False):
         except:
             pass # 네이버 조회 실패 시 야후로 넘어감
 
-    # 2️⃣ [미국주식 및 국내 백업] 야후 파이낸스 History 방식 (NXT 애프터마켓 반영)
+    # 2️⃣ [미국주식 및 국내 백업] 야후 파이낸스 History 방식 (NXT 애프터마켓 반영, 봇 차단 우회)
     try:
         ticker = code if is_usa else f"{code}.KS"
         t = yf.Ticker(ticker)
         
-        # fast_info 대신 history 방식을 써야 클라우드에서 에러가 안 납니다.
+        # fast_info 대신 history 방식을 써야 클라우드에서 차단당하지 않습니다.
         hist = t.history(period="5d", prepost=is_usa) 
         
         if hist.empty and not is_usa:
@@ -113,7 +113,7 @@ def generate_general_data():
                     })
                     continue
                 
-                # 🎯 실시간 가격 호출 (실패할 경우에만 임시값 사용)
+                # 🎯 실시간 하이브리드 가격 호출
                 cp, dr = get_realtime_price(it["코드"], is_usa)
                 if cp is not None:
                     it["현재가"] = cp
@@ -149,7 +149,7 @@ def generate_general_data():
                 "평가손익(30일전)": krw_profit * 0.85
             }
 
-        # 🚨 한국 표준시(KST) 고정
+        # 🚨 한국 표준시(KST) 강제 고정
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST)
         weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
