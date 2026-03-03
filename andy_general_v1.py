@@ -3,34 +3,46 @@ from datetime import datetime, timezone, timedelta
 import time
 import os
 import yfinance as yf
+import requests
 
 # =====================================================================
-# 🔑 Yahoo Finance API 로직 (프리/애프터마켓 완벽 지원)
+# 🔑 Yahoo Finance API 로직 (클라우드 IP 차단 우회 및 NXT 완벽 지원)
 # =====================================================================
+# 🚨 야후 서버가 봇으로 인식하는 것을 막기 위한 가짜 브라우저 세션 생성
+session = requests.Session()
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+})
+
 def get_yfinance_price(code, is_usa=False):
     if code == "-": return None, None
     ticker = code if is_usa else f"{code}.KS"
     
     try:
-        t = yf.Ticker(ticker)
+        # 생성한 세션을 통해 야후 파이낸스에 접근 (차단 방지)
+        t = yf.Ticker(ticker, session=session)
         
         # 미국 주식: 애프터마켓(NXT) 포함 강제 조회
         if is_usa:
-            hist = t.history(period="1d", prepost=True) 
+            hist = t.history(period="2d", prepost=True) 
             if not hist.empty:
                 curr = hist['Close'].iloc[-1] 
                 prev = t.fast_info.previous_close
+                if str(prev).lower() == 'nan' or prev is None:
+                    if len(hist) >= 2: prev = hist['Close'].iloc[-2]
+                
                 if curr and prev and prev > 0:
                     dr = ((curr - prev) / prev) * 100
                     return float(curr), float(dr)
 
+        # 국내 주식 및 기본 로직
         curr = t.fast_info.last_price
         prev = t.fast_info.previous_close
         
-        # 국내 주식: 코스피(.KS) 실패 시 코스닥(.KQ) 조회
+        # 코스피(.KS) 실패 시 코스닥(.KQ) 조회
         if (curr is None or str(curr).lower() == 'nan') and not is_usa:
             ticker = f"{code}.KQ"
-            t = yf.Ticker(ticker)
+            t = yf.Ticker(ticker, session=session)
             curr = t.fast_info.last_price
             prev = t.fast_info.previous_close
                 
@@ -55,7 +67,7 @@ def generate_general_data():
             "USA2": 7457930
         }
         
-        print("🔄 ZAPPA: Yahoo Finance 서버와 통신을 시작합니다...")
+        print("🔄 ZAPPA: Yahoo Finance 서버와 통신을 시작합니다 (차단 우회 모드)...")
         
         dom1 = [
             {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
@@ -110,7 +122,6 @@ def generate_general_data():
                     })
                     continue
                 
-                # 🎯 KIS 대신 야후 파이낸스로 가격 호출
                 cp, dr = get_yfinance_price(it["코드"], is_usa)
                 if cp is not None:
                     it["현재가"] = cp
@@ -146,7 +157,7 @@ def generate_general_data():
                 "평가손익(30일전)": krw_profit * 0.85
             }
 
-        # 🚨 한국 표준시(KST)로 시간 고정
+        # 🚨 한국 시간(KST) 고정
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST)
         weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
