@@ -158,7 +158,8 @@ def generate_general_data():
             "조회시간": time_str
         }
         
-        with open('assets_general.json', 'w', encoding='utf-8') as f:
+        # 🚨 [해결 핵심 포인트] 파일 이름을 드디어 app.py와 똑같은 general_assets.json 으로 맞췄습니다!
+        with open('general_assets.json', 'w', encoding='utf-8') as f:
             json.dump(final_data, f, ensure_ascii=False, indent=4)
             
     except Exception as e:
