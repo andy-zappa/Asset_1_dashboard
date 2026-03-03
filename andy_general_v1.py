@@ -5,7 +5,7 @@ import os
 import yfinance as yf
 
 # =====================================================================
-# 🔑 Yahoo Finance API 로직 (프리/애프터마켓 반영)
+# 🔑 Yahoo Finance API 로직 (프리/애프터마켓 완벽 지원)
 # =====================================================================
 def get_yfinance_price(code, is_usa=False):
     if code == "-": return None, None
@@ -14,6 +14,7 @@ def get_yfinance_price(code, is_usa=False):
     try:
         t = yf.Ticker(ticker)
         
+        # 미국 주식: 애프터마켓(NXT) 포함 강제 조회
         if is_usa:
             hist = t.history(period="1d", prepost=True) 
             if not hist.empty:
@@ -26,6 +27,7 @@ def get_yfinance_price(code, is_usa=False):
         curr = t.fast_info.last_price
         prev = t.fast_info.previous_close
         
+        # 국내 주식: 코스피(.KS) 실패 시 코스닥(.KQ) 조회
         if (curr is None or str(curr).lower() == 'nan') and not is_usa:
             ticker = f"{code}.KQ"
             t = yf.Ticker(ticker)
@@ -108,6 +110,7 @@ def generate_general_data():
                     })
                     continue
                 
+                # 🎯 KIS 대신 야후 파이낸스로 가격 호출
                 cp, dr = get_yfinance_price(it["코드"], is_usa)
                 if cp is not None:
                     it["현재가"] = cp
@@ -143,7 +146,7 @@ def generate_general_data():
                 "평가손익(30일전)": krw_profit * 0.85
             }
 
-        # 🚨 한국 표준시(KST)로 강제 고정
+        # 🚨 한국 표준시(KST)로 시간 고정
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST)
         weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
@@ -167,4 +170,3 @@ def generate_general_data():
 
 if __name__ == "__main__":
     generate_general_data()
-
