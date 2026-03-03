@@ -244,7 +244,6 @@ def to_kst(time_str):
     try:
         if time_str and time_str != '업데이트 필요':
             dt = pd.to_datetime(time_str)
-            # 만약 시간대 정보가 없다면 UTC로 간주하고 KST(Asia/Seoul)로 변환
             if dt.tzinfo is None:
                 dt = dt.tz_localize('UTC')
             dt = dt.tz_convert('Asia/Seoul')
@@ -287,7 +286,7 @@ def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 
 
 # =========================================================
-# 🚨 [ 핵심 수정 ] 가상자산 데이터를 깃허브에서 가져오는 로직 연동
+# 🚨 가상자산 데이터를 깃허브에서 가져오는 로직 연동
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
@@ -334,7 +333,10 @@ with st.sidebar:
     p_ovs_pct = (p_ovs_tot / p_asset_all * 100) if p_asset_all > 0 else 0
 
     GEN_ACC_ORDER_Q = ['DOM1', 'DOM2', 'USA1', 'USA2']
-    g_principals_q = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    # 🎯 동적 원금 데이터 로드 (app.py 수정 불필요)
+    default_principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    g_principals_q = g_data.get("원금", default_principals)
+    
     g_orig_all = sum(g_principals_q.values())
     g_asset_all = sum(g_data[k].get("총자산_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
     g_profit_all = sum(g_data[k].get("총수익_KRW", 0) for k in GEN_ACC_ORDER_Q if k in g_data)
@@ -436,7 +438,8 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    # =========================================================
+
+# =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면, 퀀트, 가상자산)
 # =========================================================
 if st.session_state.current_view == '대시보드':
@@ -852,6 +855,7 @@ elif st.session_state.current_view == '가상자산':
         st.markdown(c_html + "</table>", unsafe_allow_html=True)
     else:
         st.info("🔄 깃허브에서 최신 가상자산 데이터를 동기화하는 중입니다...")
+
         # =========================================================
 # [ Part 3 ] 절세계좌 대시보드 (오리지널 레이아웃 완벽 복원)
 # =========================================================
@@ -1190,7 +1194,7 @@ elif st.session_state.current_view == '절세계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
 
-# =========================================================
+        # =========================================================
 # [ Part 4 ] 일반계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
@@ -1214,7 +1218,10 @@ elif st.session_state.current_view == '일반계좌':
 
     nm_table = {'DOM1': '키움증권(국내Ⅰ)', 'DOM2': '삼성증권(국내Ⅱ)', 'USA1': '키움증권(해외Ⅰ)', 'USA2': '키움증권(해외Ⅱ)'}
     nm_table_expander = {'DOM1': '키움증권(국내Ⅰ) : 6312-5329', 'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01', 'USA1': '키움증권(해외Ⅰ) : 6312-5329', 'USA2': '키움증권(해외Ⅱ) : 6443-5993'}
-    principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    
+    # 🎯 동적 원금 데이터 로드 (app.py 수정 불필요)
+    default_principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    principals = g_data.get("원금", default_principals)
     GEN_ACC_ORDER = ['DOM1', 'DOM2', 'USA1', 'USA2']
     
     t_asset = sum(g_data[k].get("총자산_KRW", 0) for k in GEN_ACC_ORDER if k in g_data)
@@ -1631,4 +1638,3 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
-
