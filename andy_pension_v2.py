@@ -1,42 +1,52 @@
 import json
 from datetime import datetime, timezone, timedelta
 import time
-import yfinance as yf
 import requests
+import yfinance as yf
 
 # =====================================================================
-# 🔑 Yahoo Finance API 로직 (클라우드 IP 차단 우회 지원)
+# 🔑 실시간 시세 하이브리드 스크래퍼 (네이버 금융 + 야후 파이낸스)
 # =====================================================================
-session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-})
-
-def get_yfinance_price(code):
+def get_realtime_price(code):
     if code == "-": return None, None, None
-    ticker = f"{code}.KS" 
+    
+    # 1️⃣ 네이버 금융 모바일 API (국내 ETF 실시간 조회)
     try:
-        t = yf.Ticker(ticker, session=session)
-        curr = t.fast_info.last_price
-        prev = t.fast_info.previous_close
-        
-        if curr is None or str(curr).lower() == 'nan':
-            ticker = f"{code}.KQ"
-            t = yf.Ticker(ticker, session=session)
-            curr = t.fast_info.last_price
-            prev = t.fast_info.previous_close
-                    
-        if curr and prev and prev > 0:
-            dr = ((curr - prev) / prev) * 100
+        url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        res = requests.get(url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            curr = float(data['closePrice'].replace(',', ''))
+            dr = float(data['compareToPreviousRate'])
+            
+            # 전일비 금액 계산
+            prev = curr / (1 + (dr / 100)) if dr != 0 else curr
             damt = curr - prev
-            return float(curr), float(dr), float(damt)
-    except Exception as e:
-        print(f"🔥 {code} 가격 조회 실패: {e}")
+            return curr, dr, damt
+    except:
         pass
+
+    # 2️⃣ 백업: 야후 파이낸스 History
+    try:
+        t = yf.Ticker(f"{code}.KS")
+        hist = t.history(period="5d")
+        if hist.empty:
+            t = yf.Ticker(f"{code}.KQ")
+            hist = t.history(period="5d")
+        
+        if not hist.empty and len(hist) >= 2:
+            curr = float(hist['Close'].iloc[-1])
+            prev = float(hist['Close'].iloc[-2])
+            dr = ((curr - prev) / prev) * 100
+            return curr, dr, (curr - prev)
+    except:
+        pass
+        
     return None, None, None
 
 def generate_asset_data():
-    print("🔄 ZAPPA: Yahoo Finance 절세계좌 실시간 연동을 시작합니다...")
+    print("🔄 ZAPPA: 절세계좌 실시간 연동을 시작합니다...")
     
     KST = timezone(timedelta(hours=9))
     now_date = datetime.now(KST)
@@ -101,7 +111,7 @@ def generate_asset_data():
                 continue
 
             if it.get("코드") != "-":
-                cp, dr, damt = get_yfinance_price(it["코드"])
+                cp, dr, damt = get_realtime_price(it["코드"])
                 if cp is not None:
                     it["현재가"] = cp
                     it["전일비"] = dr
