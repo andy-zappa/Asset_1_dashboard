@@ -1,46 +1,42 @@
 import json
-import requests
 from datetime import datetime
 import time
+import yfinance as yf
 
 # =====================================================================
-# 🔑 한국투자증권 Open API 설정
+# 🔑 Yahoo Finance API 로직 (국내 ETF 시세 연동)
 # =====================================================================
-APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
-APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
-URL_BASE = "https://openapi.koreainvestment.com:9443"
-
-def get_access_token():
-    if APP_KEY.startswith("여기에"): return None
-    headers = {"content-type": "application/json"}
-    body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
+def get_yfinance_price(code):
+    if code == "-": return None, None, None
+    ticker = f"{code}.KS" # 절세계좌는 모두 국내 상장 ETF이므로 .KS 고정
     try:
-        res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
-        if res.status_code == 200: return res.json()["access_token"]
-    except: pass
-    return None
-
-def get_dom_price(code, token):
-    if not token or code == "-": return None, None, None
-    url = f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price"
-    headers = {
-        "Content-Type": "application/json; charset=utf-8", 
-        "authorization": f"Bearer {token}", 
-        "appkey": APP_KEY, 
-        "appsecret": APP_SECRET, 
-        "tr_id": "FHKST01010100"
-    }
-    params = {"fid_cond_mrkt_div_code": "J", "fid_input_iscd": code}
-    try:
-        res = requests.get(url, headers=headers, params=params, timeout=5)
-        if res.status_code == 200 and res.json()['rt_cd'] == '0':
-            return float(res.json()['output']['stck_prpr']), float(res.json()['output']['prdy_ctrt']), float(res.json()['output']['prdy_vrss'])
-    except: pass
+        t = yf.Ticker(ticker)
+        curr = t.fast_info.last_price
+        prev = t.fast_info.previous_close
+        
+        if curr is None or str(curr).lower() == 'nan':
+            ticker = f"{code}.KQ"
+            t = yf.Ticker(ticker)
+            curr = t.fast_info.last_price
+            prev = t.fast_info.previous_close
+            
+            if curr is None or str(curr).lower() == 'nan':
+                hist = t.history(period="5d")
+                if len(hist) >= 2:
+                    curr = hist['Close'].iloc[-1]
+                    prev = hist['Close'].iloc[-2]
+                    
+        if curr and prev and prev > 0:
+            dr = ((curr - prev) / prev) * 100
+            damt = curr - prev
+            return float(curr), float(dr), float(damt)
+    except Exception as e:
+        print(f"🔥 {code} 가격 조회 실패: {e}")
+        pass
     return None, None, None
 
 def generate_asset_data():
-    print("🔄 ZAPPA: 절세계좌 API 실시간 연동을 시작합니다...")
-    token = get_access_token()
+    print("🔄 ZAPPA: Yahoo Finance 절세계좌 실시간 연동을 시작합니다...")
     
     now_date = datetime.now()
     base_date = datetime(2026, 3, 1)
@@ -103,8 +99,8 @@ def generate_asset_data():
                 sum_asset += asset; sum_profit += profit; sum_buy += buy
                 continue
 
-            if token and it.get("코드") != "-":
-                cp, dr, damt = get_dom_price(it["코드"], token)
+            if it.get("코드") != "-":
+                cp, dr, damt = get_yfinance_price(it["코드"])
                 if cp is not None:
                     it["현재가"] = cp
                     it["전일비"] = dr
@@ -130,7 +126,6 @@ def generate_asset_data():
             
         for p in processed: p['비중'] = (p['총 자산'] / sum_asset * 100) if sum_asset > 0 else 0
             
-        # 🎯 [ 합  계 ] 명칭 통일 적용
         processed.append({
             "종목명": "[ 합  계 ]", "코드": "-", "비중": 100.0, "총 자산": sum_asset, "평가손익": sum_profit,
             "수익률(%)": (sum_profit / sum_buy * 100) if sum_buy else 0, "수량": "-", "매입가": "-",
