@@ -4,5 +4,6 @@ plotly
 requests
 matplotlib
 google-generativeai>=0.8.0
-yfinance
+beautifulsoup4
+
 
