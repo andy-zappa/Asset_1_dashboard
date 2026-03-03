@@ -1,58 +1,51 @@
 import json
-import requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 import os
+import yfinance as yf
 
 # =====================================================================
-# 🔑 한국투자증권 Open API 설정 (원복 완료)
+# 🔑 Yahoo Finance API 로직 (프리/애프터마켓 반영)
 # =====================================================================
-APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
-APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
-URL_BASE = "https://openapi.koreainvestment.com:9443"
-
-def get_access_token():
-    if APP_KEY.startswith("여기에"): return None
-    headers = {"content-type": "application/json"}
-    body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
+def get_yfinance_price(code, is_usa=False):
+    if code == "-": return None, None
+    ticker = code if is_usa else f"{code}.KS"
+    
     try:
-        res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
-        if res.status_code == 200: return res.json()["access_token"]
-    except: pass
-    return None
+        t = yf.Ticker(ticker)
+        
+        if is_usa:
+            hist = t.history(period="1d", prepost=True) 
+            if not hist.empty:
+                curr = hist['Close'].iloc[-1] 
+                prev = t.fast_info.previous_close
+                if curr and prev and prev > 0:
+                    dr = ((curr - prev) / prev) * 100
+                    return float(curr), float(dr)
 
-def get_dom_price(code, token):
-    if not token or code == "-": return None, None
-    url = f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price"
-    headers = {"Content-Type": "application/json; charset=utf-8", "authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "FHKST01010100"}
-    params = {"fid_cond_mrkt_div_code": "J", "fid_input_iscd": code}
-    try:
-        res = requests.get(url, headers=headers, params=params, timeout=5)
-        if res.status_code == 200 and res.json()['rt_cd'] == '0':
-            return float(res.json()['output']['stck_prpr']), float(res.json()['output']['prdy_ctrt'])
-    except: pass
-    return None, None
-
-def get_ovs_price(code, token):
-    if not token or code == "-": return None, None
-    url = f"{URL_BASE}/uapi/overseas-price/v1/quotations/price"
-    headers = {"Content-Type": "application/json; charset=utf-8", "authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "HHDFS00000300"}
-    for excd in ["NAS", "NYS", "AMS"]:
-        params = {"AUTH": "", "EXCD": excd, "SYMB": code}
-        try:
-            res = requests.get(url, headers=headers, params=params, timeout=5)
-            data = res.json()
-            if res.status_code == 200 and data.get('rt_cd') == '0' and data['output']['last'] != '':
-                return float(data['output']['last']), float(data['output']['rate'])
-        except: pass
-        time.sleep(0.1)
+        curr = t.fast_info.last_price
+        prev = t.fast_info.previous_close
+        
+        if (curr is None or str(curr).lower() == 'nan') and not is_usa:
+            ticker = f"{code}.KQ"
+            t = yf.Ticker(ticker)
+            curr = t.fast_info.last_price
+            prev = t.fast_info.previous_close
+                
+        if curr and prev and prev > 0:
+            dr = ((curr - prev) / prev) * 100
+            return float(curr), float(dr)
+            
+    except Exception as e:
+        print(f"🔥 {code} 가격 조회 실패: {e}")
+        pass
+        
     return None, None
 
 def generate_general_data():
     try:
         usd_krw = 1443.1 
         
-        # 🎯 투자 원금 중앙 관리 (유지)
         PRINCIPALS = {
             "DOM1": 110963075,
             "DOM2": 5208948,
@@ -60,8 +53,7 @@ def generate_general_data():
             "USA2": 7457930
         }
         
-        print("🔄 ZAPPA: 한국투자증권 API 서버와 통신을 시작합니다...")
-        token = get_access_token()
+        print("🔄 ZAPPA: Yahoo Finance 서버와 통신을 시작합니다...")
         
         dom1 = [
             {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
@@ -116,11 +108,10 @@ def generate_general_data():
                     })
                     continue
                 
-                if token:
-                    cp, dr = get_ovs_price(it["코드"], token) if is_usa else get_dom_price(it["코드"], token)
-                    if cp is not None:
-                        it["현재가"] = cp
-                        it["전일비"] = dr
+                cp, dr = get_yfinance_price(it["코드"], is_usa)
+                if cp is not None:
+                    it["현재가"] = cp
+                    it["전일비"] = dr
                 
                 asset = it['수량'] * it['현재가']
                 profit = (it['현재가'] - it['매입가']) * it['수량']
@@ -152,7 +143,9 @@ def generate_general_data():
                 "평가손익(30일전)": krw_profit * 0.85
             }
 
-        now = datetime.now()
+        # 🚨 한국 표준시(KST)로 강제 고정
+        KST = timezone(timedelta(hours=9))
+        now = datetime.now(KST)
         weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
         time_str = now.strftime(f"%Y/%m/%d({weekdays_kr[now.weekday()]}) / %H:%M:%S")
 
