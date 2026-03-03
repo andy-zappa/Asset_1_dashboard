@@ -32,7 +32,7 @@ def get_yfinance_price(code):
 def generate_asset_data():
     print("🔄 ZAPPA: Yahoo Finance 절세계좌 실시간 연동을 시작합니다...")
     
-    # 🚨 한국 표준시(KST)로 강제 고정
+    # 🚨 한국 표준시(KST)로 시간 강제 고정 
     KST = timezone(timedelta(hours=9))
     now_date = datetime.now(KST)
     base_date = datetime(2026, 3, 1, tzinfo=KST)
