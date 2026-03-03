@@ -1,57 +1,48 @@
 import json
 from datetime import datetime, timezone, timedelta
 import time
-import os
-import yfinance as yf
 import requests
+import yfinance as yf
 
 # =====================================================================
-# 🔑 Yahoo Finance API 로직 (클라우드 IP 차단 우회 및 NXT 완벽 지원)
+# 🔑 실시간 시세 하이브리드 스크래퍼 (네이버 금융 + 야후 파이낸스 우회)
 # =====================================================================
-# 🚨 야후 서버가 봇으로 인식하는 것을 막기 위한 가짜 브라우저 세션 생성
-session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-})
-
-def get_yfinance_price(code, is_usa=False):
+def get_realtime_price(code, is_usa=False):
     if code == "-": return None, None
-    ticker = code if is_usa else f"{code}.KS"
     
-    try:
-        # 생성한 세션을 통해 야후 파이낸스에 접근 (차단 방지)
-        t = yf.Ticker(ticker, session=session)
-        
-        # 미국 주식: 애프터마켓(NXT) 포함 강제 조회
-        if is_usa:
-            hist = t.history(period="2d", prepost=True) 
-            if not hist.empty:
-                curr = hist['Close'].iloc[-1] 
-                prev = t.fast_info.previous_close
-                if str(prev).lower() == 'nan' or prev is None:
-                    if len(hist) >= 2: prev = hist['Close'].iloc[-2]
-                
-                if curr and prev and prev > 0:
-                    dr = ((curr - prev) / prev) * 100
-                    return float(curr), float(dr)
+    # 1️⃣ [국내주식] 네이버 금융 모바일 API (가장 빠르고 정확함, 차단 없음)
+    if not is_usa:
+        try:
+            url = f"https://m.stock.naver.com/api/stock/{code}/basic"
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            res = requests.get(url, headers=headers, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                curr = float(data['closePrice'].replace(',', ''))
+                dr = float(data['compareToPreviousRate'])
+                return curr, dr
+        except:
+            pass # 네이버 조회 실패 시 야후로 넘어감
 
-        # 국내 주식 및 기본 로직
-        curr = t.fast_info.last_price
-        prev = t.fast_info.previous_close
+    # 2️⃣ [미국주식 및 국내 백업] 야후 파이낸스 History 방식 (NXT 애프터마켓 반영)
+    try:
+        ticker = code if is_usa else f"{code}.KS"
+        t = yf.Ticker(ticker)
         
-        # 코스피(.KS) 실패 시 코스닥(.KQ) 조회
-        if (curr is None or str(curr).lower() == 'nan') and not is_usa:
+        # fast_info 대신 history 방식을 써야 클라우드에서 에러가 안 납니다.
+        hist = t.history(period="5d", prepost=is_usa) 
+        
+        if hist.empty and not is_usa:
             ticker = f"{code}.KQ"
-            t = yf.Ticker(ticker, session=session)
-            curr = t.fast_info.last_price
-            prev = t.fast_info.previous_close
-                
-        if curr and prev and prev > 0:
-            dr = ((curr - prev) / prev) * 100
-            return float(curr), float(dr)
+            t = yf.Ticker(ticker)
+            hist = t.history(period="5d", prepost=False)
             
-    except Exception as e:
-        print(f"🔥 {code} 가격 조회 실패: {e}")
+        if not hist.empty and len(hist) >= 2:
+            curr = float(hist['Close'].iloc[-1])
+            prev = float(hist['Close'].iloc[-2])
+            dr = ((curr - prev) / prev) * 100
+            return curr, dr
+    except:
         pass
         
     return None, None
@@ -67,7 +58,7 @@ def generate_general_data():
             "USA2": 7457930
         }
         
-        print("🔄 ZAPPA: Yahoo Finance 서버와 통신을 시작합니다 (차단 우회 모드)...")
+        print("🔄 ZAPPA: 실시간 하이브리드 서버와 통신을 시작합니다...")
         
         dom1 = [
             {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
@@ -122,7 +113,8 @@ def generate_general_data():
                     })
                     continue
                 
-                cp, dr = get_yfinance_price(it["코드"], is_usa)
+                # 🎯 실시간 가격 호출 (실패할 경우에만 임시값 사용)
+                cp, dr = get_realtime_price(it["코드"], is_usa)
                 if cp is not None:
                     it["현재가"] = cp
                     it["전일비"] = dr
@@ -157,7 +149,7 @@ def generate_general_data():
                 "평가손익(30일전)": krw_profit * 0.85
             }
 
-        # 🚨 한국 시간(KST) 고정
+        # 🚨 한국 표준시(KST) 고정
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST)
         weekdays_kr = ["월", "화", "수", "목", "금", "토", "일"]
