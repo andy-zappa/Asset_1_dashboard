@@ -1,16 +1,40 @@
+import os
+import json
+import requests
+from datetime import datetime, timezone, timedelta
+
 # =====================================================================
 # 🔑 한국투자증권 Open API (절세계좌 - 국내 ETF 완벽 연동)
 # =====================================================================
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
 URL_BASE = "https://openapi.koreainvestment.com:9443"
+TOKEN_FILE = "kis_token.json"
 
 def get_access_token():
+    # 🎯 KIS 토큰 20시간 재사용(캐싱) 로직
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                data = json.load(f)
+                exp_time = datetime.fromisoformat(data['expired_at'])
+                if datetime.now() < exp_time:
+                    return data['access_token']
+        except Exception:
+            pass
+
+    # 토큰이 없거나 만료되었다면 새로 발급
     headers = {"content-type": "application/json"}
     body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try:
         res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
-        if res.status_code == 200: return res.json()["access_token"]
+        if res.status_code == 200:
+            token = res.json()["access_token"]
+            # 24시간 만료지만, 안전하게 20시간 후 만료되도록 세팅하여 저장
+            expired_at = (datetime.now() + timedelta(hours=20)).isoformat()
+            with open(TOKEN_FILE, 'w') as f:
+                json.dump({'access_token': token, 'expired_at': expired_at}, f)
+            return token
     except: pass
     return None
 
@@ -132,7 +156,6 @@ def generate_asset_data():
    
     final_json = {"DC": dc_data, "PENSION": pension_data, "ISA": isa_data, "IRP": irp_data, "_total": total_data, "_insight": True}
    
-    # 🎯 수정 포인트: data_tax-advantaged.json 으로 저장
     with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
         json.dump(final_json, f, ensure_ascii=False, indent=4)
 
