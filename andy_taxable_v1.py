@@ -1,3 +1,4 @@
+import os
 import json
 import requests
 from datetime import datetime, timezone, timedelta
@@ -9,13 +10,31 @@ import time
 APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
 APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
 URL_BASE = "https://openapi.koreainvestment.com:9443"
+TOKEN_FILE = "kis_token.json"
 
 def get_access_token():
+    # 🎯 KIS 토큰 20시간 재사용(캐싱) 로직
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                data = json.load(f)
+                exp_time = datetime.fromisoformat(data['expired_at'])
+                if datetime.now() < exp_time:
+                    return data['access_token']
+        except Exception:
+            pass
+
+    # 토큰이 없거나 만료되었다면 새로 발급
     headers = {"content-type": "application/json"}
     body = {"grant_type": "client_credentials", "appkey": APP_KEY, "appsecret": APP_SECRET}
     try:
         res = requests.post(f"{URL_BASE}/oauth2/tokenP", headers=headers, data=json.dumps(body), timeout=5)
-        if res.status_code == 200: return res.json()["access_token"]
+        if res.status_code == 200:
+            token = res.json()["access_token"]
+            expired_at = (datetime.now() + timedelta(hours=20)).isoformat()
+            with open(TOKEN_FILE, 'w') as f:
+                json.dump({'access_token': token, 'expired_at': expired_at}, f)
+            return token
     except: pass
     return None
 
@@ -32,6 +51,31 @@ def get_dom_price(code, token):
     return None, None
 
 def get_ovs_price(code, token):
+    # 🎯 미국 주식 애프터마켓/프리마켓 최강 콤보 (Yahoo API 선행 검사)
+    yh_code = code.replace(" ", "")
+    yh_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yh_code}?interval=1m&range=1d&includePrePost=true"
+    yh_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+   
+    try:
+        res = requests.get(yh_url, headers=yh_headers, timeout=5)
+        if res.status_code == 200:
+            meta = res.json()['chart']['result'][0]['meta']
+            # 애프터마켓 -> 프리마켓 -> 정규장 순서로 데이터 확인
+            current_price = meta.get('postMarketPrice')
+            if not current_price:
+                current_price = meta.get('preMarketPrice')
+            if not current_price:
+                current_price = meta.get('regularMarketPrice')
+               
+            prev_close = meta.get('chartPreviousClose', current_price)
+           
+            if current_price and prev_close:
+                rate = (current_price - prev_close) / prev_close * 100
+                return float(current_price), round(rate, 2)
+    except:
+        pass # Yahoo 실패 시 KIS로 자연스럽게 넘어감
+
+    # 🎯 KIS 공식 API 로직 (백업 및 정규장용)
     if not token or code == "-": return None, None
     url = f"{URL_BASE}/uapi/overseas-price/v1/quotations/price"
     headers = {"Content-Type": "application/json; charset=utf-8", "authorization": f"Bearer {token}", "appkey": APP_KEY, "appsecret": APP_SECRET, "tr_id": "HHDFS00000300"}
@@ -52,9 +96,9 @@ def generate_general_data():
         print("🔥 KIS 토큰 발급 실패!")
         return
 
-    usd_krw = 1443.1 
+    usd_krw = 1443.1
     PRINCIPALS = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
-    
+   
     dom1 = [
         {"종목명": "삼성전자", "코드": "005930", "수량": 170, "매입가": 60094, "현재가": 217500, "전일비": -0.23},
         {"종목명": "KODEX 레버리지", "코드": "122630", "수량": 300, "매입가": 37480, "현재가": 111280, "전일비": -1.97},
@@ -64,12 +108,14 @@ def generate_general_data():
         {"종목명": "한화오션", "코드": "042660", "수량": 110, "매입가": 121239, "현재가": 141200, "전일비": 0.86},
         {"종목명": "한국항공우주", "코드": "047810", "수량": 35, "매입가": 177646, "현재가": 192600, "전일비": 4.73},
         {"종목명": "POSCO홀딩스", "코드": "005490", "수량": 30, "매입가": 393400, "현재가": 415000, "전일비": 1.84},
-        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496} 
+        {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 4677496}
     ]
+   
     dom2 = [
         {"종목명": "삼성전자", "코드": "005930", "수량": 36, "매입가": 160500, "현재가": 217500, "전일비": 0.5},
         {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 18730}
     ]
+   
     usa1 = [
         {"종목명": "알파벳 A", "코드": "GOOGL", "수량": 80, "매입가": 307.2192, "현재가": 311.7600, "전일비": 1.33},
         {"종목명": "팔란티어 테크", "코드": "PLTR", "수량": 120, "매입가": 93.1779, "현재가": 137.1900, "전일비": 2.10},
@@ -86,6 +132,7 @@ def generate_general_data():
         {"종목명": "아이렌", "코드": "IREN", "수량": 150, "매입가": 46.6626, "현재가": 40.9500, "전일비": -7.44},
         {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 249.42}
     ]
+   
     usa2 = [
         {"종목명": "피그마", "코드": "FIG", "수량": 100, "매입가": 51.6084, "현재가": 29.3900, "전일비": -2.75},
         {"종목명": "예수금", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "예수금액": 300.00}
@@ -99,23 +146,23 @@ def generate_general_data():
                 sum_asset += asset; sum_buy += asset
                 processed.append({"종목명": "예수금", "코드": "-", "총자산": asset, "평가손익": 0, "수익률(%)": 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0})
                 continue
-            
+           
             # KIS API로 실시간 호출 (임시값 덮어쓰기)
             cp, dr = get_ovs_price(it["코드"], token) if is_usa else get_dom_price(it["코드"], token)
             if cp is not None:
                 it["현재가"] = cp
                 it["전일비"] = dr
-            
+           
             asset = it['수량'] * it['현재가']
             profit = (it['현재가'] - it['매입가']) * it['수량']
             buy = it['수량'] * it['매입가']
-            
+           
             processed.append({"종목명": it["종목명"], "코드": it["코드"], "총자산": asset, "평가손익": profit, "수익률(%)": (profit / buy * 100) if buy else 0, "수량": it["수량"], "매입가": it["매입가"], "현재가": it["현재가"], "전일비": it.get("전일비", 0)})
             sum_asset += asset; sum_profit += profit; sum_buy += buy
-            
+           
         for p in processed: p['비중'] = (p['총자산'] / sum_asset * 100) if sum_asset > 0 else 0
         processed.append({"종목명": "[ 합  계 ]", "코드": "-", "비중": 100.0, "총자산": sum_asset, "평가손익": sum_profit, "수익률(%)": (sum_profit/sum_buy*100) if sum_buy else 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0})
-        
+       
         krw_profit = (sum_profit * usd_krw) if is_usa else sum_profit
         return {"상세": processed, "총자산_KRW": (sum_asset * usd_krw) if is_usa else sum_asset, "총수익_KRW": krw_profit, "매입금액_KRW": (sum_buy * usd_krw) if is_usa else sum_buy, "평가손익(7일전)": krw_profit * 0.95, "평가손익(15일전)": krw_profit * 0.90, "평가손익(30일전)": krw_profit * 0.85}
 
@@ -129,13 +176,10 @@ def generate_general_data():
         "USA1": process_and_update(usa1, True), "USA2": process_and_update(usa2, True),
         "환율": usd_krw, "조회시간": time_str, "원금": PRINCIPALS
     }
+   
     # 🎯 수정 포인트: data_taxable.json 으로 저장
     with open('data_taxable.json', 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     generate_general_data()
-
-
-
-
