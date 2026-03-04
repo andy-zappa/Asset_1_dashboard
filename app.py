@@ -32,7 +32,6 @@ section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; m
 .block-container { padding-top: 3rem !important; padding-bottom: 7rem !important; }
 h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; padding-bottom: 0px; }
 .sub-title { font-size: 22px !important; font-weight: bold; margin: 12px 0 10px; }
-
 .main-table { width: 100%; border-collapse: separate !important; border-spacing: 0; border: 1.5px solid #b5b5b5 !important; border-radius: 12px; overflow: hidden; font-size: 15px; text-align: center; margin-bottom: 10px; }
 .main-table th { background-color: #f2f2f2; padding: 10px; border-bottom: 1px solid #dcdcdc !important; border-right: 1px solid #dcdcdc !important; font-weight: bold !important; vertical-align: middle; }
 .main-table td { padding: 8px; border-bottom: 1px solid #dcdcdc !important; border-right: 1px solid #dcdcdc !important; vertical-align: middle; }
@@ -41,35 +40,27 @@ h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; paddin
 .main-table th.th-eval { border-right: none !important; }
 .main-table th.th-blank { border-bottom: none !important; border-right: none !important; padding: 0 !important; }
 .main-table th.th-week { border-left: 1px solid #dcdcdc !important; border-top: 1px solid #dcdcdc !important; font-size: 13.5px; }
-
 .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
 .red { color: #D32F2F !important; } .blue { color: #1976D2 !important; }
-
 .insight-container { display: flex; gap: 20px; align-items: stretch; margin-bottom: 20px; }
 .insight-left { flex: 0 0 46%; display: flex; flex-direction: column; }
 .insight-right { flex: 1; display: flex; flex-direction: column; }
-
 .card-main { background-color: #fffdf2; border: 2px solid #e8dbad; border-radius: 18px; padding: 18px 22px 15px 22px; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.03); height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
 .card-inner { background-color: #ffffff; border: 1.5px solid #dcdcdc; border-radius: 10px; text-align: right; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s ease; cursor: default; }
 .card-inner:hover { background-color: #f8f9fa !important; border-color: #bbb !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; height: 100%; }
 .card-sub { background: #fff; border: 1.5px solid #dcdcdc; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; padding: 10px 15px; transition: background-color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s; cursor: pointer; }
 .card-sub:hover { background-color: #f2f2f2 !important; border-color: #ccc !important; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .insight-bottom-box { background: #fff; border: 1.5px solid #dcdcdc; border-radius: 18px; padding: 25px; box-shadow: 0 1px 4px rgba(0,0,0,0.02); font-size: 15.5px; line-height: 1.8; color: #333; margin-top: 5px; margin-bottom: 25px; }
-
 .summary-text { font-size: 16px !important; font-weight: bold !important; color: #333; margin-bottom: 10px; }
 .summary-val { font-size: 20px !important; }
-
 div[role="radiogroup"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 0px !important; }
 div[role="radiogroup"] label { font-size: 14.5px !important; margin-bottom: 0px !important; }
 div[data-testid="stRadio"] { display: none !important; } 
-
 div[data-baseweb="select"] { min-height: 34px !important; font-size: 13.5px !important; }
 div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 6px !important; min-height: 34px !important; }
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
 div[data-testid="stSelectbox"] label { display: none !important; }
-
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) { 
     position: fixed !important; top: 55px !important; right: 20px !important; bottom: auto !important; left: auto !important; 
     transform: none !important; width: max-content !important; min-width: 0 !important; 
@@ -78,29 +69,14 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-tes
     display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; 
     gap: 0px !important; backdrop-filter: blur(4px);
 }
-div.element-container:has(span#zappa-floating-menu) { display: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 13.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; white-space: nowrap !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background-color: #e5e7eb !important; border-radius: 4px !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
 </style>
 """
 st.markdown(css, unsafe_allow_html=True)
 
-# 🎯 스무스 스크롤 및 사이드바 카드 클릭 라우팅 JS
+# 🎯 사이드바 라우팅 JS
 components.html("""
 <script>
 const parentDoc = window.parent.document;
-parentDoc.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const targetId = this.getAttribute('href').substring(1);
-        const targetElement = parentDoc.getElementById(targetId);
-        if (targetElement) { targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    });
-});
-
 function bindSidebarClicks() {
     const labels = Array.from(parentDoc.querySelectorAll('div[role="radiogroup"] label'));
     const bindClick = (cardId, routeName) => {
@@ -131,167 +107,101 @@ GUARANTEED_LOGOS = {
     "아이온큐": "ionq.com", "리케티 컴퓨팅": "rigetti.com", "디 웨이브 퀀텀": "dwavesys.com",
     "아이렌": "iren.com", "피그마": "figma.com", "삼성전자": "samsung.com", "현대차": "hyundai.com", 
     "CJ": "cj.net", "두산에너빌리티": "doosanenerbility.com", "한화오션": "hanwhaocean.com",
-    "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com",
-    "KODEX 레버리지": "samsungfund.com", "KODEX 200": "samsungfund.com",
-    "KODEX 미국나스닥100": "samsungfund.com", "KODEX 200타겟위클리커버드콜": "samsungfund.com",
-    "KODEX 미국AI테크TOP10타겟": "samsungfund.com", "KODEX 미국나스닥100데일리": "samsungfund.com",
-    "TIGER 미국S&P500": "tigeretf.com", "TIGER 미국필라델피아반도체나스닥": "tigeretf.com",
-    "TIGER 미국배당다우존스": "tigeretf.com", "PLUS 고배당주": "hanwhafund.com",
-    "RISE 200위클리커버드콜": "kbstarfund.com"
+    "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com"
 }
 
 def get_logo_html(nm):
     if not nm or nm in ["예수금", "[ 합  계 ]"]: return ""
     domain = GUARANTEED_LOGOS.get(nm)
-    if domain:
-        return f"<img src='https://www.google.com/s2/favicons?domain={domain}&sz=64' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:8px; margin-bottom:2px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); background-color:white; object-fit:contain;'>"
-    else:
-        clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', nm)
-        short_str = clean_nm[:1] if clean_nm else "Z"
-        colors = ["#e6f2ff", "#e6ffe6", "#ffe6e6", "#fff0e6", "#f0e6ff", "#ffe6f9", "#e6ffff", "#f5ffe6"]
-        text_colors = ["#0066cc", "#006600", "#cc0000", "#cc5200", "#5200cc", "#cc00a3", "#00cccc", "#669900"]
-        idx = sum(ord(c) for c in short_str) % len(colors)
-        return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{colors[idx]}; color:{text_colors[idx]}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{short_str}</span>"
+    if domain: return f"<img src='https://www.google.com/s2/favicons?domain={domain}&sz=64' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:8px; margin-bottom:2px;'>"
+    clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', nm); short_str = clean_nm[:1] if clean_nm else "Z"
+    return f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:#e6f2ff; color:#0066cc; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle;'>{short_str}</span>"
 
-# Session States
 if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
 if 'gen_sort_mode' not in st.session_state: st.session_state.gen_sort_mode = 'init'
-if 'show_code' not in st.session_state: st.session_state.show_code = False
-if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
-if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_change_rate = False
 if 'current_view' not in st.session_state: st.session_state.current_view = '대시보드'
-if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
-if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
-
-def toggle_usa_krw():
-    st.session_state.usa_show_krw = not st.session_state.usa_show_krw
-    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd: st.session_state.usa_show_usd = True
-
-def toggle_usa_usd():
-    st.session_state.usa_show_usd = not st.session_state.usa_show_usd
-    if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd: st.session_state.usa_show_krw = True
 
 def on_menu_change():
-    if st.session_state.menu_sel is not None:
-        st.session_state.current_view = st.session_state.menu_sel
+    if st.session_state.menu_sel: st.session_state.current_view = st.session_state.menu_sel
 
 # =========================================================
-# 🚨 [ 핵심 ] 오라클 / 로컬 자동 전환 하이브리드 엔진 탑재
+# 🚨 [ 핵심 ] 껍데기(data 키값) 자동 제거 하이브리드 엔진
 # =========================================================
-def apply_corrections(raw_data):
-    if not raw_data: return raw_data
-    for k, v in raw_data.items():
+def apply_corrections(raw):
+    if not raw: return {}
+    # 원본 파일 특유의 "data" 껍데기가 있으면 벗겨냄
+    if "data" in raw and isinstance(raw["data"], dict): raw = raw["data"]
+    for k, v in raw.items():
         if isinstance(v, dict) and '상세' in v:
             for item in v['상세']:
-                name = str(item.get('종목명', ''))
-                if '삼성화재' in name: item['총 자산'] = 90356294
+                nm = str(item.get('종목명', ''))
+                if '삼성화재' in nm: item['총 자산'] = 90356294
                 if k == 'IRP': item['종목명'] = 'KODEX 200타겟위클리커버드콜'
-                if '미국나스닥100데일리' in name: item['수량'] = 770
-                elif '미국AI테크TOP10' in name: item['수량'] = 285
-    return raw_data
+    return raw
 
 @st.cache_data(ttl=60)
 def fetch_hybrid_data():
     p_data, g_data = {}, {}
-    oracle_status = False
-    
-    # 1순위: 오라클 서버 통신 시도
+    online = False
     try:
         r = requests.get("http://158.179.172.40:8000/assets", timeout=2)
         if r.status_code == 200:
             p_data = apply_corrections(r.json())
-            oracle_status = True
-            
-        r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
-        if r_g.status_code == 200:
-            g_data = r_g.json()
+            online = True
     except: pass
     
-    # 만약 g_data 엔드포인트가 없고, p_data에 통합으로 들어있다면 분배
-    if oracle_status and not g_data and 'DOM1' in p_data:
-        g_data = p_data
-
-    # 2순위: 오라클이 막혀있다면 로컬 파일로 자동 Fallback (빈 화면 방지)
-    if not oracle_status or not p_data:
+    if not online or not p_data:
         try:
-            with open('assets.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
+            with open('assets.json', 'r', encoding='utf-8') as f: p_data = apply_corrections(json.load(f))
         except: pass
-    if not g_data:
-        try:
-            with open('assets_general.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
-        except: pass
-
-    return p_data, g_data, oracle_status
+    
+    # 일반계좌도 동일하게 처리
+    try:
+        with open('assets_general.json', 'r', encoding='utf-8') as f: g_data = apply_corrections(json.load(f))
+    except: pass
+    if online and not g_data: g_data = p_data
+    
+    return p_data, g_data, online
 
 data, g_data, is_oracle_online = fetch_hybrid_data()
 tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
-# =========================================================
-# 기본 포맷팅 및 KST 변환 함수들
-# =========================================================
-def to_kst(time_str):
+def to_kst(t):
     try:
-        if time_str and time_str != '업데이트 필요':
-            dt = pd.to_datetime(time_str)
-            if dt.tzinfo is None:
-                dt = dt.tz_localize('UTC')
-            dt = dt.tz_convert('Asia/Seoul')
-            return dt.strftime('%Y-%m-%d %H:%M:%S')
-    except:
-        pass
-    return str(time_str)
+        dt = pd.to_datetime(t)
+        if dt.tzinfo is None: dt = dt.tz_localize('UTC')
+        return dt.tz_convert('Asia/Seoul').strftime('%Y-%m-%d %H:%M:%S')
+    except: return str(t)
 
-def safe_float(val):
-    try: return float(val) if val not in ['-', '', None] else 0.0
+def safe_float(v):
+    try: return float(v) if v not in ['-', '', None] else 0.0
     except: return 0.0
 
-def fmt(v, sign=False, decimal=0):
+def fmt(v, sign=False):
     if v == '-': return '-'
     try:
-        f_val = float(v)
-        val_str = f"{f_val:,.{decimal}f}" if decimal > 0 else f"{int(round(f_val)):,}"
-        return f"+{val_str}" if sign and f_val > 0 else val_str
+        f = float(v); s = f"{int(round(f)):,}"
+        return f"+{s}" if sign and f > 0 else s
     except: return str(v)
 
 def fmt_p(v):
     try:
-        val = float(v)
-        return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
-    except: return str(v)
-
-def fmt_p1(v):
-    try:
-        val = float(v)
-        abs_val = abs(val)
-        if abs_val < 1.0 and abs_val != 0.0: return f"▲{val:.2f}%" if val > 0 else f"▼{abs_val:.2f}%"
-        else: return f"▲{val:.1f}%" if val > 0 else (f"▼{abs_val:.1f}%" if val < 0 else "0.0%")
+        f = float(v)
+        return f"▲{f:.2f}%" if f > 0 else (f"▼{abs(f):.2f}%" if f < 0 else "0.00%")
     except: return str(v)
 
 def col(v):
     try: return "red" if float(v) > 0 else ("blue" if float(v) < 0 else "gray")
     except: return ""
 
-def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
+def short_name(n): return n[:13] + "***" if len(n) > 13 else n
 
 @st.cache_data(ttl=60)
 def get_crypto_data():
     url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/main/crypto_data.json"
     try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200: 
-            crypto_d = res.json()
-            total_asset = crypto_d.get('total_asset', 0)
-            coins = crypto_d.get('coins', [])
-            btc_pct = eth_pct = trx_pct = 0
-            if total_asset > 0:
-                for c in coins:
-                    if c['ticker'] == 'BTC': btc_pct = (c['eval'] / total_asset) * 100
-                    elif c['ticker'] == 'ETH': eth_pct = (c['eval'] / total_asset) * 100
-                    elif c['ticker'] == 'TRX': trx_pct = (c['eval'] / total_asset) * 100
-            crypto_d['btc_pct'] = btc_pct
-            crypto_d['eth_pct'] = eth_pct
-            crypto_d['trx_pct'] = trx_pct
-            return crypto_d
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200: return r.json()
     except: pass
     return None
 
@@ -1547,3 +1457,4 @@ elif st.session_state.current_view == '모바일관제':
                             format_dict = {'비중': '{:.1f}%', '수익률(%)': '{:.2f}%', '총 자산': '{:,.0f}', '평가손익': '{:,.0f}', '매입가': '{:,.0f}', '현재가': '{:,.0f}'}
                             st.table(df_display.style.format(format_dict, na_rep="").set_properties(**{'text-align': 'center'}))
         
+
