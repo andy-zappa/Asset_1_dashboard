@@ -2,8 +2,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import warnings
-import andy_pension_v2
-import andy_general_v1
 import os
 import re
 import time
@@ -150,6 +148,7 @@ function bindSidebarClicks() {
     bindClick('card-general', '일반계좌');
     bindClick('card-crypto', '가상자산');
     bindClick('card-quant', '퀀트매매');
+    bindClick('card-mobile', '모바일관제');
 }
 setInterval(bindSidebarClicks, 1000);
 </script>
@@ -210,41 +209,43 @@ def on_menu_change():
     if st.session_state.menu_sel is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
-# 🚨 앱 켜질 때 JSON 파일 안전 자동 복구 로직
-if 'init' not in st.session_state:
-    with st.spinner("ZAPPA AI가 Andy님의 최신 자산 데이터를 동기화하고 있습니다... ✨"):
-        try: andy_pension_v2.generate_asset_data()
-        except: pass
-        time.sleep(1.5)
-        try: andy_general_v1.generate_general_data()
-        except: pass
-    st.session_state['init'] = True
-    st.cache_data.clear()
+# =========================================================
+# 🚨 [ 핵심 수술 ] 오라클 API 서버 연동 및 데이터 보정 로직 (로컬 파일 로드 완전 대체)
+# =========================================================
+def apply_corrections(raw_data):
+    if not raw_data: return raw_data
+    for k, v in raw_data.items():
+        if isinstance(v, dict) and '상세' in v:
+            for item in v['상세']:
+                name = str(item.get('종목명', ''))
+                if '삼성화재' in name: item['총 자산'] = 90356294
+                if k == 'IRP': item['종목명'] = 'KODEX 200타겟위클리커버드콜'
+                if '미국나스닥100데일리' in name: item['수량'] = 770
+                elif '미국AI테크TOP10' in name: item['수량'] = 285
+    return raw_data
 
 @st.cache_data(ttl=60)
-def load():
+def fetch_oracle_data():
     try:
-        if not os.path.exists('assets.json') or os.path.getsize('assets.json') == 0: andy_pension_v2.generate_asset_data()
-        with open('assets.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
+        r = requests.get("http://158.179.172.40:8000/assets", timeout=15)
+        if r.status_code == 200:
+            return apply_corrections(r.json())
+    except Exception as e:
+        print(f"Oracle API Connection Error: {e}") 
+    return {}
 
-@st.cache_data(ttl=60)
-def load_gen():
-    try:
-        if not os.path.exists('assets_general.json') or os.path.getsize('assets_general.json') == 0: andy_general_v1.generate_general_data()
-        with open('assets_general.json', 'r', encoding='utf-8') as f: return json.load(f)
-    except: return {}
-
-data = load() or {}; g_data = load_gen() or {}; tot = data.get("_total", {}) if isinstance(data, dict) else {}
+fetched_data = fetch_oracle_data()
+data = fetched_data
+g_data = fetched_data
+tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
 # =========================================================
-# 🚨 [ 핵심 수정 ] 한국 시간(KST) 변환 함수 추가
+# 기본 포맷팅 및 KST 변환 함수들
 # =========================================================
 def to_kst(time_str):
     try:
         if time_str and time_str != '업데이트 필요':
             dt = pd.to_datetime(time_str)
-            # 만약 시간대 정보가 없다면 UTC로 간주하고 KST(Asia/Seoul)로 변환
             if dt.tzinfo is None:
                 dt = dt.tz_localize('UTC')
             dt = dt.tz_convert('Asia/Seoul')
@@ -285,9 +286,8 @@ def col(v):
 
 def short_name(nm): return nm[:13] + "***" if len(nm) > 13 else nm
 
-
 # =========================================================
-# 🚨 [ 핵심 수정 ] 가상자산 데이터를 깃허브에서 가져오는 로직 연동
+# 가상자산 데이터를 깃허브에서 가져오는 로직 연동
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
@@ -295,19 +295,19 @@ def get_crypto_data():
     try:
         res = requests.get(url, timeout=5)
         if res.status_code == 200: 
-            data = res.json()
-            total_asset = data.get('total_asset', 0)
-            coins = data.get('coins', [])
+            crypto_d = res.json()
+            total_asset = crypto_d.get('total_asset', 0)
+            coins = crypto_d.get('coins', [])
             btc_pct = eth_pct = trx_pct = 0
             if total_asset > 0:
                 for c in coins:
                     if c['ticker'] == 'BTC': btc_pct = (c['eval'] / total_asset) * 100
                     elif c['ticker'] == 'ETH': eth_pct = (c['eval'] / total_asset) * 100
                     elif c['ticker'] == 'TRX': trx_pct = (c['eval'] / total_asset) * 100
-            data['btc_pct'] = btc_pct
-            data['eth_pct'] = eth_pct
-            data['trx_pct'] = trx_pct
-            return data
+            crypto_d['btc_pct'] = btc_pct
+            crypto_d['eth_pct'] = eth_pct
+            crypto_d['trx_pct'] = trx_pct
+            return crypto_d
     except: pass
     return None
 
@@ -1631,5 +1631,6 @@ elif st.session_state.current_view == '일반계좌':
                 
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
