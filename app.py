@@ -1632,4 +1632,3 @@ elif st.session_state.current_view == '일반계좌':
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
 
-
