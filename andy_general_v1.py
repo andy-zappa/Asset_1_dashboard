@@ -129,12 +129,13 @@ def generate_general_data():
         "USA1": process_and_update(usa1, True), "USA2": process_and_update(usa2, True),
         "환율": usd_krw, "조회시간": time_str, "원금": PRINCIPALS
     }
-    
+    # 🎯 수정 포인트: data_taxable.json 으로 저장
     with open('data_taxable.json', 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     generate_general_data()
+
 
 
 
