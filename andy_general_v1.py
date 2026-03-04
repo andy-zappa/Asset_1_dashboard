@@ -130,10 +130,11 @@ def generate_general_data():
         "환율": usd_krw, "조회시간": time_str, "원금": PRINCIPALS
     }
     
-    with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
+    with open('data_taxable.json', 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     generate_general_data()
+
 
 
