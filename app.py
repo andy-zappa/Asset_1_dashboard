@@ -260,14 +260,15 @@ def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
     try:
-        # 1순위: 오라클 서버 통신 시도
-        r_p = requests.get("http://158.179.172.40:8000/assets", timeout=2)
-        r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
+        # 1순위: 오라클 서버 통신 (최신 URL 명칭 적용)
+        # /assets -> /tax_advantaged | /assets_general -> /taxable
+        r_p = requests.get("http://158.179.172.40:8000/tax_advantaged", timeout=2)
+        r_g = requests.get("http://158.179.172.40:8000/taxable", timeout=2)
         
         if r_p.status_code == 200:
             p_data = r_p.json()
             is_online = True
-            # [자동 백업] 통신 성공 시 이 파일을 '직전 최신 데이터'로 저장
+            # [백업 파일명] 우리 약속대로 통일된 명칭 사용
             with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
                 json.dump(p_data, f, ensure_ascii=False, indent=4)
                 
@@ -275,22 +276,25 @@ def fetch_hybrid_data():
             g_data = r_g.json()
             with open('data_taxable.json', 'w', encoding='utf-8') as f:
                 json.dump(g_data, f, ensure_ascii=False, indent=4)
-    except: pass
+    except: 
+        pass
     
-    # 2순위: 통신 실패 시 오직 '가장 마지막에 저장된 직전 데이터'만 로드!
+    # 2순위: 통신 실패 시 '직전 최신 데이터' 로드 (파일명 정합성 유지)
     if not is_online or not p_data:
         try:
-            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
+            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: 
+                p_data = json.load(f)
         except: pass
             
     if not g_data:
         try:
-            with open('data_taxable.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
+            with open('data_taxable.json', 'r', encoding='utf-8') as f: 
+                g_data = json.load(f)
         except: pass
             
     return p_data, g_data, is_online
 
-# 🚀 [데이터 로딩 실행]
+# 🚀 [데이터 로딩 실행] 
 data, g_data, is_oracle_online = fetch_hybrid_data()
 tot = data.get("_insight", {}) if isinstance(data, dict) else {}
 # =========================================================
@@ -1689,5 +1693,6 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
