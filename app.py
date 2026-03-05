@@ -253,22 +253,20 @@ def apply_corrections(data):
     if not data or "_insight" not in data: return data
     return data
 # =========================================================
-# 🌟 [핵심] 하이브리드 엔진 & 실시간 백업 (직전 데이터 최우선)
+# 🌟 [데이터 로드 엔진] 하이브리드 통신 및 최신 주소 반영
 # =========================================================
 @st.cache_data(ttl=60)
 def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
     try:
-        # 1순위: 오라클 서버 통신 (최신 URL 명칭 적용)
-        # /assets -> /tax_advantaged | /assets_general -> /taxable
+        # 오라클 서버 통신 (최신 명칭 적용)
         r_p = requests.get("http://158.179.172.40:8000/tax_advantaged", timeout=2)
         r_g = requests.get("http://158.179.172.40:8000/taxable", timeout=2)
         
         if r_p.status_code == 200:
             p_data = r_p.json()
             is_online = True
-            # [백업 파일명] 우리 약속대로 통일된 명칭 사용
             with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
                 json.dump(p_data, f, ensure_ascii=False, indent=4)
                 
@@ -279,25 +277,51 @@ def fetch_hybrid_data():
     except: 
         pass
     
-    # 2순위: 통신 실패 시 '직전 최신 데이터' 로드 (파일명 정합성 유지)
+    # 통신 실패 시 '직전 최신 데이터' 로드
     if not is_online or not p_data:
         try:
-            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: 
-                p_data = json.load(f)
+            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
         except: pass
             
     if not g_data:
         try:
-            with open('data_taxable.json', 'r', encoding='utf-8') as f: 
-                g_data = json.load(f)
+            with open('data_taxable.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
         except: pass
             
     return p_data, g_data, is_online
 
-# 🚀 [데이터 로딩 실행] 
+# 🚀 [데이터 로딩 실행]
 data, g_data, is_oracle_online = fetch_hybrid_data()
-tot = data.get("_insight", {}) if isinstance(data, dict) and isinstance(data.get("_insight"), dict) else {}
+
 # =========================================================
+# 🛡️ [데이터 전처리 레이어] 띄어쓰기 및 데이터 깨짐 완벽 방어
+# =========================================================
+def normalize_insight(raw_data):
+    if not isinstance(raw_data, dict): return {}
+    insight = raw_data.get("_insight", {})
+    if not isinstance(insight, dict): return {}
+    
+    def _safe_f(v):
+        try: return float(v)
+        except: return 0.0
+
+    # 띄어쓰기가 있든 없든 하나로 규격화 (UI 로직 부하 최소화)
+    return {
+        '총자산': _safe_f(insight.get('총 자산', insight.get('총자산', 0))),
+        '총수익': _safe_f(insight.get('총 수익', insight.get('총수익', 0))),
+        '수익률(%)': _safe_f(insight.get('수익률(%)', insight.get('수익률', 0))),
+        '원금합': _safe_f(insight.get('원금합', insight.get('투자원금', 0))),
+        '조회시간': insight.get('조회시간', '업데이트 필요')
+    }
+
+# 정규화 필터를 거친 무결점 데이터만 tot에 할당
+tot = normalize_insight(data)
+
+# 에러 없는 변수 추출
+p_asset_all = tot.get('총자산', 0)
+p_profit_all = tot.get('총수익', 0)
+p_rate_all = tot.get('수익률(%)', 0)
+
 # =========================================================
 # 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
 # =========================================================
@@ -1694,6 +1718,7 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
