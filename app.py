@@ -322,24 +322,7 @@ def normalize_insight(raw_data):
     calc_rate = (calc_profit / calc_orig * 100) if calc_orig > 0 else 0
     return {'총자산': calc_asset, '총수익': calc_profit, '수익률(%)': calc_rate, '원금합': calc_orig, '조회시간': '자체 집계 모드'}
 
-tot = normalize_insight(data)import streamlit as st
-import streamlit.components.v1 as components
-import json
-import warnings
-import os
-import re
-import time
-import requests
-from datetime import datetime
-import urllib.parse
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-
-warnings.filterwarnings("ignore")
-st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
-
+tot = normalize_insight(data)
 # =========================================================
 # [ Part 1 ] 공통 설정 및 오리지널 CSS 복원 (원본 100% 유지)
 # =========================================================
@@ -1633,3 +1616,4 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
