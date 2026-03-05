@@ -349,40 +349,142 @@ tot = data.get("_total", {}) if isinstance(data, dict) else {}
 # =========================================================
 # 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
 # =========================================================
+# =========================================================
+# 🍩 [ 고급 시각화 ] 통합 종목별 상세 비중 (ECharts 인터랙티브)
+# =========================================================
 def draw_pie_charts(g_data):
     if not g_data: return
-    
-    rows = []
-    for k, v in g_data.items():
-        if isinstance(v, dict) and '상세' in v:
-            for item in v['상세']:
-                if item.get('종목명') != '[ 합  계 ]' and '현금' not in item.get('종목명', '') and '예수금' not in item.get('종목명', ''):
-                    rows.append({
-                        '계좌': nm_table.get(k, k) if 'nm_table' in globals() else k,
-                        '종목': item.get('종목명', ''),
-                        '자산': safe_float(item.get('총자산', item.get('총자산_KRW', 0)))
-                    })
-    
-    df = pd.DataFrame(rows)
-    if df.empty: return
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align:center; font-weight:bold; font-size:16px; color:#ffffff;'>📍 통합 종목별 비중</p>", unsafe_allow_html=True)
-        fig1 = px.pie(df, values='자산', names='종목', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig1.update_layout(showlegend=False, height=350, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', font=dict(color='white'))
-        st.plotly_chart(fig1, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    # 1. 데이터 집계 내부 함수
+    def get_detailed_grouped_df(keys, is_usa=False):
+        records = []
+        fx = g_data.get('환율', 1443.1) if is_usa else 1
+        for k in keys:
+            if k in g_data:
+                for it in g_data[k].get('상세', []):
+                    nm = it.get('종목명', '').strip()
+                    if nm in ['[ 합  계 ]', '예수금', '현금성자산', 'MMF', '이율보증', '']: continue
+                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    asset = safe_float(it.get('총자산', 0)) * fx
+                    profit = safe_float(it.get('평가손익', 0)) * fx
+                    buy_amt = asset - profit
+                    records.append({'종목명': nm, '총자산': asset, '평가손익': profit, '매입금액': buy_amt})
+        if not records: return pd.DataFrame()
+        df = pd.DataFrame(records)
+        df_g = df.groupby('종목명').sum().reset_index()
+        df_g['수익률'] = (df_g['평가손익'] / df_g['매입금액'] * 100).fillna(0)
+        df_g = df_g.sort_values('총자산', ascending=False).reset_index(drop=True)
+        return df_g
 
-    with c2:
-        st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align:center; font-weight:bold; font-size:16px; color:#ffffff;'>🏦 계좌별 자산 비중</p>", unsafe_allow_html=True)
-        df_acc = df.groupby('계좌')['자산'].sum().reset_index()
-        fig2 = px.pie(df_acc, values='자산', names='계좌', hole=0.4, color_discrete_sequence=px.colors.qualitative.Set3)
-        fig2.update_layout(showlegend=False, height=350, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', font=dict(color='white'))
-        st.plotly_chart(fig2, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    # 2. 고급 ECharts 렌더링 내부 함수
+    def render_interactive_pie_area(df_pie, title):
+        if df_pie.empty: return
+        donut_colors = ['#D32F2F','#F57C00','#FBC02D','#388E3C','#1976D2','#7B1FA2', '#0097A7', '#689F38', '#C2185B', '#E64A19', '#303F9F', '#455A64']
+        chart_data = [{"value": float(row['총자산']), "name": row['종목명']} for idx, row in df_pie.iterrows()]
+        total_asset = df_pie['총자산'].sum()
+        items_js = []
+        list_html = ""
+        for i, row in enumerate(df_pie.to_dict('records')):
+            pct = (row['총자산'] / total_asset) * 100 if total_asset > 0 else 0
+            logo = get_logo_html(row['종목명'])
+            p_class = "#FF5252" if row['평가손익'] > 0 else ("#448AFF" if row['평가손익'] < 0 else "#9e9e9e")
+            sign = "+" if row['평가손익'] > 0 else ""
+            c_code = donut_colors[i % len(donut_colors)]
+            items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code})
+            list_html += f"<div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:4px;'><div class='leg-left' style='display:flex; align-items:center;'><div class='leg-color' style='width:14px; height:14px; border-radius:4px; margin-right:10px; background-color:{c_code};'></div>{logo}<span class='leg-name' style='color:#e2e8f0; font-size:15px; font-weight:500;'>{row['종목명']}</span></div><span class='leg-pct' style='color:#94a3b8; font-size:15px; font-weight:bold;'>{pct:.1f}%</span></div>"
+            
+        html_code = f"""
+        <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; }}.box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:500px; border:1px solid #2c3140; box-sizing:border-box; }}.title {{ color:#fff; font-size:19px; font-weight:bold; margin-bottom:20px; }}.content {{ display:flex; height:100%; }}.left-panel {{ flex:1.1; display:flex; flex-direction:column; padding-right:20px; border-right:1px solid #2c3140; }}.hover-panel {{ min-height:100px; margin-bottom:15px; border-bottom:1px dashed #3a3f50; display:flex; flex-direction:column; justify-content:center; }}.list-area {{ flex:1; overflow-y:auto; padding-right:10px; }}.list-area::-webkit-scrollbar {{ width:6px; }}.list-area::-webkit-scrollbar-thumb {{ background:#4b5563; border-radius:3px; }}.chart-area {{ flex:1.2; position:relative; }}.legend-item {{ transition:all 0.2s; }}.legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(5px); border-left:3px solid #4CAF50; }}</style></head>
+        <body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="hover-panel" id="hover-info"><div style='color:#64748b; font-size:13px; text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div></div><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
+        <script>
+            var itemsData = {json.dumps(items_js, ensure_ascii=False)};
+            var chart = echarts.init(document.getElementById('pie-chart'));
+            chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
+            chart.on('mouseover', function(p){{ updateHover(p.dataIndex); highlightLegend(p.dataIndex); }});
+            chart.on('mouseout', function(){{ clearHover(); highlightLegend(-1); }});
+            function updateHover(idx){{ var d=itemsData[idx]; document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; }}
+            function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
+            function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
+        </script></body></html>
+        """
+        components.html(html_code, height=520)
+
+    # 3. 화면 출력 및 제목 구성
+    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+    df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+    df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+    
+    cb1, cb2 = st.columns(2)
+    with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
+    with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
+# =========================================================
+# 🍩 [ 고급 시각화 ] 통합 종목별 상세 비중 (ECharts 인터랙티브)
+# =========================================================
+def draw_pie_charts(g_data):
+    if not g_data: return
+
+    # 1. 데이터 집계 내부 함수
+    def get_detailed_grouped_df(keys, is_usa=False):
+        records = []
+        fx = g_data.get('환율', 1443.1) if is_usa else 1
+        for k in keys:
+            if k in g_data:
+                for it in g_data[k].get('상세', []):
+                    nm = it.get('종목명', '').strip()
+                    if nm in ['[ 합  계 ]', '예수금', '현금성자산', 'MMF', '이율보증', '']: continue
+                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    asset = safe_float(it.get('총자산', 0)) * fx
+                    profit = safe_float(it.get('평가손익', 0)) * fx
+                    buy_amt = asset - profit
+                    records.append({'종목명': nm, '총자산': asset, '평가손익': profit, '매입금액': buy_amt})
+        if not records: return pd.DataFrame()
+        df = pd.DataFrame(records)
+        df_g = df.groupby('종목명').sum().reset_index()
+        df_g['수익률'] = (df_g['평가손익'] / df_g['매입금액'] * 100).fillna(0)
+        df_g = df_g.sort_values('총자산', ascending=False).reset_index(drop=True)
+        return df_g
+
+    # 2. 고급 ECharts 렌더링 내부 함수
+    def render_interactive_pie_area(df_pie, title):
+        if df_pie.empty: return
+        donut_colors = ['#D32F2F','#F57C00','#FBC02D','#388E3C','#1976D2','#7B1FA2', '#0097A7', '#689F38', '#C2185B', '#E64A19', '#303F9F', '#455A64']
+        chart_data = [{"value": float(row['총자산']), "name": row['종목명']} for idx, row in df_pie.iterrows()]
+        total_asset = df_pie['총자산'].sum()
+        items_js = []
+        list_html = ""
+        for i, row in enumerate(df_pie.to_dict('records')):
+            pct = (row['총자산'] / total_asset) * 100 if total_asset > 0 else 0
+            logo = get_logo_html(row['종목명'])
+            p_class = "#FF5252" if row['평가손익'] > 0 else ("#448AFF" if row['평가손익'] < 0 else "#9e9e9e")
+            sign = "+" if row['평가손익'] > 0 else ""
+            c_code = donut_colors[i % len(donut_colors)]
+            items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code})
+            list_html += f"<div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:4px;'><div class='leg-left' style='display:flex; align-items:center;'><div class='leg-color' style='width:14px; height:14px; border-radius:4px; margin-right:10px; background-color:{c_code};'></div>{logo}<span class='leg-name' style='color:#e2e8f0; font-size:15px; font-weight:500;'>{row['종목명']}</span></div><span class='leg-pct' style='color:#94a3b8; font-size:15px; font-weight:bold;'>{pct:.1f}%</span></div>"
+            
+        html_code = f"""
+        <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; }}.box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:500px; border:1px solid #2c3140; box-sizing:border-box; }}.title {{ color:#fff; font-size:19px; font-weight:bold; margin-bottom:20px; }}.content {{ display:flex; height:100%; }}.left-panel {{ flex:1.1; display:flex; flex-direction:column; padding-right:20px; border-right:1px solid #2c3140; }}.hover-panel {{ min-height:100px; margin-bottom:15px; border-bottom:1px dashed #3a3f50; display:flex; flex-direction:column; justify-content:center; }}.list-area {{ flex:1; overflow-y:auto; padding-right:10px; }}.list-area::-webkit-scrollbar {{ width:6px; }}.list-area::-webkit-scrollbar-thumb {{ background:#4b5563; border-radius:3px; }}.chart-area {{ flex:1.2; position:relative; }}.legend-item {{ transition:all 0.2s; }}.legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(5px); border-left:3px solid #4CAF50; }}</style></head>
+        <body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="hover-panel" id="hover-info"><div style='color:#64748b; font-size:13px; text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div></div><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
+        <script>
+            var itemsData = {json.dumps(items_js, ensure_ascii=False)};
+            var chart = echarts.init(document.getElementById('pie-chart'));
+            chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
+            chart.on('mouseover', function(p){{ updateHover(p.dataIndex); highlightLegend(p.dataIndex); }});
+            chart.on('mouseout', function(){{ clearHover(); highlightLegend(-1); }});
+            function updateHover(idx){{ var d=itemsData[idx]; document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; }}
+            function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
+            function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
+        </script></body></html>
+        """
+        components.html(html_code, height=520)
+
+    # 3. 화면 출력 및 제목 구성
+    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+    df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+    df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+    
+    cb1, cb2 = st.columns(2)
+    with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
+    with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
 # =========================================================
 # 유틸리티 함수 모음
 # =========================================================
