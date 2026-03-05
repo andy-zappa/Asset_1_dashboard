@@ -252,7 +252,6 @@ def short_name(nm):
 def apply_corrections(data):
     if not data or "_insight" not in data: return data
     return data
-
 # =========================================================
 # 🌟 [핵심] 하이브리드 엔진 & 실시간 백업 (우선순위 로직)
 # =========================================================
@@ -261,14 +260,14 @@ def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
     try:
-        # 오라클 서버 호출 (체계적 파일명 적용)
+        # 1순위: 오라클 서버 통신 시도 (절세/일반 통합)
         r_p = requests.get("http://158.179.172.40:8000/assets", timeout=2)
         r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
         
         if r_p.status_code == 200:
             p_data = r_p.json()
             is_online = True
-            # [자동 백업] 오라클 성공 시 로컬에 최신본 저장
+            # [자동 백업] 오라클 성공 시 로컬 파일 갱신
             with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
                 json.dump(p_data, f, ensure_ascii=False, indent=4)
                 
@@ -278,16 +277,22 @@ def fetch_hybrid_data():
                 json.dump(g_data, f, ensure_ascii=False, indent=4)
     except: pass
     
-    # 서버 실패 시 로컬 파일 로드
+    # 2순위: 서버 실패 시 최신 로컬 백업 로드
     if not is_online or not p_data:
         try:
-            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
+            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: 
+                p_data = json.load(f)
         except: pass
     if not g_data:
         try:
-            with open('data_taxable.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
+            with open('data_taxable.json', 'r', encoding='utf-8') as f: 
+                g_data = json.load(f)
         except: pass
     return p_data, g_data, is_online
+
+# 🚀 [데이터 로딩 실행] 이 코드가 있어야 변수들이 생성되어 에러가 나지 않습니다.
+data, g_data, is_oracle_online = fetch_hybrid_data()
+tot = data.get("_total", {}) if isinstance(data, dict) else {}
 # =========================================================
 # 🚨 [ 통신 엔진 교체 ] 오라클 서버 & 로컬 Fallback (원본 껍데기 제거 로직 포함)
 # =========================================================
@@ -1741,5 +1746,3 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
-
-
