@@ -294,64 +294,6 @@ def fetch_hybrid_data():
 data, g_data, is_oracle_online = fetch_hybrid_data()
 tot = data.get("_insight", {}) if isinstance(data, dict) else {}
 # =========================================================
-# 🚨 [ 통신 엔진 교체 ] 오라클 서버 & 로컬 Fallback (원본 껍데기 제거 로직 포함)
-# =========================================================
-def apply_corrections(raw_data):
-    if not raw_data: return {}
-    # 원본 파일 특유의 "data" 껍데기가 있으면 벗겨냄
-    if "data" in raw_data and isinstance(raw_data["data"], dict):
-        raw_data = raw_data["data"]
-   
-    for k, v in raw_data.items():
-        if isinstance(v, dict) and '상세' in v:
-            for item in v['상세']:
-                nm = str(item.get('종목명', ''))
-                if '삼성화재' in nm: item['총 자산'] = 90356294
-                if k == 'IRP': item['종목명'] = 'KODEX 200타겟위클리커버드콜'
-    return raw_data
-
-@st.cache_data(ttl=60)
-def fetch_hybrid_data():
-    p_data, g_data = {}, {}
-    is_online = False
-   
-    # 1순위: 오라클 서버 통신 시도
-    try:
-        r = requests.get("http://158.179.172.40:8000/assets", timeout=2)
-        if r.status_code == 200:
-            p_data = apply_corrections(r.json())
-            is_online = True
-    except: pass
-       
-    # 2순위: 오라클 통신 실패 시 로컬 파일(assets.json) 로드
-    if not is_online or not p_data:
-        try:
-            with open('assets.json', 'r', encoding='utf-8') as f:
-                p_data = apply_corrections(json.load(f))
-        except: pass
-
-    # 일반계좌 데이터 로드
-    try:
-        r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
-        if r_g.status_code == 200:
-            g_data = apply_corrections(r_g.json())
-    except: pass
-
-    if not g_data:
-        try:
-            with open('assets_general.json', 'r', encoding='utf-8') as f:
-                g_data = apply_corrections(json.load(f))
-        except: pass
-
-    if is_online and not g_data and 'DOM1' in p_data:
-        g_data = p_data
-       
-    return p_data, g_data, is_online
-
-data, g_data, is_oracle_online = fetch_hybrid_data()
-tot = data.get("_total", {}) if isinstance(data, dict) else {}
-
-# =========================================================
 # 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
 # =========================================================
 # =========================================================
