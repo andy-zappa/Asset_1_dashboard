@@ -292,7 +292,7 @@ def fetch_hybrid_data():
 
 # 🚀 [데이터 로딩 실행] 이 코드가 있어야 변수들이 생성되어 에러가 나지 않습니다.
 data, g_data, is_oracle_online = fetch_hybrid_data()
-tot = data.get("_total", {}) if isinstance(data, dict) else {}
+tot = data.get("_insight", {}) if isinstance(data, dict) else {}
 # =========================================================
 # 🚨 [ 통신 엔진 교체 ] 오라클 서버 & 로컬 Fallback (원본 껍데기 제거 로직 포함)
 # =========================================================
@@ -1746,3 +1746,4 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
