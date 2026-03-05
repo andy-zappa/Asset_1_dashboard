@@ -296,7 +296,7 @@ def fetch_hybrid_data():
 
 # 🚀 [데이터 로딩 실행] 
 data, g_data, is_oracle_online = fetch_hybrid_data()
-tot = data.get("_insight", {}) if isinstance(data, dict) else {}
+tot = data.get("_insight", {}) if isinstance(data, dict) and isinstance(data.get("_insight"), dict) else {}
 # =========================================================
 # =========================================================
 # 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
@@ -1693,6 +1693,7 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
