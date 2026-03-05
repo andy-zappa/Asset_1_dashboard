@@ -209,6 +209,101 @@ def on_menu_change():
         st.session_state.current_view = st.session_state.menu_sel
 
 # =========================================================
+# 🎯 헬퍼 함수 (형식 변환 등)
+# =========================================================
+def to_kst(dt_str):
+    try:
+        dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    except: return dt_str
+
+def fmt(v, sign=False, decimal=0):
+    if v == '-' or v is None: return '-'
+    try:
+        val = float(v)
+        if sign: return f"{val:+,.{decimal}f}"
+        return f"{val:,.{decimal}f}"
+    except: return v
+
+def fmt_p(v):
+    if v == '-' or v is None: return '-'
+    try: return f"{float(v):+.2f}%"
+    except: return v
+
+def col(v):
+    try:
+        val = float(v)
+        if val > 0: return 'red-text'
+        if val < 0: return 'blue-text'
+    except: pass
+    return 'black-text'
+
+def safe_float(v):
+    try: return float(v)
+    except: return 0.0
+
+def short_name(nm):
+    nm = str(nm)
+    map_dict = {'TIGER 미국S&P500': '미국S&P500', 'TIGER 미국나스닥100': '미국나스닥100', 'KODEX 200': 'KODEX200'}
+    for k, v in map_dict.items():
+        if k in nm: return v
+    return nm[:10]
+
+def apply_corrections(data):
+    if not data or "_insight" not in data: return data
+    return data
+
+# =========================================================
+# 🌟 [핵심] 하이브리드 엔진 & 실시간 백업 (우선순위 로직)
+# =========================================================
+@st.cache_data(ttl=60)
+def fetch_hybrid_data():
+    p_data, g_data = {}, {}
+    is_online = False
+   
+    # 1순위: 오라클 서버 통신 시도 (새로운 파일명 API 호출)
+    try:
+        # 절세계좌
+        r_p = requests.get("http://158.179.172.40:8000/assets", timeout=2)
+        # 일반계좌
+        r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
+        
+        if r_p.status_code == 200:
+            p_data = apply_corrections(r_p.json())
+            is_online = True
+            # 🔥 [실시간 백업] 오라클 성공 시 로컬 파일을 최신본으로 즉시 갱신
+            with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
+                json.dump(p_data, f, ensure_ascii=False, indent=4)
+                
+        if r_g.status_code == 200:
+            g_data = r_g.json()
+            # 🔥 [실시간 백업] 일반계좌도 로컬에 즉시 갱신
+            with open('data_taxable.json', 'w', encoding='utf-8') as f:
+                json.dump(g_data, f, ensure_ascii=False, indent=4)
+                
+    except Exception as e:
+        pass # 통신 실패 시 아래 2순위로 넘어감
+       
+    # 2순위: 오라클 통신 실패 시 (가장 마지막에 저장된 '최신' 로컬 파일 로드)
+    if not is_online or not p_data:
+        try:
+            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f:
+                p_data = json.load(f)
+        except: p_data = {}
+
+    if not g_data:
+        try:
+            with open('data_taxable.json', 'r', encoding='utf-8') as f:
+                g_data = json.load(f)
+        except: g_data = {}
+       
+    return p_data, g_data, is_online
+
+# 데이터 로딩 실행
+data, g_data, is_oracle_online = fetch_hybrid_data()
+tot = data.get('_insight', {}) if data else {}
+
+# =========================================================
 # 🚨 [ 통신 엔진 교체 ] 오라클 서버 & 로컬 Fallback (원본 껍데기 제거 로직 포함)
 # =========================================================
 def apply_corrections(raw_data):
@@ -1521,3 +1616,4 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
