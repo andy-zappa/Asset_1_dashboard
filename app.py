@@ -260,49 +260,34 @@ def apply_corrections(data):
 def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
-   
-    # 1순위: 오라클 서버 통신 시도 (새로운 파일명 API 호출)
     try:
-        # 절세계좌
+        # 오라클 서버 호출 (체계적 파일명 적용)
         r_p = requests.get("http://158.179.172.40:8000/assets", timeout=2)
-        # 일반계좌
         r_g = requests.get("http://158.179.172.40:8000/assets_general", timeout=2)
         
         if r_p.status_code == 200:
-            p_data = apply_corrections(r_p.json())
+            p_data = r_p.json()
             is_online = True
-            # 🔥 [실시간 백업] 오라클 성공 시 로컬 파일을 최신본으로 즉시 갱신
+            # [자동 백업] 오라클 성공 시 로컬에 최신본 저장
             with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
                 json.dump(p_data, f, ensure_ascii=False, indent=4)
                 
         if r_g.status_code == 200:
             g_data = r_g.json()
-            # 🔥 [실시간 백업] 일반계좌도 로컬에 즉시 갱신
             with open('data_taxable.json', 'w', encoding='utf-8') as f:
                 json.dump(g_data, f, ensure_ascii=False, indent=4)
-                
-    except Exception as e:
-        pass # 통신 실패 시 아래 2순위로 넘어감
-       
-    # 2순위: 오라클 통신 실패 시 (가장 마지막에 저장된 '최신' 로컬 파일 로드)
+    except: pass
+    
+    # 서버 실패 시 로컬 파일 로드
     if not is_online or not p_data:
         try:
-            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f:
-                p_data = json.load(f)
-        except: p_data = {}
-
+            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
+        except: pass
     if not g_data:
         try:
-            with open('data_taxable.json', 'r', encoding='utf-8') as f:
-                g_data = json.load(f)
-        except: g_data = {}
-       
+            with open('data_taxable.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
+        except: pass
     return p_data, g_data, is_online
-
-# 데이터 로딩 실행
-data, g_data, is_oracle_online = fetch_hybrid_data()
-tot = data.get('_insight', {}) if data else {}
-
 # =========================================================
 # 🚨 [ 통신 엔진 교체 ] 오라클 서버 & 로컬 Fallback (원본 껍데기 제거 로직 포함)
 # =========================================================
@@ -361,6 +346,43 @@ def fetch_hybrid_data():
 data, g_data, is_oracle_online = fetch_hybrid_data()
 tot = data.get("_total", {}) if isinstance(data, dict) else {}
 
+# =========================================================
+# 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
+# =========================================================
+def draw_pie_charts(g_data):
+    if not g_data: return
+    
+    rows = []
+    for k, v in g_data.items():
+        if isinstance(v, dict) and '상세' in v:
+            for item in v['상세']:
+                if item.get('종목명') != '[ 합  계 ]' and '현금' not in item.get('종목명', '') and '예수금' not in item.get('종목명', ''):
+                    rows.append({
+                        '계좌': nm_table.get(k, k) if 'nm_table' in globals() else k,
+                        '종목': item.get('종목명', ''),
+                        '자산': safe_float(item.get('총자산', item.get('총자산_KRW', 0)))
+                    })
+    
+    df = pd.DataFrame(rows)
+    if df.empty: return
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center; font-weight:bold; font-size:16px; color:#ffffff;'>📍 통합 종목별 비중</p>", unsafe_allow_html=True)
+        fig1 = px.pie(df, values='자산', names='종목', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig1.update_layout(showlegend=False, height=350, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', font=dict(color='white'))
+        st.plotly_chart(fig1, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("<div style='background-color: #1e222d; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center; font-weight:bold; font-size:16px; color:#ffffff;'>🏦 계좌별 자산 비중</p>", unsafe_allow_html=True)
+        df_acc = df.groupby('계좌')['자산'].sum().reset_index()
+        fig2 = px.pie(df_acc, values='자산', names='계좌', hole=0.4, color_discrete_sequence=px.colors.qualitative.Set3)
+        fig2.update_layout(showlegend=False, height=350, margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', font=dict(color='white'))
+        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 # =========================================================
 # 유틸리티 함수 모음
 # =========================================================
@@ -1616,4 +1638,5 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
