@@ -539,8 +539,9 @@ def on_menu_change():
 # =========================================================
 # 🚨 NameError 방지를 위한 전역 변수 사전 계산 로직
 # =========================================================
-p_asset_all = tot.get('총 자산', 0)
-p_profit_all = tot.get('총 수익', 0)
+# 띄어쓰기가 있든 없든 무조건 찾아오도록 완벽한 덫(Fallback)을 놓습니다.
+p_asset_all = tot.get('총 자산', tot.get('총자산', 0))
+p_profit_all = tot.get('총 수익', tot.get('총수익', 0))
 p_rate_all = tot.get('수익률(%)', 0)
 
 p_cash_tot, p_ovs_tot, p_dom_tot = 0, 0, 0
@@ -1693,6 +1694,7 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
