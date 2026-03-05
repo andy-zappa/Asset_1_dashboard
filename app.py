@@ -294,33 +294,56 @@ def fetch_hybrid_data():
 data, g_data, is_oracle_online = fetch_hybrid_data()
 
 # =========================================================
-# 🛡️ [데이터 전처리 레이어] 띄어쓰기 및 데이터 깨짐 완벽 방어
+# 🛡️ [데이터 전처리 레이어] 결측치 완벽 방어 및 자체 집계 엔진
 # =========================================================
 def normalize_insight(raw_data):
     if not isinstance(raw_data, dict): return {}
-    insight = raw_data.get("_insight", {})
-    if not isinstance(insight, dict): return {}
     
     def _safe_f(v):
         try: return float(v)
         except: return 0.0
 
-    # 띄어쓰기가 있든 없든 하나로 규격화 (UI 로직 부하 최소화)
+    insight = raw_data.get("_insight", {})
+    
+    # 1. '_insight' 요약본이 정상적으로 존재할 경우
+    if isinstance(insight, dict) and _safe_f(insight.get('총 자산', insight.get('총자산', 0))) > 0:
+        return {
+            '총자산': _safe_f(insight.get('총 자산', insight.get('총자산', 0))),
+            '총수익': _safe_f(insight.get('총 수익', insight.get('총수익', 0))),
+            '수익률(%)': _safe_f(insight.get('수익률(%)', insight.get('수익률', 0))),
+            '원금합': _safe_f(insight.get('원금합', insight.get('투자원금', 0))),
+            '조회시간': insight.get('조회시간', '업데이트 필요')
+        }
+        
+    # 2. [체계적 집계] '_insight'가 깨졌거나 0원일 경우 -> 개별 계좌에서 강제 추출 및 합산
+    calc_asset = 0
+    calc_profit = 0
+    calc_orig = 0
+    
+    for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+        if k in raw_data and isinstance(raw_data[k], dict):
+            calc_asset += _safe_f(raw_data[k].get('총 자산', raw_data[k].get('총자산', 0)))
+            calc_profit += _safe_f(raw_data[k].get('총 수익', raw_data[k].get('총수익', 0)))
+            calc_orig += _safe_f(raw_data[k].get('원금', 0))
+            
+    calc_rate = (calc_profit / calc_orig * 100) if calc_orig > 0 else 0
+    
     return {
-        '총자산': _safe_f(insight.get('총 자산', insight.get('총자산', 0))),
-        '총수익': _safe_f(insight.get('총 수익', insight.get('총수익', 0))),
-        '수익률(%)': _safe_f(insight.get('수익률(%)', insight.get('수익률', 0))),
-        '원금합': _safe_f(insight.get('원금합', insight.get('투자원금', 0))),
-        '조회시간': insight.get('조회시간', '업데이트 필요')
+        '총자산': calc_asset,
+        '총수익': calc_profit,
+        '수익률(%)': calc_rate,
+        '원금합': calc_orig,
+        '조회시간': '자체 집계 모드'
     }
 
-# 정규화 필터를 거친 무결점 데이터만 tot에 할당
+# 정규화 및 집계 필터를 거친 무결점 데이터만 tot에 할당
 tot = normalize_insight(data)
 
 # 에러 없는 변수 추출
 p_asset_all = tot.get('총자산', 0)
 p_profit_all = tot.get('총수익', 0)
 p_rate_all = tot.get('수익률(%)', 0)
+# =========================================================
 
 # =========================================================
 # 🥧 일반계좌 종목별/계좌별 파이차트 함수 (설계도)
@@ -1718,6 +1741,7 @@ elif st.session_state.current_view == '일반계좌':
                
             h3.append("</table>")
             st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
