@@ -779,7 +779,7 @@ if st.session_state.current_view == '대시보드':
             if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-         draw_pie_charts(g_data)
+        draw_pie_charts(g_data)
 # =========================================================
 # 퀀트매매 & 가상자산 화면
 # =========================================================
