@@ -631,31 +631,53 @@ def normalize_insight(raw_data):
 
 tot = normalize_insight(data)
 # =========================================================
-# 가상자산 깃허브 로드 로직
+# 🪙 가상자산 오라클 로드 로직 (하이브리드 구조 완벽 통일)
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
-    url = "https://raw.githubusercontent.com/andy-zappa/Asset_1_dashboard/main/crypto_data.json"
+    url = "http://158.179.172.40:8000/crypto"
+    crypto_d = None
+    
+    # 1. 오라클 서버 실시간 통신 시도
     try:
-        res = requests.get(url, timeout=5)
+        res = requests.get(url, timeout=2)
         if res.status_code == 200:
             crypto_d = res.json()
-            if not isinstance(crypto_d, dict): return None
-            
-            total_asset = crypto_d.get('total_asset', 0)
-            coins = crypto_d.get('coins', [])
-            btc_pct = eth_pct = trx_pct = 0
-            if total_asset > 0 and isinstance(coins, list):
-                for c in coins:
-                    if isinstance(c, dict):
-                        if c.get('ticker') == 'BTC': btc_pct = (c.get('eval', 0) / total_asset) * 100
-                        elif c.get('ticker') == 'ETH': eth_pct = (c.get('eval', 0) / total_asset) * 100
-                        elif c.get('ticker') == 'TRX': trx_pct = (c.get('eval', 0) / total_asset) * 100
-            crypto_d['btc_pct'] = btc_pct
-            crypto_d['eth_pct'] = eth_pct
-            crypto_d['trx_pct'] = trx_pct
-            return crypto_d
-    except: pass
+            if isinstance(crypto_d, dict) and "error" not in crypto_d:
+                # 성공 시 직전 데이터 로컬 백업
+                with open('data_crypto.json', 'w', encoding='utf-8') as f:
+                    json.dump(crypto_d, f, ensure_ascii=False, indent=4)
+            else:
+                crypto_d = None
+    except:
+        pass
+        
+    # 2. 통신 실패 시 '직전 최신 백업 데이터' 로드 (0원 지옥 방지)
+    if not crypto_d:
+        try:
+            with open('data_crypto.json', 'r', encoding='utf-8') as f:
+                crypto_d = json.load(f)
+        except:
+            pass
+
+    # 3. 비중(%) 데이터 후처리
+    if isinstance(crypto_d, dict):
+        total_asset = safe_float(crypto_d.get('total_asset', 0))
+        coins = crypto_d.get('coins', [])
+        btc_pct = eth_pct = trx_pct = 0
+        
+        if total_asset > 0 and isinstance(coins, list):
+            for c in coins:
+                if isinstance(c, dict):
+                    if c.get('ticker') == 'BTC': btc_pct = (safe_float(c.get('eval', 0)) / total_asset) * 100
+                    elif c.get('ticker') == 'ETH': eth_pct = (safe_float(c.get('eval', 0)) / total_asset) * 100
+                    elif c.get('ticker') == 'TRX': trx_pct = (safe_float(c.get('eval', 0)) / total_asset) * 100
+        
+        crypto_d['btc_pct'] = btc_pct
+        crypto_d['eth_pct'] = eth_pct
+        crypto_d['trx_pct'] = trx_pct
+        return crypto_d
+        
     return None
 
 crypto_data = get_crypto_data()
@@ -1616,4 +1638,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
