@@ -476,7 +476,7 @@ with st.sidebar:
     
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
+        <div style='font-size:13px; font-weight:bold; color:#777777; margin-bottom:6px;'>🌎 총 자산 통합</div>
         <div style='text-align: right;'>
             <div style='font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:15px; font-weight:normal; color:#ddd;'>KRW</span></div>
             <div style='font-size:15px; margin-top:4px; color:#cccccc;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
@@ -1234,5 +1234,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
