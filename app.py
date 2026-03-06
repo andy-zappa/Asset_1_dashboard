@@ -414,8 +414,8 @@ with st.sidebar:
     # 현재 화면에 맞는 시간 가져오기
     upd_time = "업데이트 필요"
     if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
-    대시보드 == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-    대시보드 == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
 
     time_str = to_kst(upd_time)
 
@@ -1371,6 +1371,7 @@ if st.session_state.current_view == '대시보드':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
