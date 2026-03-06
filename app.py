@@ -1150,68 +1150,6 @@ elif st.session_state.current_view == '퀀트매매':
 # 🪙 가상자산 상세 화면 (Andy님 오더 100% 절대 반영본)
 # =========================================================
 elif st.session_state.current_view == '가상자산':
-   
-    # 💡 1. KST(한국 시간) 변환 로직 (9시간 딜레이 완벽 보정)
-    upd_text = "업데이트 필요"
-    if isinstance(crypto_data, dict) and crypto_data.get('update_time'):
-        try:
-            dt = pd.to_datetime(crypto_data['update_time'])
-            # 9시간을 강제로 더하여 한국 시간으로 맞춤
-            dt = dt + pd.Timedelta(hours=9)
-            wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
-            upd_text = dt.strftime(f"%m/%d({wd}), %H:%M:%S")
-        except: pass
-
-    # 💡 2. 좌측 고정 플로팅 배너 및 박스 일체형 디자인 (오더 절대 준수)
-    st.markdown("""
-    <style>
-    div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) {
-        position: fixed !important;
-        top: 60px !important;
-        left: 15px !important;  /* 화면 바라보는 좌측 고정 */
-        z-index: 999999 !important;
-        background-color: rgba(255, 255, 255, 0.95) !important;
-        border: 2px solid #ccc !important;
-        border-radius: 12px !important;
-        padding: 5px 15px 10px 15px !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        width: max-content !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 0px !important;
-    }
-    div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) button {
-        background: transparent !important;
-        border: none !important;
-        color: #1f77b4 !important;
-        font-size: 18px !important;
-        font-weight: 900 !important;
-        padding: 0 !important;
-        min-height: 35px !important;
-        box-shadow: none !important;
-    }
-    div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) button:hover {
-        color: #0056b3 !important;
-    }
-    .float-date-text {
-        font-size: 14px;
-        color: #333;
-        font-weight: 600;
-        margin-top: -5px;
-        letter-spacing: -0.5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 배너 컨테이너 구성 (버튼과 날짜가 한 박스에 포함됨)
-    with st.container():
-        st.markdown("<div id='crypto-floating-updater'></div>", unsafe_allow_html=True)
-        if st.button("🔄 업데이트", key="btn_update_crypto_float"):
-            # 캐시를 날리고 즉시 새로고침
-            get_crypto_data.clear()
-            st.rerun()
-        st.markdown(f"<div class='float-date-text'>{upd_text}</div>", unsafe_allow_html=True)
 
     # 메인 타이틀
     st.markdown("""
@@ -1306,11 +1244,6 @@ elif st.session_state.current_view == '가상자산':
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
     with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 (Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
-    with c2:
-        st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-        if st.button("🔄 업데이트", use_container_width=True):
-            st.cache_data.clear(); st.rerun()
-
     st.markdown(f"<div style='text-align:right;font-size:14.5px;color:#555;margin:-10px 0 15px;'>[ {to_kst(tot.get('조회시간', '업데이트 필요'))} ]</div>", unsafe_allow_html=True)
 
     FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
@@ -1699,6 +1632,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
