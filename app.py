@@ -174,11 +174,15 @@ def to_kst(time_str):
     if not time_str or time_str in ['업데이트 필요', '자체 집계 모드']: 
         return str(time_str)
     try:
-        # 기존 날짜 문자열 전처리 (포맷 통일)
+        # 기존 날짜 텍스트의 불필요한 한글 제거 및 전처리
         t_str = str(time_str).replace('년 ', '-').replace('월 ', '-').replace('일', '')
         t_str = re.sub(r'\(.\)\s*/\s*', ' ', t_str)
         
         dt = pd.to_datetime(t_str)
+        # 오라클 데이터는 이미 KST이므로 강제 시간 더하기 제거
+        if dt.tzinfo is not None:
+            dt = dt.tz_localize(None)
+            
         wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
         return dt.strftime(f"%m/%d({wd}), %H:%M:%S")
     except: 
@@ -409,54 +413,65 @@ with st.sidebar:
     else:
         st.markdown("<div style='text-align:center; padding:6px; background:#fce8e6; color:#d93025; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🔴 로컬 백업 데이터 표출 중</div>", unsafe_allow_html=True)
 
-    # 현재 화면 기준 KST 시간 가져오기
+    # 현재 화면에 맞는 시간 가져오기
     upd_time = "업데이트 필요"
     if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
     elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
     elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
-    
+
     time_str = to_kst(upd_time)
 
-    # 💡 [핵심 해결책] Streamlit 순정 버튼 디자인을 CSS 마술로 일체형 박스처럼 변경!
+    # 💡 [화면 깨짐 방지] Streamlit 순정 버튼을 CSS로 꾸며서 버튼 글씨 밑에 시간을 새겨넣는 마술!
     st.markdown(f"""
     <style>
-    div[data-testid="stSidebar"] button[kind="secondary"] {{
-        border: 1.5px solid #bbb !important;
+    div[data-testid="stSidebar"] button[kind="primary"] {{
+        border: 1.5px solid #a0a0a0 !important;
         border-radius: 12px !important;
-        background-color: #ffffff !important;
-        height: auto !important;
-        padding: 10px 5px 12px 5px !important;
+        background-color: white !important;
+        color: #111 !important;
+        padding: 12px 15px 36px 15px !important; /* 시간 텍스트가 들어갈 하단 여백 확보 */
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        margin-bottom: 15px !important;
         transition: all 0.2s ease !important;
+        margin-bottom: 15px !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        border-color: #888 !important;
+    div[data-testid="stSidebar"] button[kind="primary"]:hover {{
+        border-color: #4285F4 !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
-        transform: translateY(-1px) !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{
+    div[data-testid="stSidebar"] button[kind="primary"] p {{
         font-size: 20px !important;
         font-weight: 800 !important;
-        color: #111 !important;
         margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
-    /* 버튼 글씨 바로 아래에 시간을 강제로 박아 넣는 마술 */
-    div[data-testid="stSidebar"] button[kind="secondary"]::after {{
+    /* 버튼 글씨 안쪽에 아이콘 추가 */
+    div[data-testid="stSidebar"] button[kind="primary"] p::before {{
+        content: '🔄 ';
+        margin-right: 5px;
+    }}
+    /* 버튼 껍데기 하단에 날짜/시간을 강제로 렌더링 */
+    div[data-testid="stSidebar"] button[kind="primary"]::after {{
         content: '{time_str}';
-        font-size: 14.5px !important;
-        color: #222 !important;
-        font-weight: 600 !important;
-        margin-top: 6px !important;
+        position: absolute !important;
+        bottom: 12px !important;
+        left: 0 !important;
+        right: 0 !important;
+        text-align: center !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #333 !important;
         letter-spacing: -0.2px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    if st.button("🔄 업데이트", use_container_width=True):
+    # 순정 버튼 사용으로 화면 터짐 100% 방지
+    if st.button("업데이트", key="sidebar_btn_update", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -573,101 +588,6 @@ def draw_pie_charts(g_data):
     with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
     with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
 
-# =========================================================
-# 🚀 [통합] 전역 실시간 업데이트 플로팅 배너 (좌측 완벽 일체형)
-# =========================================================
-upd_time = "업데이트 필요"
-if st.session_state.current_view == '절세계좌':
-    upd_time = tot.get('조회시간', '업데이트 필요')
-elif st.session_state.current_view == '일반계좌':
-    upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-elif st.session_state.current_view == '가상자산':
-    upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
-
-formatted_time = to_kst(upd_time)
-
-if st.session_state.current_view in ['절세계좌', '일반계좌', '가상자산']:
-    st.markdown("""
-    <style>
-    /* 💡 1. 겉면 박스(컨테이너)를 하나의 완벽한 둥근 버튼처럼 디자인 */
-    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) {
-        position: fixed !important;
-        top: 75px !important;
-        left: 20px !important;
-        z-index: 999999 !important;
-        background-color: rgba(255, 255, 255, 0.95) !important;
-        border: 1.5px solid #999 !important; /* 이미지와 유사한 회색 테두리 */
-        border-radius: 12px !important;
-        padding: 10px 15px 12px 15px !important; /* 박스 내부 여백 최적화 */
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
-        width: max-content !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 2px !important; /* 버튼과 날짜 사이 간격 최소화 */
-        pointer-events: auto !important;
-        transition: all 0.2s ease !important;
-        backdrop-filter: blur(4px);
-    }
-    
-    /* 마우스 오버 시 전체 박스가 반응하도록 (클릭 유도) */
-    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater):hover {
-        border-color: #555 !important;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.18) !important;
-        transform: translateY(-1px) !important;
-    }
-
-    /* 💡 2. Streamlit 기본 버튼의 껍데기를 완전히 투명하게 날려버림 */
-    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) div.stButton > button {
-        background: transparent !important;
-        border: none !important;
-        color: #111 !important;
-        padding: 0 !important;
-        min-height: 0px !important;
-        height: auto !important;
-        box-shadow: none !important;
-        line-height: 1 !important;
-        cursor: pointer !important;
-    }
-    
-    /* 버튼 텍스트 디자인 (아이콘 + 업데이트) */
-    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) div.stButton > button p {
-        font-size: 22px !important; /* 타이틀 크기 */
-        font-weight: 800 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-    }
-
-    /* 💡 3. 날짜 텍스트 디자인 (버튼 바로 아래 밀착) */
-    .global-date-text {
-        font-size: 14.5px !important; /* 폰트 사이즈 조정 */
-        color: #222 !important;     /* 첨부 이미지처럼 진한 색상 */
-        font-weight: 500 !important;
-        margin-top: 4px !important;
-        letter-spacing: -0.2px !important;
-        text-align: center !important;
-        cursor: default !important;
-    }
-    
-    /* 숨김 처리된 앵커용 div 높이 제거 */
-    #zappa-global-updater {
-        display: none !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # UI 컴포넌트 렌더링
-    with st.container():
-        st.markdown("<div id='zappa-global-updater'></div>", unsafe_allow_html=True)
-        if st.button("🔄 업데이트", key=f"btn_global_update_{st.session_state.current_view}"):
-            fetch_hybrid_data.clear()
-            get_crypto_data.clear()
-            st.rerun()
-        st.markdown(f"<div class='global-date-text'>{formatted_time}</div>", unsafe_allow_html=True)
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -1008,7 +928,7 @@ elif st.session_state.current_view == '절세계좌':
 # [ Part 4 ] 일반계좌 대시보드 (구형 버튼 & 시간 삭제)
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 이상혁(Andy lee)님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 Andy lee 님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
         st.warning("데이터가 올바르지 않습니다. 좌측 사이드바의 업데이트 버튼을 눌러주세요.")
@@ -1268,4 +1188,5 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
