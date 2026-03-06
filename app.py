@@ -1105,7 +1105,7 @@ elif st.session_state.current_view == '절세계좌':
 # =========================================================
 # [ Part 4 ] 일반계좌 대시보드
 # =========================================================
-대시보드 == '일반계좌':
+elif st.session_state.current_view == '일반계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드 수정</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
@@ -1371,6 +1371,7 @@ elif st.session_state.current_view == '절세계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
