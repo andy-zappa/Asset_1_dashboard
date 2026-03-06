@@ -1228,7 +1228,7 @@ elif st.session_state.current_view == '가상자산':
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
-    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 (Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True):
@@ -1622,6 +1622,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
