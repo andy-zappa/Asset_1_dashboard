@@ -514,6 +514,10 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
+    c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
+    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
     
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
@@ -525,9 +529,7 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
+    
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
         <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
@@ -1232,4 +1234,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
