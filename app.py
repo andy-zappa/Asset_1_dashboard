@@ -403,13 +403,36 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링
+# 📍 사이드바 렌더링 (연동 상태 박스 디자인 일체화)
 # =========================================================
 with st.sidebar:
+    # 💡 사이드바 카드와 동일한 디자인의 연동 상태 박스
     if is_oracle_online:
-        st.markdown("<div style='text-align:center; padding:6px; background:#e6f4ea; color:#1e8e3e; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🟢 실시간 데이터 연동 중 (오라클)</div>", unsafe_allow_html=True)
+        status_html = f"""
+        <div class='sidebar-card' style='background-color: #e6f4ea; border-color: #34a853; padding: 12px; margin-bottom: 20px; cursor: default;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
+                <span style='font-size: 18px;'>🟢</span>
+                <span style='color: #1e8e3e; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
+            </div>
+        </div>
+        """
     else:
-        st.markdown("<div style='text-align:center; padding:6px; background:#fce8e6; color:#d93025; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🔴 로컬 백업 데이터 표출 중</div>", unsafe_allow_html=True)
+        status_html = f"""
+        <div class='sidebar-card' style='background-color: #fce8e6; border-color: #ea4335; padding: 12px; margin-bottom: 20px; cursor: default;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
+                <span style='font-size: 18px;'>🔴</span>
+                <span style='color: #d93025; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
+            </div>
+        </div>
+        """
+    st.markdown(status_html, unsafe_allow_html=True)
+
+    # 현재 화면에 맞는 시간 가져오기 (기존 로직 유지)
+    upd_time = "업데이트 필요"
+    if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
+    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+
 
     # 현재 화면에 맞는 시간 가져오기
     upd_time = "업데이트 필요"
