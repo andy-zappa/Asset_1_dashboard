@@ -404,85 +404,89 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # =========================================================
 # 📍 사이드바 렌더링 (업데이트 버튼 디자인 일체화 및 실시간 시간 반영)
 # =========================================================
+# =========================================================
+# 📍 사이드바 렌더링 (디자인 일체화 및 간격 조정 완료)
+# =========================================================
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스 (첨부 디자인 스타일로 고정)
+    # 1. 데이터 연동 상태 박스 (상단)
     if is_oracle_online:
         status_html = f"""
-        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.5px solid #34a853; padding: 12px; margin-bottom: 12px; cursor: default;'>
-            <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
-                <span style='font-size: 18px;'>🟢</span>
-                <span style='color: #1e8e3e; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
+        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 10px; cursor: default;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+                <span style='font-size: 16px;'>🟢</span>
+                <span style='color: #1e8e3e; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
             </div>
         </div>
         """
     else:
         status_html = f"""
-        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.5px solid #ea4335; padding: 12px; margin-bottom: 12px; cursor: default;'>
-            <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
-                <span style='font-size: 18px;'>🔴</span>
-                <span style='color: #d93025; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
+        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 10px; cursor: default;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+                <span style='font-size: 16px;'>🔴</span>
+                <span style='color: #d93025; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
             </div>
         </div>
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 클릭 시(페이지 새로고침 시) 갱신되는 현재 시간 계산
+    # 2. 실시간 날짜/시간 계산 로직 (클릭 시 갱신)
     now = datetime.now()
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. 업데이트 버튼 디자인 CSS (사이드바 카드와 동일하게 튜닝)
+    # 3. 업데이트 버튼 전용 강력한 CSS (사진 70a7fe 디자인 100% 반영)
     st.markdown(f"""
     <style>
+    /* 버튼 외곽 박스 디자인 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
-        border: 1.5px solid #dcdcdc !important;
-        border-radius: 12px !important;
-        padding: 12px 15px 38px 15px !important; /* 날짜 정보가 들어갈 하단 여백 확보 */
+        border: 1.2px solid #888888 !important;
+        border-radius: 15px !important;
+        padding: 10px 15px 35px 15px !important; /* 시간 텍스트 공간 확보 */
         position: relative !important;
         display: block !important;
         width: 100% !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
-        transition: all 0.2s ease !important;
-        margin-bottom: 20px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+        margin-bottom: 12px !important; /* 💡 카드 사이 간격과 동일하게 설정 */
     }}
+    /* 호버 효과 */
     div[data-testid="stSidebar"] button[kind="primary"]:hover {{
-        background-color: #f8f9fa !important;
-        border-color: #bbb !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+        background-color: #f9f9f9 !important;
+        border-color: #555 !important;
     }}
+    /* '업데이트' 글자 및 아이콘 스타일 */
     div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 19px !important;
-        font-weight: 800 !important;
-        color: #111 !important;
+        font-size: 21px !important;
+        font-weight: 700 !important;
+        color: #111111 !important;
         margin: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }}
+    /* 아이콘 이미지 삽입 (사진과 동일한 스타일) */
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
-        content: '🔄 ';
-        margin-right: 5px;
+        content: '🔄';
+        margin-right: 8px;
+        font-size: 18px;
     }}
-    /* 버튼 박스 내부에 날짜/시간 정보 삽입 */
+    /* 💡 박스 내부 하단에 날짜/시간 강제 삽입 */
     div[data-testid="stSidebar"] button[kind="primary"]::after {{
         content: '{now_str}';
         position: absolute !important;
-        bottom: 12px !important;
+        bottom: 10px !important;
         left: 0 !important;
         right: 0 !important;
         text-align: center !important;
-        font-size: 14px !important;
-        color: #555 !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.2px !important;
+        font-size: 14.5px !important;
+        color: #333333 !important;
+        font-weight: 500 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 업데이트 버튼 실행부
-    if st.button("업데이트", key="sidebar_btn_update", type="primary", use_container_width=True):
+    # 업데이트 실행 버튼
+    if st.button("업데이트", key="sidebar_btn_update_final", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1385,6 +1389,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
