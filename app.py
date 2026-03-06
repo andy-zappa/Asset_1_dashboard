@@ -174,14 +174,15 @@ def to_kst(time_str):
     if not time_str or time_str in ['업데이트 필요', '자체 집계 모드']: 
         return str(time_str)
     try:
-        if '년' in str(time_str): return str(time_str)
-        dt = pd.to_datetime(time_str)
-        if dt.tzinfo is None: dt = dt.tz_localize('UTC')
-        dt = dt.tz_convert('Asia/Seoul')
+        # 기존 날짜 문자열 전처리 (포맷 통일)
+        t_str = str(time_str).replace('년 ', '-').replace('월 ', '-').replace('일', '')
+        t_str = re.sub(r'\(.\)\s*/\s*', ' ', t_str)
+        
+        dt = pd.to_datetime(t_str)
         wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
         return dt.strftime(f"%m/%d({wd}), %H:%M:%S")
-    except: pass
-    return str(time_str)
+    except: 
+        return str(time_str)
 
 def safe_float(val):
     try: return float(val) if val not in ['-', '', None] else 0.0
@@ -400,7 +401,7 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링 (업데이트 버튼 일체형 추가)
+# 📍 사이드바 렌더링
 # =========================================================
 with st.sidebar:
     if is_oracle_online:
@@ -408,57 +409,59 @@ with st.sidebar:
     else:
         st.markdown("<div style='text-align:center; padding:6px; background:#fce8e6; color:#d93025; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🔴 로컬 백업 데이터 표출 중</div>", unsafe_allow_html=True)
 
-    # 💡 1. 여기에 Andy님이 요청하신 "버튼+날짜" 일체형 스타일의 컨테이너를 추가합니다.
-    st.markdown("""
-        <style>
-        .sidebar-update-box {
-            border: 1px solid #ccc;
-            border-radius: 12px;
-            padding: 8px 10px;
-            margin-bottom: 15px;
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        }
-        .sidebar-update-box div.stButton > button {
-            width: 100% !important;
-            background-color: #4285F4 !important; /* 파란색 배경 */
-            color: white !important;
-            font-weight: bold !important;
-            border-radius: 8px !important;
-            border: none !important;
-            padding: 5px 0 !important;
-        }
-        .sidebar-update-box div.stButton > button p {
-            font-size: 16px !important;
-            margin: 0 !important;
-        }
-        .sidebar-update-date {
-            font-size: 13.5px !important;
-            color: #333 !important;
-            margin-top: 6px !important;
-            font-weight: 500 !important;
-        }
-        </style>
+    # 현재 화면 기준 KST 시간 가져오기
+    upd_time = "업데이트 필요"
+    if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
+    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+    
+    time_str = to_kst(upd_time)
+
+    # 💡 [핵심 해결책] Streamlit 순정 버튼 디자인을 CSS 마술로 일체형 박스처럼 변경!
+    st.markdown(f"""
+    <style>
+    div[data-testid="stSidebar"] button[kind="secondary"] {{
+        border: 1.5px solid #bbb !important;
+        border-radius: 12px !important;
+        background-color: #ffffff !important;
+        height: auto !important;
+        padding: 10px 5px 12px 5px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        margin-bottom: 15px !important;
+        transition: all 0.2s ease !important;
+    }}
+    div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
+        border-color: #888 !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+        transform: translateY(-1px) !important;
+    }}
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{
+        font-size: 20px !important;
+        font-weight: 800 !important;
+        color: #111 !important;
+        margin: 0 !important;
+    }}
+    /* 버튼 글씨 바로 아래에 시간을 강제로 박아 넣는 마술 */
+    div[data-testid="stSidebar"] button[kind="secondary"]::after {{
+        content: '{time_str}';
+        font-size: 14.5px !important;
+        color: #222 !important;
+        font-weight: 600 !important;
+        margin-top: 6px !important;
+        letter-spacing: -0.2px !important;
+    }}
+    </style>
     """, unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown("<div class='sidebar-update-box'>", unsafe_allow_html=True)
-        if st.button("🔄 업데이트", key="sidebar_global_update"):
-            fetch_hybrid_data.clear()
-            get_crypto_data.clear()
-            st.rerun()
-        
-        # 현재 화면에 맞는 시간을 KST로 가져와서 표시
-        upd_time = "업데이트 필요"
-        if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
-        elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-        elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
-        
-        st.markdown(f"<div class='sidebar-update-date'>{to_kst(upd_time)}</div></div>", unsafe_allow_html=True)
+    if st.button("🔄 업데이트", use_container_width=True):
+        fetch_hybrid_data.clear()
+        get_crypto_data.clear()
+        st.rerun()
+
+    # (이 아래에 원래 있던 st.radio 와 카드 부분은 그대로 둡니다!)
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
@@ -903,7 +906,7 @@ elif st.session_state.current_view == '가상자산':
 # ⏳ 절세계좌 상세 화면 (구형 버튼 & 시간 삭제)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 Andy lee 님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     P_MAP = {'DC': '퇴직연금(DC)계좌', 'IRP': '퇴직연금(IRP)계좌', 'PENSION': '연금저축(CMA)계좌', 'ISA': 'ISA(중개형)계좌'}
@@ -1265,3 +1268,4 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
