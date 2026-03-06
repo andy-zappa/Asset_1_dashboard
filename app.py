@@ -509,7 +509,7 @@ with st.sidebar:
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
+            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
         </div>
     </div>
@@ -524,7 +524,7 @@ with st.sidebar:
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🪙 가상자산</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
+            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
         </div>
     </div>
@@ -1234,6 +1234,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
