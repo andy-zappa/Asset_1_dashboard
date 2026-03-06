@@ -438,6 +438,48 @@ with st.sidebar:
     <div id='card-pension' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
         <div style='text-align: right;'>
+            <div style='font-size:22px;
+# =========================================================
+# 📍 사이드바 렌더링
+# =========================================================
+with st.sidebar:
+    if is_oracle_online:
+        st.markdown("<div style='text-align:center; padding:6px; background:#e6f4ea; color:#1e8e3e; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🟢 실시간 데이터 연동 중 (오라클)</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='text-align:center; padding:6px; background:#fce8e6; color:#d93025; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🔴 로컬 백업 데이터 표출 중</div>", unsafe_allow_html=True)
+
+    # 💡 [Andy님 아이디어] 사이드바 최상단 전역 원클릭 업데이트 버튼!
+    if st.button("🔄 전체 데이터 실시간 업데이트", use_container_width=True, type="primary"):
+        fetch_hybrid_data.clear()
+        get_crypto_data.clear()
+        st.rerun()
+    st.markdown("<div style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
+
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+    
+    st.markdown(f"""
+    <div id='card-total' class='sidebar-card sidebar-card-dark'>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
+        <div style='text-align: right;'>
+            <div style='font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:15px; font-weight:normal; color:#ddd;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#cccccc;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
+        </div>
+        <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
+                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 금융자산 30억 목표</span>
+                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
+            </div>
+            <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
+                <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div id='card-pension' class='sidebar-card'>
+        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>⏳ 절세계좌</div>
+        <div style='text-align: right;'>
             <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
             <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> ({fmt_p1(p_rate_all)})</div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
@@ -456,6 +498,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    c_tot = crypto_data.get('total_asset', 0) if isinstance(crypto_data, dict) else 0
+    c_prof = crypto_data.get('total_profit', 0) if isinstance(crypto_data, dict) else 0
+    c_rate = crypto_data.get('total_rate', 0) if isinstance(crypto_data, dict) else 0
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -464,8 +509,8 @@ with st.sidebar:
     <div id='card-crypto' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
         <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
+            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof)}' style='font-weight:bold;'>{fmt(c_prof, True)}</span> ({fmt_p1(c_rate)})</div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
         </div>
     </div>
@@ -1228,5 +1273,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
