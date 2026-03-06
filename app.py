@@ -771,7 +771,7 @@ if st.session_state.current_view == '대시보드':
 # =========================================================
 # 퀀트매매 화면
 # =========================================================
-대시보드 == '퀀트매매':
+elif st.session_state.current_view == '퀀트매매':
     st.markdown("""
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
@@ -1371,6 +1371,7 @@ if st.session_state.current_view == '대시보드':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
