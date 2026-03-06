@@ -823,10 +823,10 @@ elif st.session_state.current_view == '가상자산':
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
 # =========================================================
-# ⏳ 절세계좌 상세 화면 (구형 버튼 & 시간 삭제)
+# ⏳ 절세계좌 상세 화면
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 Andy lee 님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     P_MAP = {'DC': '퇴직연금(DC)계좌', 'IRP': '퇴직연금(IRP)계좌', 'PENSION': '연금저축(CMA)계좌', 'ISA': 'ISA(중개형)계좌'}
@@ -1188,5 +1188,6 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
