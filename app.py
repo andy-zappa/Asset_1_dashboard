@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원 (중복 제거 완료)
+# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
 # =========================================================
 css = """
 <style>
@@ -168,21 +168,17 @@ def on_menu_change():
         st.session_state.current_view = st.session_state.menu_sel
 
 # =========================================================
-# 🎯 통합 헬퍼 함수 모음
+# 🎯 통합 헬퍼 함수 모음 (시간 포맷 오류 수정 완료)
 # =========================================================
 def to_kst(time_str):
     if not time_str or time_str in ['업데이트 필요', '자체 집계 모드']: 
         return str(time_str)
     try:
-        # 기존 날짜 텍스트의 불필요한 한글 제거 및 전처리
         t_str = str(time_str).replace('년 ', '-').replace('월 ', '-').replace('일', '')
         t_str = re.sub(r'\(.\)\s*/\s*', ' ', t_str)
-        
         dt = pd.to_datetime(t_str)
-        # 오라클 데이터는 이미 KST이므로 강제 시간 더하기 제거
         if dt.tzinfo is not None:
             dt = dt.tz_localize(None)
-            
         wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
         return dt.strftime(f"%m/%d({wd}), %H:%M:%S")
     except: 
@@ -228,7 +224,7 @@ def short_name(nm):
     return nm[:13] + "***" if len(nm) > 13 else nm
 
 # =========================================================
-# 🌟 [데이터 로드 엔진] 하이브리드 통신 및 캐시 무력화 (타임아웃 5초 연장)
+# 🌟 [데이터 로드 엔진] 하이브리드 통신 및 캐시 무력화
 # =========================================================
 @st.cache_data(ttl=60)
 def fetch_hybrid_data():
@@ -266,7 +262,7 @@ def fetch_hybrid_data():
 data, g_data, is_oracle_online = fetch_hybrid_data()
 
 # =========================================================
-# 🛡️ [데이터 전처리 레이어] 자체 집계 모드 방어 로직 완벽 적용
+# 🛡️ [데이터 전처리 레이어] 
 # =========================================================
 def normalize_insight(raw_data):
     if not isinstance(raw_data, dict): return {}
@@ -405,7 +401,7 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링
+# 📍 사이드바 렌더링 (가상자산, 퀀트매매 카드 포함!)
 # =========================================================
 with st.sidebar:
     if is_oracle_online:
@@ -476,8 +472,6 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # (이 아래에 원래 있던 st.radio 와 카드 부분은 그대로 둡니다!)
-
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     st.markdown(f"""
@@ -520,6 +514,27 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div id='card-crypto' class='sidebar-card'>
+        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
+        <div style='text-align: right;'>
+            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
+        <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
+            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:36px; height:36px; object-fit:contain;'>
+            퀀트매매
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -736,7 +751,7 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🪙 가상자산 상세 화면 (구형 버튼 & 시간 삭제)
+# 🪙 가상자산 상세 화면 (구형 버튼 및 찌꺼기 시간 삭제 완료)
 # =========================================================
 elif st.session_state.current_view == '가상자산':
     st.markdown("""
@@ -823,7 +838,7 @@ elif st.session_state.current_view == '가상자산':
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
 # =========================================================
-# ⏳ 절세계좌 상세 화면
+# ⏳ 절세계좌 상세 화면 (구형 버튼 삭제 + 5개 정렬 플로팅 메뉴 장착)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -906,7 +921,22 @@ elif st.session_state.current_view == '절세계좌':
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
 
-        st.markdown("<div class='sub-title' style='margin-top:40px;'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+        # 💡 [Andy님 요청] 절세계좌 전용 5개 정렬 플로팅 메뉴 장착
+        st.markdown("<div id='tax_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+        tb1, tb2, tb3, tb4, tb5 = st.columns(5)
+        with tb1:
+            st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
+            if st.button("🛠️ 초기화[●]" if st.session_state.sort_mode == 'init' else "🛠️ 초기화[○]", type="primary" if st.session_state.sort_mode == 'init' else "secondary", key='tax_btn1', on_click=lambda: setattr(st.session_state, 'sort_mode', 'init')): pass
+        with tb2:
+            if st.button("💰 총자산[▼]" if st.session_state.sort_mode == 'asset' else "💰 총자산[▽]", type="primary" if st.session_state.sort_mode == 'asset' else "secondary", key='tax_btn2', on_click=lambda: setattr(st.session_state, 'sort_mode', 'asset')): pass
+        with tb3:
+            if st.button("📊 평가손익[▼]" if st.session_state.sort_mode == 'profit' else "📊 평가손익[▽]", type="primary" if st.session_state.sort_mode == 'profit' else "secondary", key='tax_btn3', on_click=lambda: setattr(st.session_state, 'sort_mode', 'profit')): pass
+        with tb4:
+            if st.button("📈 손익률[▼]" if st.session_state.sort_mode == 'rate' else "📈 손익률[▽]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", key='tax_btn4', on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
+        with tb5:
+            if st.button("↕️ 등락률[+]" if st.session_state.show_change_rate else "↕️ 등락률[-]", type="primary" if st.session_state.show_change_rate else "secondary", key='tax_btn5', on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+        st.markdown("<br>", unsafe_allow_html=True)
+
         for k in FIXED_ORDER:
             if k in data and isinstance(data[k], dict):
                 a = data[k]
@@ -915,20 +945,33 @@ elif st.session_state.current_view == '절세계좌':
                     s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {})
                     st.markdown(f"<div class='summary-text'>● 총 자산 : {fmt(a.get('총 자산',0))} KRW / 수익 : <span class='{col(s_data.get('평가손익',0))}'>{fmt(s_data.get('평가손익',0), True)}</span></div>", unsafe_allow_html=True)
                     
-                    h3 = ["<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th></tr>"]
+                    th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
+                    h3 = [f"<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
+                    
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') != "[ 합  계 ]"]
+                    
+                    # 💡 정렬 로직 적용
+                    if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: safe_float(x.get('총 자산', x.get('총자산', 0))), reverse=True)
+                    elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: safe_float(x.get('평가손익', 0)), reverse=True)
+                    elif st.session_state.sort_mode == 'rate': items.sort(key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)
+
                     for i in ([s_data] + items):
                         if not i: continue
                         row_cls = "class='sum-row'" if i.get('종목명') == "[ 합  계 ]" else ""
-                        h3.append(f"<tr {row_cls}><td>{get_logo_html(i.get('종목명'))}{i.get('종목명','')}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td></tr>")
+                        
+                        chg_rate = safe_float(i.get('전일비', 0))
+                        td_chg = f"<td class='{col(chg_rate)}' style='font-weight:bold;'>{fmt_p(chg_rate)}</td>" if st.session_state.show_change_rate else ""
+                        if i.get('종목명') == "[ 합  계 ]" and st.session_state.show_change_rate: td_chg = "<td>-</td>"
+
+                        h3.append(f"<tr {row_cls}><td>{get_logo_html(i.get('종목명'))}{i.get('종목명','')}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td>{td_chg}</tr>")
                     h3.append("</table>")
                     st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 4 ] 일반계좌 대시보드 (구형 버튼 & 시간 삭제)
+# [ Part 4 ] 일반계좌 대시보드 (구형 버튼 & 찌꺼기 삭제 완료)
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 Andy lee 님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 이상혁(Andy lee)님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
         st.warning("데이터가 올바르지 않습니다. 좌측 사이드바의 업데이트 버튼을 눌러주세요.")
@@ -1187,7 +1230,3 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-                
-
-
-
