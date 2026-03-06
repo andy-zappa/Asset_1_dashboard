@@ -479,7 +479,7 @@ with st.sidebar:
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
         <div style='text-align: right;'>
             <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
+            <div style='font-size:15px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}' >{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
         </div>
         <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
@@ -1234,6 +1234,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
