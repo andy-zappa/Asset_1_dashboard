@@ -210,15 +210,22 @@ def on_menu_change():
 # =========================================================
 # 🎯 통합 헬퍼 함수 모음 (중복 제거)
 # =========================================================
+# 💡 [교정 1] KST 시간 9시간 보정 완료
 def to_kst(time_str):
+    if not time_str or time_str in ['업데이트 필요', '자체 집계 모드']: 
+        return str(time_str)
     try:
-        if time_str and time_str != '업데이트 필요':
-            dt = pd.to_datetime(time_str)
-            if dt.tzinfo is None: dt = dt.tz_localize('UTC')
-            dt = dt.tz_convert('Asia/Seoul')
-            return dt.strftime('%Y-%m-%d %H:%M:%S')
-    except: pass
-    return str(time_str)
+        # 절세/일반계좌 포맷인 경우 그대로 출력
+        if '년' in str(time_str): 
+            return str(time_str)
+        # 가상자산 등 UTC 포맷인 경우 KST로 변환
+        dt = pd.to_datetime(time_str)
+        if dt.tzinfo is None: dt = dt.tz_localize('UTC')
+        dt = dt.tz_convert('Asia/Seoul')
+        wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
+        return dt.strftime(f"%m/%d({wd}), %H:%M:%S")
+    except: 
+        return str(time_str)
 
 def safe_float(val):
     try: return float(val) if val not in ['-', '', None] else 0.0
@@ -299,9 +306,11 @@ data, g_data, is_oracle_online = fetch_hybrid_data()
 # =========================================================
 # 🛡️ [데이터 전처리 레이어] 결측치 완벽 방어 및 자체 집계 엔진
 # =========================================================
+# 💡 [교정 2] 자체 집계 모드 오류 해결 완료
 def normalize_insight(raw_data):
     if not isinstance(raw_data, dict): return {}
-    insight = raw_data.get("_insight", {})
+    # 봇이 생성하는 '_total' 키를 우선 탐색하도록 매핑
+    insight = raw_data.get("_total", raw_data.get("_insight", {}))
     
     if isinstance(insight, dict) and safe_float(insight.get('총 자산', insight.get('총자산', 0))) > 0:
         return {
@@ -1622,6 +1631,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
