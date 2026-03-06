@@ -925,6 +925,74 @@ def draw_pie_charts(g_data):
     cb1, cb2 = st.columns(2)
     with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
     with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
+
+# =========================================================
+# 🚀 [통합] 전역 실시간 업데이트 플로팅 배너 & 시간 렌더링
+# =========================================================
+upd_time = "업데이트 필요"
+if st.session_state.current_view == '절세계좌':
+    upd_time = tot.get('조회시간', '업데이트 필요')
+elif st.session_state.current_view == '일반계좌':
+    upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+elif st.session_state.current_view == '가상자산':
+    upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+
+formatted_time = to_kst(upd_time)
+
+if st.session_state.current_view in ['절세계좌', '일반계좌', '가상자산']:
+    st.markdown("""
+    <style>
+    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) {
+        position: fixed !important;
+        top: 80px !important;
+        left: 20px !important;
+        z-index: 999999 !important;
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border: 2px solid #888 !important;
+        border-radius: 12px !important;
+        padding: 5px 15px 10px 15px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+        width: max-content !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 0px !important;
+        pointer-events: auto !important; /* 💡 클릭 불가 버그 완벽 해결 */
+    }
+    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) button {
+        background: transparent !important;
+        border: none !important;
+        color: #111 !important;
+        font-size: 22px !important;
+        font-weight: 800 !important;
+        padding: 0 !important;
+        min-height: 35px !important;
+        box-shadow: none !important;
+        line-height: 1 !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(> div > #zappa-global-updater) button p {
+        font-size: 20px !important;
+        font-weight: 800 !important;
+    }
+    .global-date-text {
+        font-size: 15px !important;
+        color: #333 !important;
+        font-weight: 600 !important;
+        margin-top: 5px !important;
+        letter-spacing: -0.5px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown("<div id='zappa-global-updater'></div>", unsafe_allow_html=True)
+        # 💡 버튼 클릭 시 일반/절세/가상자산 캐시를 모두 날리고 즉시 새로고침
+        if st.button("🔄 업데이트", key=f"btn_global_update_{st.session_state.current_view}"):
+            fetch_hybrid_data.clear()
+            get_crypto_data.clear()
+            st.rerun()
+        st.markdown(f"<div class='global-date-text'>{formatted_time}</div>", unsafe_allow_html=True)
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -1631,6 +1699,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
