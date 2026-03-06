@@ -790,7 +790,7 @@ with st.sidebar:
         </div>
         <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
-                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 30억 달성 프로젝트</span>
+                <span style='font-size: 13px; color: #999; font-weight: 500;'>🎯 금융자산 30억 목표</span>
                 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
             <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
@@ -1228,7 +1228,7 @@ elif st.session_state.current_view == '가상자산':
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     c1, c2 = st.columns([8.5, 1.5])
-    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 (Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True):
@@ -1468,7 +1468,7 @@ elif st.session_state.current_view == '절세계좌':
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     c1, c2 = st.columns([8.5, 1.5])
-    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 이상혁(Andy lee)님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    with c1: st.markdown("<h3 style='margin-top: 5px;'>🚀 (Andy lee)님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
     with c2:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", use_container_width=True, key="btn_update_gen"):
