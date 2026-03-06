@@ -1241,17 +1241,23 @@ elif st.session_state.current_view == '일반계좌':
     b1, b2, b3, b4, b5, b6 = st.columns(6)
     with b1:
         st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
-        if st.button("🛠️ 초기화[●]" if st.session_state.gen_sort_mode == 'init' else "🛠️ 초기화[○]", type="primary" if st.session_state.gen_sort_mode == 'init' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'init')): pass
+        lbl1 = "📊정렬 [ 초기화(●)" if st.session_state.gen_sort_mode == 'init' else "📊정렬 [ 초기화(○)"
+        if st.button(lbl1, type="primary" if st.session_state.gen_sort_mode == 'init' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'init')): pass
     with b2:
-        if st.button("💰 총자산[▼]" if st.session_state.gen_sort_mode == 'asset' else "💰 총자산[▽]", type="primary" if st.session_state.gen_sort_mode == 'asset' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'asset')): pass
+        lbl2 = "총자산(▼)" if st.session_state.gen_sort_mode == 'asset' else "총자산(▽)"
+        if st.button(lbl2, type="primary" if st.session_state.gen_sort_mode == 'asset' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'asset')): pass
     with b3:
-        if st.button("📊 평가손익[▼]" if st.session_state.gen_sort_mode == 'profit' else "📊 평가손익[▽]", type="primary" if st.session_state.gen_sort_mode == 'profit' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'profit')): pass
+        lbl3 = "평가손익(▼)" if st.session_state.gen_sort_mode == 'profit' else "평가손익(▽)"
+        if st.button(lbl3, type="primary" if st.session_state.gen_sort_mode == 'profit' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'profit')): pass
     with b4:
-        if st.button("📈 손익률[▼]" if st.session_state.gen_sort_mode == 'rate' else "📈 손익률[▽]", type="primary" if st.session_state.gen_sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'rate')): pass
+        lbl4 = "손익률(▼) ]" if st.session_state.gen_sort_mode == 'rate' else "손익률(▽) ]"
+        if st.button(lbl4, type="primary" if st.session_state.gen_sort_mode == 'rate' else "secondary", on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'rate')): pass
     with b5:
-        if st.button("↕️ 등락률[+]" if st.session_state.gen_show_change_rate else "↕️ 등락률[-]", type="primary" if st.session_state.gen_show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'gen_show_change_rate', not st.session_state.gen_show_change_rate)): pass
+        lbl5 = "↕️등락률[-]" if st.session_state.gen_show_change_rate else "↕️등락률[+]"
+        if st.button(lbl5, type="primary" if st.session_state.gen_show_change_rate else "secondary", on_click=lambda: setattr(st.session_state, 'gen_show_change_rate', not st.session_state.gen_show_change_rate)): pass
     with b6:
-        if st.button("💻 종목코드[+]" if st.session_state.show_code else "💻 종목코드[-]", type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
+        lbl6 = "💻종목코드[-]" if st.session_state.show_code else "💻종목코드[+]"
+        if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
     st.markdown("<br>", unsafe_allow_html=True)
 
     for k in GEN_ACC_ORDER:
@@ -1327,6 +1333,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
