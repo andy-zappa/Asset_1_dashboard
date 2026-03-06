@@ -692,7 +692,7 @@ if st.session_state.current_view == '대시보드':
                                         '매입가': safe_float(item.get('매입가', 0)) * fx, '현재가': safe_float(item.get('현재가', 0)) * fx
                                     })
 
-        def render_treemap(data_list, title):
+     def render_treemap(data_list, title):
             if not data_list: return None
             df = pd.DataFrame(data_list)
             df = df.groupby(['카테고리', '종목명']).agg({
@@ -711,8 +711,8 @@ if st.session_state.current_view == '대시보드':
             for _, r in df.iterrows():
                 labels.append(r['종목명']); parents.append(r['카테고리']); values.append(r['자산'])
                 if r['카테고리'] == '현금성 자산': c_color = '#4b5563'
-                elif r['전일비'] > 0: c_color = '#d84b4b' # 💡 고급스러운 빨간색 (상승)
-                elif r['전일비'] < 0: c_color = '#3a9d5d' # 💡 고급스러운 초록색 (하락)
+                elif r['전일비'] > 0: c_color = '#d84b4b' # 고급스러운 빨간색
+                elif r['전일비'] < 0: c_color = '#3a9d5d' # 고급스러운 초록색
                 else: c_color = '#616161'
                 colors.append(c_color)
 
@@ -723,10 +723,10 @@ if st.session_state.current_view == '대시보드':
                 pct = (r['자산'] / total_sum) * 100 if total_sum > 0 else 0
                 custom_data.append([pct, r['평가손익'], r['수익률'], r.get('수량',0), r.get('매입가',0), r.get('현재가',0), r['전일비']])
 
+            # 💡 에러 원인이었던 둥근 모서리 옵션을 제거하고 정상 복구!
             fig = go.Figure(go.Treemap(
                 labels=labels, parents=parents, values=values, text=texts, textinfo="text",
                 marker_colors=colors, customdata=custom_data,
-                marker=dict(cornerradius=8), # 💡 4모서리 둥글게 처리 (cornerradius)
                 hovertemplate=(
                     "<b style='font-size:16px;'>%{label}</b><br><br>"
                     "<b>총자산:</b> %{value:,.0f}원 (비중: %{customdata[0]:.1f}%)<br>"
@@ -742,10 +742,12 @@ if st.session_state.current_view == '대시보드':
 
         c1, c2 = st.columns(2)
         
-        # 💡 리스트에서 상승/하락 종목 카운트 계산
+        # 💡 에러 원천 차단: 안전한 카운트 계산 로직 적용
         def get_counts(lst):
             if not lst: return 0, 0
-            df_c = pd.DataFrame(lst).groupby('종목명').mean().reset_index()
+            df_c = pd.DataFrame(lst)
+            if df_c.empty: return 0, 0
+            df_c = df_c.groupby('종목명')['전일비'].mean().reset_index()
             up_c = len(df_c[df_c['전일비'] > 0])
             dn_c = len(df_c[df_c['전일비'] < 0])
             return up_c, dn_c
@@ -757,14 +759,12 @@ if st.session_state.current_view == '대시보드':
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
-            # 💡 상승/하락 카운트 박스 추가 (X: 빨간색, Y: 파란색)
             st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:20px;'>상승종목 : <span style='color:#ff5252;'>{pen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#448aff;'>{pen_dn}개</span></div>", unsafe_allow_html=True)
             
         with c2:
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
-            # 💡 상승/하락 카운트 박스 추가 (X: 빨간색, Y: 파란색)
             st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:20px;'>상승종목 : <span style='color:#ff5252;'>{gen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#448aff;'>{gen_dn}개</span></div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
@@ -1371,6 +1371,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
