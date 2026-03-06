@@ -394,6 +394,8 @@ g_ovs_pct = (g_ovs_tot / g_asset_all * 100) if g_asset_all > 0 else 0
 
 c_tot_sum = crypto_data.get('total_asset', 0) if isinstance(crypto_data, dict) else 0
 c_prof_sum = crypto_data.get('total_profit', 0) if isinstance(crypto_data, dict) else 0
+c_buy_sum = c_tot_sum - c_prof_sum
+c_rate_sum = (c_prof_sum / c_buy_sum * 100) if c_buy_sum > 0 else 0
 
 total_asset = p_asset_all + g_asset_all + c_tot_sum
 total_profit = p_profit_all + g_profit_all + c_prof_sum
@@ -401,7 +403,7 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링 (가상자산, 퀀트매매 카드 포함!)
+# 📍 사이드바 렌더링
 # =========================================================
 with st.sidebar:
     if is_oracle_online:
@@ -474,16 +476,21 @@ with st.sidebar:
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
+    # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
+    c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
+    c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
+    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
+
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
         <div style='text-align: right;'>
             <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:18px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}'style='font-weight:bold;' >{fmt(total_profit, True)}</span> ({fmt_p1(total_rate)})</div>
+            <div style='font-size:18px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
         </div>
         <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
-                <span style='font-size: 12.5px; color: #999; font-weight: 500;'>🎯 금융자산 30억 목표</span>
+                <span style='font-size: 12.5px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
                 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
             <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
@@ -495,10 +502,10 @@ with st.sidebar:
     
     st.markdown(f"""
     <div id='card-pension' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaa777; margin-bottom:6px;'>⏳ 절세계좌</div>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'> ({fmt_p1(p_rate_all)})</div>
+            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_all)})</span></div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
         </div>
     </div>
@@ -509,22 +516,18 @@ with st.sidebar:
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> ({fmt_p1(g_rate_all)})</div>
+            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_all)})</span></div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
     
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🪙 가상자산</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
+            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum)})</span></div>
             <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
         </div>
     </div>
@@ -739,8 +742,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown("</div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
-
-# =========================================================
+        # =========================================================
 # 퀀트매매 화면
 # =========================================================
 elif st.session_state.current_view == '퀀트매매':
@@ -755,7 +757,7 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🪙 가상자산 상세 화면 (구형 버튼 및 찌꺼기 시간 삭제 완료)
+# 🪙 가상자산 상세 화면
 # =========================================================
 elif st.session_state.current_view == '가상자산':
     st.markdown("""
@@ -840,11 +842,11 @@ elif st.session_state.current_view == '가상자산':
         st.markdown(t_h, unsafe_allow_html=True)
     else:
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
+
 # =========================================================
-# ⏳ 절세계좌 상세 화면 (상단 대시보드 UI + 5개 정렬 플로팅 메뉴 장착)
+# ⏳ 절세계좌 상세 화면
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
-    # 💡 타이틀 명칭 수정 완료
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [절세계좌] 통합 대시보드 수정</h3>", unsafe_allow_html=True)
 
     FIXED_ORDER = ['DC', 'PENSION', 'ISA', 'IRP']
@@ -870,9 +872,6 @@ elif st.session_state.current_view == '절세계좌':
         t_diff_7 = t_prof_buy - t_prof_7ago
         t_diff_30 = t_prof_buy - t_prof_30ago
 
-        # ---------------------------------------------------------
-        # 💡 [NEW] 절세계좌 상단 대시보드 UI (도넛 차트 + 4개 카드)
-        # ---------------------------------------------------------
         cash_total = 0
         for k in FIXED_ORDER:
             if k in data and isinstance(data[k], dict):
@@ -919,9 +918,6 @@ elif st.session_state.current_view == '절세계좌':
         html_parts.append("</div></div></div>")
         st.markdown("".join(html_parts), unsafe_allow_html=True)
 
-        # ---------------------------------------------------------
-        # 📊 기존 테이블 (투자원금 대비)
-        # ---------------------------------------------------------
         unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
         
         st.markdown("<div class='sub-title' style='margin-top:20px;'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
@@ -969,7 +965,7 @@ elif st.session_state.current_view == '절세계좌':
         st.markdown("".join(h2), unsafe_allow_html=True)
 
         # ---------------------------------------------------------
-        # 🔍 [3] 계좌별 상세 내역 (💡 5개 플로팅 메뉴 장착)
+        # 🔍 [3] 계좌별 상세 내역 (5개 정렬 플로팅 메뉴 장착)
         # ---------------------------------------------------------
         st.markdown("<div id='tax_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         tb1, tb2, tb3, tb4, tb5 = st.columns(5)
@@ -999,7 +995,6 @@ elif st.session_state.current_view == '절세계좌':
                     
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') != "[ 합  계 ]"]
                     
-                    # 💡 정렬 로직
                     if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: safe_float(x.get('총 자산', x.get('총자산', 0))), reverse=True)
                     elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: safe_float(x.get('평가손익', 0)), reverse=True)
                     elif st.session_state.sort_mode == 'rate': items.sort(key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)
@@ -1020,7 +1015,6 @@ elif st.session_state.current_view == '절세계좌':
 # [ Part 4 ] 일반계좌 대시보드
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
-    # 💡 타이틀 명칭 수정 완료
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드 수정</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
