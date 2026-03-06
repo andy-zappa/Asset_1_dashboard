@@ -1070,67 +1070,68 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
     
 # =========================================================
-# 🪙 가상자산 상세 화면 (플로팅 배너 및 표 정렬 교정본)
+# 🪙 가상자산 상세 화면 (Andy님 오더 100% 절대 반영본)
 # =========================================================
 elif st.session_state.current_view == '가상자산':
-    # 💡 1. KST(한국 시간) 변환 로직 (9시간 딜레이 완벽 해결)
+   
+    # 💡 1. KST(한국 시간) 변환 로직 (9시간 딜레이 완벽 보정)
     upd_text = "업데이트 필요"
     if isinstance(crypto_data, dict) and crypto_data.get('update_time'):
         try:
-            import pytz
             dt = pd.to_datetime(crypto_data['update_time'])
-            if dt.tzinfo is None: dt = dt.tz_localize('UTC')
-            dt = dt.tz_convert('Asia/Seoul')
+            # 9시간을 강제로 더하여 한국 시간으로 맞춤
+            dt = dt + pd.Timedelta(hours=9)
             wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
             upd_text = dt.strftime(f"%m/%d({wd}), %H:%M:%S")
         except: pass
 
-    # 💡 2. 스크롤을 따라다니는 플로팅 배너 스타일 (우측 상단 최적화)
+    # 💡 2. 좌측 고정 플로팅 배너 및 박스 일체형 디자인 (오더 절대 준수)
     st.markdown("""
     <style>
     div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) {
-        position: relative;
-        top: 75px;
-        right: 40px;
-        z-index: 9999;
-        background-color: rgba(255, 255, 255, 0.95);
-        border: 1px solid #dcdcdc;
-        border-radius: 12px;
-        padding: 8px 15px 12px 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        backdrop-filter: blur(4px);
-        width: max-content;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        position: fixed !important;
+        top: 60px !important;
+        left: 15px !important;  /* 화면 바라보는 좌측 고정 */
+        z-index: 999999 !important;
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border: 2px solid #ccc !important;
+        border-radius: 12px !important;
+        padding: 5px 15px 10px 15px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        width: max-content !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 0px !important;
     }
     div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) button {
         background: transparent !important;
         border: none !important;
         color: #1f77b4 !important;
         font-size: 18px !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         padding: 0 !important;
-        min-height: 30px !important;
+        min-height: 35px !important;
         box-shadow: none !important;
     }
     div[data-testid="stVerticalBlock"]:has(> div > #crypto-floating-updater) button:hover {
         color: #0056b3 !important;
     }
     .float-date-text {
-        font-size: 13.5px;
+        font-size: 14px;
         color: #333;
-        margin-top: -2px;
-        font-weight: 500;
+        font-weight: 600;
+        margin-top: -5px;
         letter-spacing: -0.5px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # 플로팅 버튼 컨테이너 생성
+    # 배너 컨테이너 구성 (버튼과 날짜가 한 박스에 포함됨)
     with st.container():
         st.markdown("<div id='crypto-floating-updater'></div>", unsafe_allow_html=True)
         if st.button("🔄 업데이트", key="btn_update_crypto_float"):
+            # 캐시를 날리고 즉시 새로고침
             get_crypto_data.clear()
             st.rerun()
         st.markdown(f"<div class='float-date-text'>{upd_text}</div>", unsafe_allow_html=True)
@@ -1174,8 +1175,8 @@ elif st.session_state.current_view == '가상자산':
             clr = c_m.get(it['name'], d_c[idx % len(d_c)])
             grad.append(f"{clr} {curr_p}% {curr_p + p}%")
            
-            # 💡 3. 범례(인덱스) 옆에 퍼센트 숫자 추가
-            leg += f"<div style='display:flex; align-items:center; gap:6px; font-size:13.5px; color:#555; font-weight:bold;'><div style='width:12px; height:12px; background-color:{clr}; border-radius:50%;'></div>{it['name']} <span style='color:#111; font-weight:900;'>{p:.1f}%</span></div>"
+            # 💡 3. 파이차트 인덱스 비중 숫자 추가 (BTC 52.3% 형태 유지)
+            leg += f"<div style='display:flex; align-items:center; gap:6px; font-size:14.5px; color:#333; font-weight:bold;'><div style='width:12px; height:12px; background-color:{clr}; border-radius:50%;'></div>{it['name']} <span style='margin-left:4px;'>{p:.1f}%</span></div>"
            
             if p > 3:
                 mid_angle = (curr_p + p / 2) / 100 * 360
@@ -1193,7 +1194,7 @@ elif st.session_state.current_view == '가상자산':
        
         st.markdown(f"<h4 style='margin-bottom:10px; font-weight:bold;'>📂 보유 코인 목록</h4><div style='margin-bottom:15px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div></div><div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
        
-        # 💡 4. 모든 열의 헤더(1행)를 완벽하게 가운데 정렬 처리
+        # 💡 4. 표의 1행(헤더) 모든 단어 완벽 가운데 정렬 적용
         t_h = "<table class='main-table'><tr>"
         headers = ['코인명', '비중', '평가금액', '평가손익', '손익률', '보유량', '매입가', '현재가']
         for h in headers:
