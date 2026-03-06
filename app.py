@@ -617,7 +617,6 @@ def draw_pie_charts(g_data):
     cb1, cb2 = st.columns(2)
     with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
     with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
-
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -692,7 +691,7 @@ if st.session_state.current_view == '대시보드':
                                         '매입가': safe_float(item.get('매입가', 0)) * fx, '현재가': safe_float(item.get('현재가', 0)) * fx
                                     })
 
-     def render_treemap(data_list, title):
+        def render_treemap(data_list, title):
             if not data_list: return None
             df = pd.DataFrame(data_list)
             df = df.groupby(['카테고리', '종목명']).agg({
@@ -711,8 +710,8 @@ if st.session_state.current_view == '대시보드':
             for _, r in df.iterrows():
                 labels.append(r['종목명']); parents.append(r['카테고리']); values.append(r['자산'])
                 if r['카테고리'] == '현금성 자산': c_color = '#4b5563'
-                elif r['전일비'] > 0: c_color = '#d84b4b' # 고급스러운 빨간색
-                elif r['전일비'] < 0: c_color = '#3a9d5d' # 고급스러운 초록색
+                elif r['전일비'] > 0: c_color = '#d84b4b' # 고급스러운 빨간색 (상승)
+                elif r['전일비'] < 0: c_color = '#3a9d5d' # 고급스러운 초록색 (하락)
                 else: c_color = '#616161'
                 colors.append(c_color)
 
@@ -723,7 +722,6 @@ if st.session_state.current_view == '대시보드':
                 pct = (r['자산'] / total_sum) * 100 if total_sum > 0 else 0
                 custom_data.append([pct, r['평가손익'], r['수익률'], r.get('수량',0), r.get('매입가',0), r.get('현재가',0), r['전일비']])
 
-            # 💡 에러 원인이었던 둥근 모서리 옵션을 제거하고 정상 복구!
             fig = go.Figure(go.Treemap(
                 labels=labels, parents=parents, values=values, text=texts, textinfo="text",
                 marker_colors=colors, customdata=custom_data,
@@ -768,6 +766,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:20px;'>상승종목 : <span style='color:#ff5252;'>{gen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#448aff;'>{gen_dn}개</span></div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
+
 # =========================================================
 # 퀀트매매 화면
 # =========================================================
@@ -1371,6 +1370,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
