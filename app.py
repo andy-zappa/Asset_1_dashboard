@@ -407,13 +407,13 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
+# 📍 사이드바 렌더링 (최종 완성본 - 간격 및 디자인 정밀 튜닝)
 # =========================================================
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스 (상단)
+    # 1. 데이터 연동 상태 박스
     if is_oracle_online:
         status_html = """
-        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 10px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 12px; cursor: default;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 16px;'>🟢</span>
                 <span style='color: #1e8e3e; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
@@ -422,7 +422,7 @@ with st.sidebar:
         """
     else:
         status_html = """
-        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 10px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 12px; cursor: default;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 16px;'>🔴</span>
                 <span style='color: #d93025; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
@@ -431,52 +431,55 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 실시간 날짜/시간 생성 (현재 시간 반영)
+    # 2. 실시간 시간 로직
     now = datetime.now()
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 업데이트 버튼을 카드 디자인으로 강제 개조
+    # 3. [최종 강화 CSS] 업데이트 버튼을 하단 카드와 완벽하게 밀착
     st.markdown(f"""
     <style>
-    /* 스트림릿 기본 버튼 스타일을 무력화하고 카드 디자인 적용 */
-    div[data-testid="stSidebar"] button[kind="primary"] {{
+    /* 버튼 컨테이너 자체의 여백을 제거하여 하단 카드와 바짝 붙임 */
+    div[data-testid="stSidebar"] div.element-container:has(button[key="sidebar_btn_final_fix"]) {{
+        margin-bottom: -10px !important;
+    }}
+    
+    /* 업데이트 버튼 스타일 강제 주입 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="sidebar_btn_final_fix"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 15px !important;
-        padding: 10px 15px 35px 15px !important; /* 💡 시간 텍스트가 들어갈 하단 여백 확보 */
+        padding: 12px 15px 38px 15px !important;
         position: relative !important;
         display: block !important;
         width: 100% !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-        margin-bottom: -15px !important; /* 💡 하단 카드와 바짝 붙이기 위한 음수 마진 */
-        height: auto !important;
-        min-height: 80px !important;
+        min-height: 85px !important;
     }}
-    /* 호버 시 배경색 살짝 변경 */
-    div[data-testid="stSidebar"] button[kind="primary"]:hover {{
-        background-color: #f9f9f9 !important;
+    
+    div[data-testid="stSidebar"] button[kind="primary"][key="sidebar_btn_final_fix"]:hover {{
+        background-color: #f2f2f2 !important;
         border-color: #555 !important;
     }}
-    /* '업데이트' 텍스트 및 아이콘 스타일 */
-    div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 20px !important;
+    
+    div[data-testid="stSidebar"] button[kind="primary"][key="sidebar_btn_final_fix"] p {{
+        font-size: 21px !important;
         font-weight: 700 !important;
         color: #111111 !important;
         margin: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        line-height: 1.2 !important;
     }}
-    /* 아이콘 추가 */
-    div[data-testid="stSidebar"] button[kind="primary"] p::before {{
+    
+    div[data-testid="stSidebar"] button[kind="primary"][key="sidebar_btn_final_fix"] p::before {{
         content: '🔄';
         margin-right: 8px;
-        font-size: 18px;
+        font-size: 19px;
     }}
-    /* 💡 [핵심] 버튼 박스 내부 하단에 날짜/시간 강제 삽입 */
-    div[data-testid="stSidebar"] button[kind="primary"]::after {{
+    
+    /* 버튼 내부에 날짜/시간 박기 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="sidebar_btn_final_fix"]::after {{
         content: '{now_str}';
         position: absolute !important;
         bottom: 12px !important;
@@ -484,24 +487,19 @@ with st.sidebar:
         right: 0 !important;
         text-align: center !important;
         font-size: 14.5px !important;
-        color: #444444 !important;
-        font-weight: 500 !important;
-        letter-spacing: -0.2px !important;
-    }}
-    /* 버튼 사이의 기본 간격을 좁히기 위한 컨테이너 조정 */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="sidebar_btn_update_final"]) {{
-        margin-bottom: -20px !important;
+        color: #333333 !important;
+        font-weight: 600 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (키값을 바꿔서 캐시 충돌 방지)
-    if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
+    # 4. 업데이트 버튼 실행 (전용 키값 부여로 중복 방지)
+    if st.button("업데이트", key="sidebar_btn_final_fix", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 버튼과 하단 카드 사이의 미세 간격 조정용 (12px 유지)
+    # 버튼 하단 미세 간격 조정 (다른 카드들 간격 12px와 동일하게 맞춤)
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
@@ -1402,6 +1400,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
