@@ -65,7 +65,7 @@ div[data-testid="stSelectbox"] label { display: none !important; }
 
 /* 🎯 플로팅 배너 CSS 수정 */
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) {
-    position: fixed !important; top: 55px !important; right: 20px !important; bottom: auto !important; left: auto !important;
+    position: fixed !important; top: 15px !important; right: 20px !important; bottom: auto !important; left: auto !important;
     transform: none !important; width: max-content !important; min-width: 0 !important;
     background: rgba(255, 255, 255, 0.95) !important; padding: 6px 12px !important; border-radius: 8px !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important; z-index: 999999 !important;
@@ -1012,23 +1012,27 @@ elif st.session_state.current_view == '절세계좌':
                 h2.append(f"<tr><td>{P_MAP[k]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(diff1)}'>{fmt(diff1, True)}</td><td class='{col(diff7)}'>{fmt(diff7, True)}</td><td class='{col(diff30)}'>{fmt(diff30, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(a_buy)}</td></tr>")
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
-
         # ---------------------------------------------------------
-        # 🔍 [3] 계좌별 상세 내역 (5개 정렬 플로팅 메뉴 장착)
+        # 🔍 [3] 계좌별 상세 내역 (수정된 플로팅 정렬 배너)
         # ---------------------------------------------------------
         st.markdown("<div id='tax_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
         tb1, tb2, tb3, tb4, tb5 = st.columns(5)
         with tb1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
-            if st.button("🛠️ 초기화[●]" if st.session_state.sort_mode == 'init' else "🛠️ 초기화[○]", type="primary" if st.session_state.sort_mode == 'init' else "secondary", key='tax_btn1', on_click=lambda: setattr(st.session_state, 'sort_mode', 'init')): pass
+            lbl1 = "📊정렬 [ 초기화(●)" if st.session_state.sort_mode == 'init' else "📊정렬 [ 초기화(○)"
+            if st.button(lbl1, type="primary" if st.session_state.sort_mode == 'init' else "secondary", key='tax_btn1', on_click=lambda: setattr(st.session_state, 'sort_mode', 'init')): pass
         with tb2:
-            if st.button("💰 총자산[▼]" if st.session_state.sort_mode == 'asset' else "💰 총자산[▽]", type="primary" if st.session_state.sort_mode == 'asset' else "secondary", key='tax_btn2', on_click=lambda: setattr(st.session_state, 'sort_mode', 'asset')): pass
+            lbl2 = "총자산(▼)" if st.session_state.sort_mode == 'asset' else "총자산(▽)"
+            if st.button(lbl2, type="primary" if st.session_state.sort_mode == 'asset' else "secondary", key='tax_btn2', on_click=lambda: setattr(st.session_state, 'sort_mode', 'asset')): pass
         with tb3:
-            if st.button("📊 평가손익[▼]" if st.session_state.sort_mode == 'profit' else "📊 평가손익[▽]", type="primary" if st.session_state.sort_mode == 'profit' else "secondary", key='tax_btn3', on_click=lambda: setattr(st.session_state, 'sort_mode', 'profit')): pass
+            lbl3 = "평가손익(▼)" if st.session_state.sort_mode == 'profit' else "평가손익(▽)"
+            if st.button(lbl3, type="primary" if st.session_state.sort_mode == 'profit' else "secondary", key='tax_btn3', on_click=lambda: setattr(st.session_state, 'sort_mode', 'profit')): pass
         with tb4:
-            if st.button("📈 손익률[▼]" if st.session_state.sort_mode == 'rate' else "📈 손익률[▽]", type="primary" if st.session_state.sort_mode == 'rate' else "secondary", key='tax_btn4', on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
+            lbl4 = "손익률(▼) ]" if st.session_state.sort_mode == 'rate' else "손익률(▽) ]"
+            if st.button(lbl4, type="primary" if st.session_state.sort_mode == 'rate' else "secondary", key='tax_btn4', on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with tb5:
-            if st.button("↕️ 등락률[+]" if st.session_state.show_change_rate else "↕️ 등락률[-]", type="primary" if st.session_state.show_change_rate else "secondary", key='tax_btn5', on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+            lbl5 = "↕️등락률[-]" if st.session_state.show_change_rate else "↕️등락률[+]"
+            if st.button(lbl5, type="primary" if st.session_state.show_change_rate else "secondary", key='tax_btn5', on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
         st.markdown("<br>", unsafe_allow_html=True)
 
         for k in FIXED_ORDER:
@@ -1323,5 +1327,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
