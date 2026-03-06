@@ -1012,11 +1012,13 @@ elif st.session_state.current_view == '절세계좌':
                 h2.append(f"<tr><td>{P_MAP[k]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(diff1)}'>{fmt(diff1, True)}</td><td class='{col(diff7)}'>{fmt(diff7, True)}</td><td class='{col(diff30)}'>{fmt(diff30, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(a_buy)}</td></tr>")
         h2.append("</table>")
         st.markdown("".join(h2), unsafe_allow_html=True)
-        # ---------------------------------------------------------
-        # 🔍 [3] 계좌별 상세 내역 (수정된 플로팅 정렬 배너)
+# ---------------------------------------------------------
+        # 🔍 [3] 계좌별 상세 내역 (수정된 플로팅 정렬 배너 - 종목코드 추가)
         # ---------------------------------------------------------
         st.markdown("<div id='tax_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
-        tb1, tb2, tb3, tb4, tb5 = st.columns(5)
+        
+        # 💡 6개의 컬럼으로 나누어 일반계좌와 동일하게 맞춤
+        tb1, tb2, tb3, tb4, tb5, tb6 = st.columns(6)
         with tb1:
             st.markdown("<span id='zappa-floating-menu'></span>", unsafe_allow_html=True)
             lbl1 = "📊정렬 [ 초기화(●)" if st.session_state.sort_mode == 'init' else "📊정렬 [ 초기화(○)"
@@ -1033,6 +1035,9 @@ elif st.session_state.current_view == '절세계좌':
         with tb5:
             lbl5 = "↕️등락률[-]" if st.session_state.show_change_rate else "↕️등락률[+]"
             if st.button(lbl5, type="primary" if st.session_state.show_change_rate else "secondary", key='tax_btn5', on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
+        with tb6:
+            lbl6 = "💻종목코드[-]" if st.session_state.show_code else "💻종목코드[+]"
+            if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='tax_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
         st.markdown("<br>", unsafe_allow_html=True)
 
         for k in FIXED_ORDER:
@@ -1043,24 +1048,31 @@ elif st.session_state.current_view == '절세계좌':
                     s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {})
                     st.markdown(f"<div class='summary-text'>● 총 자산 : {fmt(a.get('총 자산',0))} KRW / 수익 : <span class='{col(s_data.get('평가손익',0))}'>{fmt(s_data.get('평가손익',0), True)}</span></div>", unsafe_allow_html=True)
                     
+                    # 💡 종목코드 및 등락률 헤더 로직
+                    code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
-                    h3 = [f"<table class='main-table'><tr><th>종목명</th><th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
+                    h3 = [f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                     
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') != "[ 합  계 ]"]
                     
+                    # 정렬 로직 적용
                     if st.session_state.sort_mode == 'asset': items.sort(key=lambda x: safe_float(x.get('총 자산', x.get('총자산', 0))), reverse=True)
                     elif st.session_state.sort_mode == 'profit': items.sort(key=lambda x: safe_float(x.get('평가손익', 0)), reverse=True)
                     elif st.session_state.sort_mode == 'rate': items.sort(key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)
 
                     for i in ([s_data] + items):
                         if not i: continue
-                        row_cls = "class='sum-row'" if i.get('종목명') == "[ 합  계 ]" else ""
+                        is_s = (i.get('종목명') == "[ 합  계 ]")
+                        row_cls = "class='sum-row'" if is_s else ""
+                        
+                        # 종목코드 및 등락률 데이터 반영 로직
+                        td_code = f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>" if st.session_state.show_code else ""
                         
                         chg_rate = safe_float(i.get('전일비', 0))
                         td_chg = f"<td class='{col(chg_rate)}' style='font-weight:bold;'>{fmt_p(chg_rate)}</td>" if st.session_state.show_change_rate else ""
-                        if i.get('종목명') == "[ 합  계 ]" and st.session_state.show_change_rate: td_chg = "<td>-</td>"
+                        if is_s and st.session_state.show_change_rate: td_chg = "<td>-</td>"
 
-                        h3.append(f"<tr {row_cls}><td>{get_logo_html(i.get('종목명'))}{i.get('종목명','')}</td><td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td>{td_chg}</tr>")
+                        h3.append(f"<tr {row_cls}><td>{get_logo_html(i.get('종목명'))}{i.get('종목명','')}</td>{td_code}<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td>{td_chg}</tr>")
                     h3.append("</table>")
                     st.markdown("".join(h3), unsafe_allow_html=True)
 
@@ -1333,6 +1345,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
