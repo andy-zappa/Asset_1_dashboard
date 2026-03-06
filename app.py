@@ -414,8 +414,8 @@ with st.sidebar:
     # 현재 화면에 맞는 시간 가져오기
     upd_time = "업데이트 필요"
     if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
-    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+    대시보드 == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+    대시보드 == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
 
     time_str = to_kst(upd_time)
 
@@ -562,7 +562,8 @@ def draw_pie_charts(g_data):
                         asset = safe_float(it.get('총자산', 0)) * fx
                         profit = safe_float(it.get('평가손익', 0)) * fx
                         buy_amt = asset - profit
-                        records.append({'종목명': nm, '총자산': asset, '평가손익': profit, '매입금액': buy_amt})
+                        qty = safe_float(it.get('수량', 0)) # 💡 보유량 추가
+                        records.append({'종목명': nm, '총자산': asset, '평가손익': profit, '매입금액': buy_amt, '수량': qty})
         if not records: return pd.DataFrame()
         df = pd.DataFrame(records)
         df_g = df.groupby('종목명').sum().reset_index()
@@ -583,7 +584,10 @@ def draw_pie_charts(g_data):
             p_class = "#FF5252" if row['평가손익'] > 0 else ("#448AFF" if row['평가손익'] < 0 else "#9e9e9e")
             sign = "+" if row['평가손익'] > 0 else ""
             c_code = donut_colors[i % len(donut_colors)]
-            items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code})
+            qty_str = f"{row['수량']:,.2f}".rstrip('0').rstrip('.') if row['수량'] % 1 != 0 else f"{int(row['수량']):,}" # 보유량 포맷팅
+            
+            # 💡 items_js에 qty 정보 삽입
+            items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code, "qty": qty_str})
             list_html += f"<div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:4px;'><div class='leg-left' style='display:flex; align-items:center;'><div class='leg-color' style='width:14px; height:14px; border-radius:4px; margin-right:10px; background-color:{c_code};'></div>{logo}<span class='leg-name' style='color:#e2e8f0; font-size:15px; font-weight:500;'>{row['종목명']}</span></div><span class='leg-pct' style='color:#94a3b8; font-size:15px; font-weight:bold;'>{pct:.1f}%</span></div>"
             
         html_code = f"""
@@ -595,7 +599,11 @@ def draw_pie_charts(g_data):
             chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
             chart.on('mouseover', function(p){{ updateHover(p.dataIndex); highlightLegend(p.dataIndex); }});
             chart.on('mouseout', function(){{ clearHover(); highlightLegend(-1); }});
-            function updateHover(idx){{ var d=itemsData[idx]; document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; }}
+            function updateHover(idx){{ 
+                var d=itemsData[idx]; 
+                // 💡 첨부 이미지처럼 타이틀 밑에 보유 주식수(qty) 라벨 추가
+                document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span><span style='margin-left:8px; padding:3px 6px; background:#1e293b; color:#94a3b8; border-radius:4px; font-size:11.5px; font-weight:bold;'>보유 ${{d.qty}}주</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; 
+            }});
             function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
             function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
         </script></body></html>
@@ -703,8 +711,8 @@ if st.session_state.current_view == '대시보드':
             for _, r in df.iterrows():
                 labels.append(r['종목명']); parents.append(r['카테고리']); values.append(r['자산'])
                 if r['카테고리'] == '현금성 자산': c_color = '#4b5563'
-                elif r['전일비'] > 0: c_color = '#D32F2F'
-                elif r['전일비'] < 0: c_color = '#388E3C'
+                elif r['전일비'] > 0: c_color = '#d84b4b' # 💡 고급스러운 빨간색 (상승)
+                elif r['전일비'] < 0: c_color = '#3a9d5d' # 💡 고급스러운 초록색 (하락)
                 else: c_color = '#616161'
                 colors.append(c_color)
 
@@ -718,6 +726,7 @@ if st.session_state.current_view == '대시보드':
             fig = go.Figure(go.Treemap(
                 labels=labels, parents=parents, values=values, text=texts, textinfo="text",
                 marker_colors=colors, customdata=custom_data,
+                marker=dict(cornerradius=8), # 💡 4모서리 둥글게 처리 (cornerradius)
                 hovertemplate=(
                     "<b style='font-size:16px;'>%{label}</b><br><br>"
                     "<b>총자산:</b> %{value:,.0f}원 (비중: %{customdata[0]:.1f}%)<br>"
@@ -732,20 +741,37 @@ if st.session_state.current_view == '대시보드':
             return fig
 
         c1, c2 = st.columns(2)
+        
+        # 💡 리스트에서 상승/하락 종목 카운트 계산
+        def get_counts(lst):
+            if not lst: return 0, 0
+            df_c = pd.DataFrame(lst).groupby('종목명').mean().reset_index()
+            up_c = len(df_c[df_c['전일비'] > 0])
+            dn_c = len(df_c[df_c['전일비'] < 0])
+            return up_c, dn_c
+            
+        pen_up, pen_dn = get_counts(all_pension_list)
+        gen_up, gen_dn = get_counts(all_gen_list)
+
         with c1:
-            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
+            # 💡 상승/하락 카운트 박스 추가 (X: 빨간색, Y: 파란색)
+            st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:20px;'>상승종목 : <span style='color:#ff5252;'>{pen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#448aff;'>{pen_dn}개</span></div>", unsafe_allow_html=True)
+            
         with c2:
-            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
+            # 💡 상승/하락 카운트 박스 추가 (X: 빨간색, Y: 파란색)
+            st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:20px;'>상승종목 : <span style='color:#ff5252;'>{gen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#448aff;'>{gen_dn}개</span></div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
-        # =========================================================
+# =========================================================
 # 퀀트매매 화면
 # =========================================================
-elif st.session_state.current_view == '퀀트매매':
+대시보드 == '퀀트매매':
     st.markdown("""
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
@@ -759,7 +785,7 @@ elif st.session_state.current_view == '퀀트매매':
 # =========================================================
 # 🪙 가상자산 상세 화면
 # =========================================================
-elif st.session_state.current_view == '가상자산':
+대시보드 == '가상자산':
     st.markdown("""
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <div style="font-size:40px;">🪙</div>
@@ -846,7 +872,7 @@ elif st.session_state.current_view == '가상자산':
 # =========================================================
 # ⏳ 절세계좌 상세 화면 (Andy님 오더: 상단 대시보드 및 시황/우수종목 완벽 복구)
 # =========================================================
-elif st.session_state.current_view == '절세계좌':
+대시보드 == '절세계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [절세계좌] 통합 대시보드 수정</h3>", unsafe_allow_html=True)
 
     FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
@@ -1079,7 +1105,7 @@ elif st.session_state.current_view == '절세계좌':
 # =========================================================
 # [ Part 4 ] 일반계좌 대시보드
 # =========================================================
-elif st.session_state.current_view == '일반계좌':
+대시보드 == '일반계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드 수정</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
@@ -1345,6 +1371,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
