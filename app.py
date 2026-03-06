@@ -400,13 +400,65 @@ total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 # =========================================================
-# 📍 사이드바 렌더링
+# 📍 사이드바 렌더링 (업데이트 버튼 일체형 추가)
 # =========================================================
 with st.sidebar:
     if is_oracle_online:
         st.markdown("<div style='text-align:center; padding:6px; background:#e6f4ea; color:#1e8e3e; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🟢 실시간 데이터 연동 중 (오라클)</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div style='text-align:center; padding:6px; background:#fce8e6; color:#d93025; border-radius:5px; font-size:13px; font-weight:bold; margin-bottom:12px;'>🔴 로컬 백업 데이터 표출 중</div>", unsafe_allow_html=True)
+
+    # 💡 1. 여기에 Andy님이 요청하신 "버튼+날짜" 일체형 스타일의 컨테이너를 추가합니다.
+    st.markdown("""
+        <style>
+        .sidebar-update-box {
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            padding: 8px 10px;
+            margin-bottom: 15px;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .sidebar-update-box div.stButton > button {
+            width: 100% !important;
+            background-color: #4285F4 !important; /* 파란색 배경 */
+            color: white !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            border: none !important;
+            padding: 5px 0 !important;
+        }
+        .sidebar-update-box div.stButton > button p {
+            font-size: 16px !important;
+            margin: 0 !important;
+        }
+        .sidebar-update-date {
+            font-size: 13.5px !important;
+            color: #333 !important;
+            margin-top: 6px !important;
+            font-weight: 500 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown("<div class='sidebar-update-box'>", unsafe_allow_html=True)
+        if st.button("🔄 업데이트", key="sidebar_global_update"):
+            fetch_hybrid_data.clear()
+            get_crypto_data.clear()
+            st.rerun()
+        
+        # 현재 화면에 맞는 시간을 KST로 가져와서 표시
+        upd_time = "업데이트 필요"
+        if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
+        elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
+        elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+        
+        st.markdown(f"<div class='sidebar-update-date'>{to_kst(upd_time)}</div></div>", unsafe_allow_html=True)
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
@@ -450,31 +502,6 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
-
-    st.markdown(f"""
-    <div id='card-crypto' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#555; margin-bottom:6px;'>🪙 가상자산</div>
-        <div style='text-align: right;'>
-            <div style='font-size:22px; font-weight:800; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:15px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:15px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
-        <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
-            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:36px; height:36px; object-fit:contain;'>
-            퀀트매매
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -786,7 +813,7 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🪙 가상자산 상세 화면
+# 🪙 가상자산 상세 화면 (구형 버튼 & 시간 삭제)
 # =========================================================
 elif st.session_state.current_view == '가상자산':
     st.markdown("""
@@ -873,7 +900,7 @@ elif st.session_state.current_view == '가상자산':
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
 # =========================================================
-# ⏳ 절세계좌 상세 화면
+# ⏳ 절세계좌 상세 화면 (구형 버튼 & 시간 삭제)
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 이상혁(Andy lee)님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -975,13 +1002,13 @@ elif st.session_state.current_view == '절세계좌':
                     st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 4 ] 일반계좌 대시보드
+# [ Part 4 ] 일반계좌 대시보드 (구형 버튼 & 시간 삭제)
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 20px;'>🚀 이상혁(Andy lee)님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
-        st.warning("데이터가 올바르지 않습니다. 우측 상단의 업데이트 버튼을 눌러주세요.")
+        st.warning("데이터가 올바르지 않습니다. 좌측 사이드바의 업데이트 버튼을 눌러주세요.")
         st.stop()
 
     nm_table = {'DOM1': '키움증권(국내Ⅰ)', 'DOM2': '삼성증권(국내Ⅱ)', 'USA1': '키움증권(해외Ⅰ)', 'USA2': '키움증권(해외Ⅱ)'}
@@ -1237,3 +1264,4 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+                
