@@ -603,7 +603,7 @@ def draw_pie_charts(g_data):
                 var d=itemsData[idx]; 
                 // 💡 첨부 이미지처럼 타이틀 밑에 보유 주식수(qty) 라벨 추가
                 document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span><span style='margin-left:8px; padding:3px 6px; background:#1e293b; color:#94a3b8; border-radius:4px; font-size:11.5px; font-weight:bold;'>보유 ${{d.qty}}주</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; 
-            }});
+            }}
             function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
             function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
         </script></body></html>
@@ -617,6 +617,7 @@ def draw_pie_charts(g_data):
     cb1, cb2 = st.columns(2)
     with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
     with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
+
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -1370,6 +1371,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
