@@ -785,7 +785,7 @@ elif st.session_state.current_view == '퀀트매매':
 # =========================================================
 # 🪙 가상자산 상세 화면
 # =========================================================
-대시보드 == '가상자산':
+elif st.session_state.current_view == '가상자산':
     st.markdown("""
         <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
             <div style="font-size:40px;">🪙</div>
@@ -1371,6 +1371,7 @@ elif st.session_state.current_view == '퀀트매매':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
