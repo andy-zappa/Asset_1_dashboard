@@ -26,7 +26,11 @@ html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container 
 [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }
 section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -15px !important; gap: 0 !important; }
 .sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px; }
-.sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; border-color: #ccc !important; }
+.sidebar-card:hover { 
+    background-color: #f2f2f2 !important; /* 옅은 회색으로 변경 */
+    border-color: #bbb !important; 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important;
 .sidebar-card-dark { background-color: #1a1a1a !important; color: #ffffff !important; border: none !important; }
 .sidebar-card-dark:hover { box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; }
 .block-container { padding-top: 3rem !important; padding-bottom: 7rem !important; }
@@ -1398,6 +1402,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
