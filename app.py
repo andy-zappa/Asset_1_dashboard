@@ -401,15 +401,14 @@ total_asset = p_asset_all + g_asset_all + c_tot_sum
 total_profit = p_profit_all + g_profit_all + c_prof_sum
 total_orig = tot.get('원금합', 1) + g_orig_all
 total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
-
 # =========================================================
-# 📍 사이드바 렌더링 (연동 상태 박스 디자인 일체화)
+# 📍 사이드바 렌더링 (업데이트 버튼 디자인 일체화 및 실시간 시간 반영)
 # =========================================================
 with st.sidebar:
-    # 💡 사이드바 카드와 동일한 디자인의 연동 상태 박스
+    # 1. 데이터 연동 상태 박스 (첨부 디자인 스타일로 고정)
     if is_oracle_online:
         status_html = f"""
-        <div class='sidebar-card' style='background-color: #e6f4ea; border-color: #34a853; padding: 12px; margin-bottom: 20px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.5px solid #34a853; padding: 12px; margin-bottom: 12px; cursor: default;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
                 <span style='font-size: 18px;'>🟢</span>
                 <span style='color: #1e8e3e; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
@@ -418,7 +417,7 @@ with st.sidebar:
         """
     else:
         status_html = f"""
-        <div class='sidebar-card' style='background-color: #fce8e6; border-color: #ea4335; padding: 12px; margin-bottom: 20px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.5px solid #ea4335; padding: 12px; margin-bottom: 12px; cursor: default;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
                 <span style='font-size: 18px;'>🔴</span>
                 <span style='color: #d93025; font-size: 14.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
@@ -427,71 +426,62 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 현재 화면에 맞는 시간 가져오기 (기존 로직 유지)
-    upd_time = "업데이트 필요"
-    if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
-    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
+    # 2. 클릭 시(페이지 새로고침 시) 갱신되는 현재 시간 계산
+    now = datetime.now()
+    wd_list = ['월', '화', '수', '목', '금', '토', '일']
+    now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-
-    # 현재 화면에 맞는 시간 가져오기
-    upd_time = "업데이트 필요"
-    if st.session_state.current_view == '절세계좌': upd_time = tot.get('조회시간', '업데이트 필요')
-    elif st.session_state.current_view == '일반계좌': upd_time = g_data.get('조회시간', '업데이트 필요') if isinstance(g_data, dict) else '업데이트 필요'
-    elif st.session_state.current_view == '가상자산': upd_time = crypto_data.get('update_time', '업데이트 필요') if isinstance(crypto_data, dict) else '업데이트 필요'
-
-    time_str = to_kst(upd_time)
-
-    # 💡 [화면 깨짐 방지] Streamlit 순정 버튼을 CSS로 꾸며서 버튼 글씨 밑에 시간을 새겨넣는 마술!
+    # 3. 업데이트 버튼 디자인 CSS (사이드바 카드와 동일하게 튜닝)
     st.markdown(f"""
     <style>
     div[data-testid="stSidebar"] button[kind="primary"] {{
-        border: 1.5px solid #a0a0a0 !important;
+        background-color: #ffffff !important;
+        border: 1.5px solid #dcdcdc !important;
         border-radius: 12px !important;
-        background-color: white !important;
-        color: #111 !important;
-        padding: 12px 15px 36px 15px !important; /* 시간 텍스트가 들어갈 하단 여백 확보 */
+        padding: 12px 15px 38px 15px !important; /* 날짜 정보가 들어갈 하단 여백 확보 */
         position: relative !important;
         display: block !important;
         width: 100% !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
         transition: all 0.2s ease !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 20px !important;
     }}
     div[data-testid="stSidebar"] button[kind="primary"]:hover {{
-        border-color: #4285F4 !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+        background-color: #f8f9fa !important;
+        border-color: #bbb !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
     }}
     div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 20px !important;
+        font-size: 19px !important;
         font-weight: 800 !important;
+        color: #111 !important;
         margin: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }}
-    /* 버튼 글씨 안쪽에 아이콘 추가 */
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
         content: '🔄 ';
         margin-right: 5px;
     }}
-    /* 버튼 껍데기 하단에 날짜/시간을 강제로 렌더링 */
+    /* 버튼 박스 내부에 날짜/시간 정보 삽입 */
     div[data-testid="stSidebar"] button[kind="primary"]::after {{
-        content: '{time_str}';
+        content: '{now_str}';
         position: absolute !important;
         bottom: 12px !important;
         left: 0 !important;
         right: 0 !important;
         text-align: center !important;
         font-size: 14px !important;
-        font-weight: 500 !important;
-        color: #333 !important;
+        color: #555 !important;
+        font-weight: 600 !important;
         letter-spacing: -0.2px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 순정 버튼 사용으로 화면 터짐 100% 방지
+    # 업데이트 버튼 실행부
     if st.button("업데이트", key="sidebar_btn_update", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
@@ -1395,6 +1385,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
