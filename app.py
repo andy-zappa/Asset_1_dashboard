@@ -1081,15 +1081,25 @@ elif st.session_state.current_view == '가상자산':
         if st.button("🔄 업데이트", use_container_width=True, key="btn_update_crypto"):
             with st.spinner("데이터 업데이트 중..."): get_crypto_data.clear()
             st.rerun()
+           
+        # 💡 [요청] 첨부2 스타일: 업데이트 버튼 아래에 시간 표시
+        upd_text = "업데이트 필요"
+        if isinstance(crypto_data, dict) and crypto_data.get('update_time'):
+            try:
+                dt = pd.to_datetime(crypto_data['update_time'])
+                wd = {0:'월', 1:'화', 2:'수', 3:'목', 4:'금', 5:'토', 6:'일'}[dt.weekday()]
+                upd_text = dt.strftime(f"%m/%d({wd}), %H:%M:%S")
+            except: pass
+        st.markdown(f"<div style='text-align:center; font-size:14px; color:#333; margin-top:-10px; font-weight:500;'>{upd_text}</div>", unsafe_allow_html=True)
 
     if isinstance(crypto_data, dict) and 'total_asset' in crypto_data:
         ca = safe_float(crypto_data.get('total_asset', 0))
         ck = safe_float(crypto_data.get('total_krw', 0))
         ce = ca - ck
         cb = safe_float(crypto_data.get('total_buy', 0)) - ck
-        # 💡 [교정] NameError 방지를 위해 cp 계산 후 cr 계산 진행
         cp = ce - cb
         cr = (cp / cb * 100) if cb > 0 else 0
+        total_principal = cb + ck
        
         # 🍩 파이차트 데이터 구성
         pie_items = []
@@ -1103,31 +1113,40 @@ elif st.session_state.current_view == '가상자산':
        
         c_m = {'KRW': '#d870ad', 'BTC': '#8bc34a', 'ETH': '#00bcd4', 'TRX': '#673ab7'}
         d_c = ['#ff9800', '#f44336', '#9c27b0']
-        grad, leg = [], ""
-        curr = 0
+        grad, leg, labels_html = [], "", ""
+        curr_p = 0
+       
         for idx, it in enumerate(pie_items):
             p = (it['val'] / ca * 100) if ca > 0 else 0
             clr = c_m.get(it['name'], d_c[idx % len(d_c)])
-            grad.append(f"{clr} {curr}% {curr + p}%")
-            leg += f"<div style='display:flex; align-items:center; gap:6px; font-size:13px; color:#555; font-weight:bold;'><div style='width:10px; height:10px; background-color:{clr}; border-radius:50%;'></div>{it['name']} <span style='color:#111; font-weight:900;'>{p:.1f}%</span></div>"
-            curr += p
+            grad.append(f"{clr} {curr_p}% {curr_p + p}%")
+            leg += f"<div style='display:flex; align-items:center; gap:6px; font-size:13px; color:#555; font-weight:bold;'><div style='width:10px; height:10px; background-color:{clr}; border-radius:50%;'></div>{it['name']}</div>"
            
-        # [요청] 파이차트 안 '보유 비중(%)' 완벽 가운데 정렬
+            # 💡 [요청] 파이차트 영역 위에 퍼센트 숫자 직접 렌더링 (Numpy 삼각함수 좌표 계산)
+            if p > 3:
+                mid_angle = (curr_p + p / 2) / 100 * 360
+                rad = np.radians(mid_angle - 90)
+                x = 80 + 55 * np.cos(rad)
+                y = 80 + 55 * np.sin(rad)
+                labels_html += f"<div style='position:absolute; left:{x}px; top:{y}px; transform:translate(-50%, -50%); font-size:12px; font-weight:bold; color:#fff; text-shadow:1px 1px 2px rgba(0,0,0,0.8); z-index:10;'>{p:.1f}%</div>"
+            curr_p += p
+           
         conic_str = ", ".join(grad)
-        donut_html = f"<div style='display:flex; align-items:center; gap:25px; justify-content: center;'><div style='position: relative; width: 160px; height: 160px; border-radius: 50%; background: conic-gradient({conic_str}); border: 1px solid #ddd; flex-shrink: 0;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45%; height: 45%; background-color: #fff; border-radius: 50%; display:flex; align-items:center; justify-content:center; text-align:center;'><span style='font-size:12.5px; color:#333; font-weight:bold; line-height:1.2;'>보유 비중<br>(%)</span></div></div><div style='display:flex; flex-direction:column; gap:6px;'>{leg}</div></div>"
        
-        # [요청] 이미지 1000067870.jpg 스타일 단일 박스 구성 (들여쓰기 제거 완료)
-        top_box = f"<div class='card-main' style='width:100%; display:flex; flex-direction:row; align-items:center; padding:35px 50px; background-color:#ffffff; border:1px solid #ddd; border-radius:15px; margin-bottom:30px;'><div style='flex: 1; border-right: 1px solid #eee; padding-right: 30px;'><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 20px;'>📊 총 보유자산 비중</div>{donut_html}</div><div style='flex: 1.2; padding-left: 50px;'><div style='text-align:right; margin-bottom:30px;'><div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom:5px;'>총 보유자산</div><div style='font-size: 42px; font-weight: 800; color: #111; line-height: 1;'>{fmt(ca)} <span style='font-size: 22px;'>KRW</span></div><div style='font-size: 18px; font-weight: bold; margin-top: 10px;' class='{col(cp)}'>평가손익 &nbsp;&nbsp;&nbsp;&nbsp; {fmt(cp, True)} <span style='font-size:16px;'>({fmt_p(cr)})</span></div></div><div style='background:#f9f9f9; padding:20px; border-radius:10px; display:flex; flex-direction:column; gap:12px;'><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>총 매수</span><span style='font-weight:bold; color:#111;'>{fmt(cb)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>총 평가</span><span style='font-weight:bold; color:#111;'>{fmt(ce)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>주문가능</span><span style='font-weight:bold; color:#111;'>{fmt(ck)}</span></div></div></div></div>"
+        # 💡 [요청] 파이차트 아래 '원금' 문구 추가 및 중앙 정렬
+        donut_html = f"<div style='display:flex; flex-direction:row; align-items:center; gap:25px;'><div style='display:flex; flex-direction:column; align-items:center;'><div style='position: relative; width: 160px; height: 160px; border-radius: 50%; background: conic-gradient({conic_str}); border: 1px solid #ddd; flex-shrink: 0;'>{labels_html}<div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45%; height: 45%; background-color: #fff; border-radius: 50%; display:flex; align-items:center; justify-content:center; text-align:center;'><span style='font-size:12.5px; color:#333; font-weight:bold; line-height:1.2;'>보유 비중<br>(%)</span></div></div><div style='font-size:15.5px; font-weight:bold; color:#444; margin-top:15px;'>원금 : {fmt(total_principal)}</div></div><div style='display:flex; flex-direction:column; gap:6px;'>{leg}</div></div>"
+       
+        # 💡 [요청] 우측 박스 문구 수정 및 '평가손익' 글자 제거
+        top_box = f"<div class='card-main' style='width:100%; display:flex; flex-direction:row; align-items:center; padding:35px 50px; background-color:#ffffff; border:1px solid #ddd; border-radius:15px; margin-bottom:30px;'><div style='flex: 1; border-right: 1px solid #eee; padding-right: 30px;'><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 20px;'>📊 총 보유자산 비중</div>{donut_html}</div><div style='flex: 1.2; padding-left: 50px;'><div style='text-align:right; margin-bottom:30px;'><div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom:5px;'>총 보유자산</div><div style='font-size: 42px; font-weight: 800; color: #111; line-height: 1;'>{fmt(ca)} <span style='font-size: 22px;'>KRW</span></div><div style='font-size: 18px; font-weight: bold; margin-top: 10px;' class='{col(cp)}'>{fmt(cp, True)} <span style='font-size:16px;'>({fmt_p(cr)})</span></div></div><div style='background:#f9f9f9; padding:20px; border-radius:10px; display:flex; flex-direction:column; gap:12px;'><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>평가금액</span><span style='color:#111;'>{fmt(ce)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>현금성(예수금)</span><span style='color:#111;'>{fmt(ck)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>총 손익</span><span class='{col(cp)}'>{fmt(cp, True)}</span></div></div></div></div>"
         st.markdown(top_box, unsafe_allow_html=True)
        
-        # [요청] 보유 코인 목록 하단 요약 문구 (이미지 1760bd.png 스타일)
-        st.markdown(f"<h4 style='margin-bottom:10px; font-weight:bold;'>보유 코인 목록</h4><div style='margin-bottom:15px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div></div><div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
+        # 💡 [요청] 제목 변경 및 1/2행 외 Bold체 제거, 열 재배치 (비중/평가금액/평가손익/손익률/보유량/매입가/현재가)
+        st.markdown(f"<h4 style='margin-bottom:10px; font-weight:bold;'>📂 보유 코인 목록</h4><div style='margin-bottom:15px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div></div><div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
        
-        # [요청] 코인명 가운데 정렬 및 아이콘 표시 테이블
-        t_h = "<table class='main-table'><tr><th style='text-align:center;'>코인명</th><th style='text-align:right; padding-right:15px;'>보유수량</th><th style='text-align:right; padding-right:15px;'>매수평균가</th><th style='text-align:right; padding-right:15px;'>현재가</th><th style='text-align:right; padding-right:15px;'>평가금액</th><th style='text-align:right; padding-right:15px;'>평가손익</th><th style='text-align:right; padding-right:15px;'>수익률</th></tr>"
-        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ce)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td></tr>"
+        t_h = "<table class='main-table'><tr><th style='text-align:center;'>코인명</th><th style='text-align:right; padding-right:15px;'>비중</th><th style='text-align:right; padding-right:15px;'>평가금액</th><th style='text-align:right; padding-right:15px;'>평가손익</th><th style='text-align:right; padding-right:15px;'>손익률</th><th style='text-align:right; padding-right:15px;'>보유량</th><th style='text-align:right; padding-right:15px;'>매입가</th><th style='text-align:right; padding-right:15px;'>현재가</th></tr>"
        
-        # 아이콘 주소 정합성 확보 (Google Favicon 서비스 이용)
+        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ce)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td></tr>"
+       
         c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'TRX': 'tron'}
         c_n = {'BTC': '비트코인(BTC)', 'ETH': '이더리움(ETH)', 'TRX': '트론(TRX)'}
        
@@ -1137,11 +1156,17 @@ elif st.session_state.current_view == '가상자산':
                 tk = c.get('ticker', '')
                 nm = c_n.get(tk, f"{c.get('name', tk)}({tk})")
                 icon = f"https://www.google.com/s2/favicons?domain={c_i.get(tk, 'cryptocompare.com')}.org&sz=64"
-                logo = f"<div style='display:flex; justify-content:center; align-items:center; gap:10px;'><img src='{icon}' style='width:22px; height:22px; border-radius:50%;'><span style='font-weight:bold;'>{nm}</span></div>"
-                t_h += f"<tr><td style='text-align:center;'>{logo}</td><td style='text-align:right; padding-right:15px;'>{safe_float(c.get('qty',0)):.6f}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('avg_price',0))}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('curr_price',0))}</td><td style='text-align:right; padding-right:15px; font-weight:bold;'>{fmt(c.get('eval',0))}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td></tr>"
+               
+                # 💡 [요청] 코인명 가운데 정렬
+                logo = f"<div style='display:flex; justify-content:center; align-items:center; gap:8px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span>{nm}</span></div>"
+                c_pct = (safe_float(c.get('eval', 0)) / ca * 100) if ca > 0 else 0
+               
+                # 💡 [요청] 볼드체 제거 (td 태그 내 font-weight:bold 삭제)
+                t_h += f"<tr><td style='text-align:center;'>{logo}</td><td style='text-align:right; padding-right:15px;'>{c_pct:.1f}%</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('eval',0))}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td><td style='text-align:right; padding-right:15px;'>{safe_float(c.get('qty',0)):.6f}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('avg_price',0))}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('curr_price',0))}</td></tr>"
        
-        # [요청] 마지막 행 현금성자산 추가
-        t_h += f"<tr style='background-color:#fcfcfc;'><td style='text-align:center;'><div style='display:flex; justify-content:center; align-items:center; gap:10px;'><span style='font-size:18px;'>💵</span><span style='font-weight:bold; color:#555;'>현금성자산(예수금)</span></div></td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px; font-weight:bold; color:#555;'>{fmt(ck)}</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td></tr></table>"
+        # 💡 [요청] 현금성자산 문구 수정 및 볼드체 제거
+        krw_pct = (ck / ca * 100) if ca > 0 else 0
+        t_h += f"<tr style='background-color:#fcfcfc;'><td style='text-align:center;'><div style='display:flex; justify-content:center; align-items:center; gap:8px;'><span style='font-size:18px;'>💵</span><span style='color:#555;'>현금성자산</span></div></td><td style='text-align:right; padding-right:15px;'>{krw_pct:.1f}%</td><td style='text-align:right; padding-right:15px; color:#555;'>{fmt(ck)}</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td></tr></table>"
         st.markdown(t_h, unsafe_allow_html=True)
     else:
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
