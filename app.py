@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 💡 [수정] 상태 박스의 '인라인 스타일'을 제거하고 클래스 이름만 부여 (CSS에서 제어하기 위함)
+    # 1. 상태 박스 (인라인 제거 완료)
     if is_oracle_online:
         status_html = """
         <div class='status-box online-status'>
@@ -423,7 +423,7 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 날짜 및 시간 계산 (요일 14.0px 유지)
+    # 2. 날짜 및 시간 계산 (요일 14.0px)
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
@@ -432,10 +432,10 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력한 CSS 완결판] 모든 요소를 통제합니다.
+    # 3. 💡 [진짜 타겟팅 CSS] 헛발질하던 라디오 CSS를 버리고, 커스텀 HTML 카드(.sidebar-card)를 정밀 타격합니다!
     st.markdown(f"""
     <style>
-    /* 🚀 1. 상태 박스 (인라인을 빼고 여기서 제어해야 호버가 먹힘) */
+    /* 🚀 1. 상단 상태 박스 호버 효과 */
     .status-box {{
         padding: 10px;
         margin-bottom: 15px;
@@ -454,14 +454,13 @@ with st.sidebar:
     .online-status {{ border: 1.2px solid #34a853; background-color: #e6f4ea; color: #1e8e3e; }}
     .offline-status {{ border: 1.2px solid #ea4335; background-color: #fce8e6; color: #d93025; }}
     
-    /* 상태 박스 마우스 오버 시 바운스 & 살짝 진해짐 */
     .status-box:hover {{
         transform: translateY(-3px) !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
         filter: brightness(0.95) !important; 
     }}
 
-    /* 🚀 2. 업데이트 버튼 (성공했던 원본 유지) */
+    /* 🚀 2. 업데이트 버튼 호버 효과 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
@@ -478,40 +477,27 @@ with st.sidebar:
     }}
     div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
 
-    /* 🚀 3. 라디오 메뉴 (스트림릿 내부 껍질 완벽 타격) */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label {{
+    /* 🚀 3. 커스텀 메뉴 박스들 (.sidebar-card) 타겟팅! (여기가 핵심입니다) */
+    .sidebar-card {{
         transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, background-color 0.2s ease !important;
-        border-radius: 8px !important;
-        padding: 8px 12px !important; 
-        cursor: pointer !important;
+        cursor: pointer !important; /* 마우스 올렸을 때 손가락 모양 추가 */
     }}
     
-    /* 전체 메뉴 호버 시 바운스! */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {{
+    /* 모든 카드(1~5번) 공통: 마우스 올리면 위로 바운스! */
+    .sidebar-card:hover {{
         transform: translateY(-3px) !important;
     }}
 
-    /* 1번(대시보드) 배경 투명 예외 */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(1):hover {{
-        background-color: transparent !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
-    }}
-
-    /* 2~5번 메뉴 호버 시 회색 배경 */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(n+2):hover {{
-        background-color: #e2e6ea !important; 
+    /* 총자산통합(#card-total)은 배경색 변경 제외, 나머지(2~5번)는 호버 시 시원한 회색 배경 적용 */
+    .sidebar-card:not(#card-total):hover {{
+        background-color: #e2e6ea !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
-    }}
-
-    /* 방어막 무력화: 라디오 버튼 내부의 모든 div 배경을 투명하게 뚫어버림 */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:hover div {{
-        background-color: transparent !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 버튼 영역
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v12", use_container_width=True):
+    # 4. 업데이트 버튼
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v13", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -519,12 +505,15 @@ with st.sidebar:
     # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -10px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택
+    # 6. 하단 메뉴 선택 (라디오 버튼)
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+    
+    # 가상자산 퍼센트 연산
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
 
+    # 7. 🌎 총 자산 통합 카드 (id='card-total')
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
@@ -544,6 +533,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # 8. ⏳ 절세계좌 카드 (id='card-pension')
     st.markdown(f"""
     <div id='card-pension' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div>
@@ -555,6 +545,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # 9. 🌱 일반계좌 카드 (id='card-general')
     st.markdown(f"""
     <div id='card-general' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div>
@@ -566,6 +557,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # 10. 🪙 가상자산 카드 (id='card-crypto')
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🪙 가상자산</div>
@@ -577,6 +569,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # 11. 📈 퀀트매매 카드 (id='card-quant')
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
         <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
@@ -1459,6 +1452,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
