@@ -446,19 +446,20 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력 CSS] 상태창 디자인 & 업데이트 버튼 바운스 강제 구동!
+    # 3. 💡 [강력 CSS] 테두리 색상 일치 & 텍스트 크기 최적화
     st.markdown(f"""
     <style>
-    /* 🚀 1. 혁신된 상단 상태 박스 (마이너스 마진으로 업데이트 버튼과 한 덩어리 유지) */
+    /* 🚀 1. 혁신된 상단 상태 박스 */
     .status-box {{
         display: flex;
         justify-content: center;
         align-items: center;
         gap: 15px;
         padding: 12px 10px;
-        margin-bottom: -5px !important; /* 💡 업데이트 버튼과 바짝 밀착! */
+        margin-bottom: -5px !important; 
         background-color: #f8f9fa;
-        border: 1.2px solid #e0e0e0;
+        /* 💡 테두리 색상을 업데이트 버튼과 동일한 #888888 로 변경! */
+        border: 1.2px solid #888888;
         border-radius: 8px;
         cursor: default;
     }}
@@ -470,10 +471,10 @@ with st.sidebar:
     /* 켜진 상태 컬러 */
     .active-green .text {{ color: #1e8e3e; }}
     .active-red .text {{ color: #d93025; }}
-    /* 꺼진 상태 컬러 (흑백 처리 & 투명도) */
+    /* 꺼진 상태 컬러 */
     .dimmed {{ opacity: 0.3; filter: grayscale(100%); }}
 
-    /* 🚀 2. 업데이트 버튼 (바운스 강제 구동) */
+    /* 🚀 2. 업데이트 버튼 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
@@ -483,18 +484,17 @@ with st.sidebar:
         width: 100% !important;
         display: block !important;
         position: relative !important;
-        /* GPU 가속을 사용해 바운스 애니메이션 강제 적용 */
         will-change: transform; 
         transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important; 
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
         background-color: #f0f2f6 !important; 
         border-color: #666666 !important;
-        /* 💡 드디어 튀어오릅니다! */
         transform: translateY(-2px) !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
+    /* 💡 글자가 길어졌으므로 폰트 사이즈를 15px로 안정적으로 축소 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 15px !important; font-weight: 800 !important; margin: 0 !important; letter-spacing: -0.3px; }}
 
     /* 🚀 3. 커스텀 메뉴 박스들 (.sidebar-card) */
     .sidebar-card {{
@@ -511,8 +511,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v18", use_container_width=True):
+    # 4. 💡 텍스트가 변경된 업데이트 버튼
+    if st.button("🔄 업데이트 (증권사/업비트 API)", key="sidebar_btn_update_v19", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1466,6 +1466,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
