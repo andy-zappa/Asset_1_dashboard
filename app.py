@@ -406,7 +406,27 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 
+import base64
+import os
+import streamlit as st
+
 with st.sidebar:
+    # 0. 💡 [핵심 기술] 로컬 이미지 파일을 읽어서 절대 안 깨지는 Base64 데이터로 변환
+    def get_image_base64(image_path):
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as img_file:
+                return base64.b64encode(img_file.read()).decode()
+        return ""
+    
+    # 파이썬 파일과 같은 폴더에 있는 'robot.png'를 불러옵니다.
+    robot_b64 = get_image_base64("robot.png")
+    
+    # 💡 파일이 있으면 내 PC의 파일을 쓰고, 아직 안 넣었으면 외부 무료 아이콘(Icons8)을 임시로 씁니다.
+    if robot_b64:
+        robot_img_src = f"data:image/png;base64,{robot_b64}"
+    else:
+        robot_img_src = "https://img.icons8.com/3d-fluency/94/robot.png" # 차단 없는 안전한 임시 URL
+
     # 1. 💡 상태창 (여백 2칸 / 여백 2칸 완벽 적용)
     if is_oracle_online:
         status_html = """
@@ -488,7 +508,7 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼 (본체 텍스트는 DUMMY로 넣고, 화면엔 CSS가 글자를 입혀줌)
+    # 4. 업데이트 버튼
     if st.button("DUMMY", key="sidebar_btn_update_final", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
@@ -509,7 +529,7 @@ with st.sidebar:
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
 
-    # 7. 🌎 총 자산 통합 카드 (지구본 회전 애니메이션 적용!)
+    # 7. 🌎 총 자산 통합 카드
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
@@ -565,10 +585,10 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 🤖 AI 퀀트매매 카드 (referrerpolicy 적용으로 로봇 아이콘 강제 표출 & 텍스트 복구!)
+    # 11. 🤖 AI 퀀트매매 카드 (로컬 이미지 완벽 연동!)
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 25px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' referrerpolicy='no-referrer' style='width:52px; height:52px; object-fit:contain;'>
+        <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
         <div style='display:flex; flex-direction:column; align-items:flex-start; justify-content:center;'>
             <div style='font-size:25px; font-weight:900; color:#111111; letter-spacing:-1.5px; line-height:1.1;'>AI 퀀트매매</div>
             <div style='font-size:12px; color:#111111; font-weight:600; letter-spacing:0px; margin-top:2px; margin-left: 2px;'>Built & Algo by Andy</div>
@@ -1447,4 +1467,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
