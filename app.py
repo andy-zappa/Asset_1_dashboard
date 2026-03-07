@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스
+    # 1. 데이터 연동 상태 박스 (상단)
     if is_oracle_online:
         status_html = """
         <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 10px; cursor: default;'>
@@ -427,81 +427,52 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [KST 정정] 한국 표준시(KST) 강제 적용 (2026-02-12 오더 준수)
-    from datetime import datetime, timedelta, timezone
-    # 서버 위치 상관없이 무조건 한국 시간(UTC+9)으로 계산
-    now_kst = datetime.now(timezone(timedelta(hours=9)))
+    # 2. 실시간 날짜/시간 생성 (현재 시간 반영)
+    now = datetime.now()
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
+    now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 화이트 카드 고정 + 간격 밀착 (빨간색 완전 제거)
+    # 3. [강력한 CSS] 스트림릿 기본 빨간색 무력화 및 2행 구조화
     st.markdown(f"""
     <style>
-    /* 1. 버튼 본체: 빨간색 제거 및 화이트 카드화 */
-    div[data-testid="stSidebar"] button[kind="primary"] {{
+    /* 버튼 기본 빨간색 무력화 및 깔끔한 1행 테두리 구성 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"] {{
         background-color: #ffffff !important;
-        border: 1.2px solid #888888 !important;
+        border: 1.2px solid #dcdcdc !important;
         border-radius: 12px !important;
-        /* 💡 간격 밀착을 위해 padding-bottom 최소화 */
-        padding: 10px 15px 22px 15px !important; 
-        position: relative !important;
-        display: block !important;
+        padding: 10px 0 !important;
         width: 100% !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-        margin-bottom: -15px !important;
-        height: auto !important;
-        min-height: 65px !important; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
     }}
-    /* 2. 마우스 오버: 밝은 회색으로 전환 */
-    div[data-testid="stSidebar"] button[kind="primary"]:hover {{
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"]:hover {{
         background-color: #f8f9fa !important;
-        border-color: #555 !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
+        border-color: #bbb !important;
     }}
-    /* 3. '업데이트' 글씨 스타일 */
-    div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 20px !important;
+    /* '업데이트' 텍스트 스타일 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"] p {{
+        font-size: 18px !important;
         font-weight: 700 !important;
         color: #111111 !important;
         margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }}
-    div[data-testid="stSidebar"] button[kind="primary"] p::before {{
-        content: '🔄';
-        margin-right: 6px;
-        font-size: 18px;
-    }}
-    /* 4. 💡 [간격 밀착 핵심] 날짜 위치를 위로 바짝 올림 */
-    div[data-testid="stSidebar"] button[kind="primary"]::after {{
-        content: '{now_str}';
-        position: absolute !important;
-        bottom: 5px !important; /* 바닥에서 5px 지점까지 올림 */
-        left: 0 !important;
-        right: 0 !important;
-        text-align: center !important;
-        font-size: 14px !important;
-        color: #555555 !important;
-        font-weight: 500 !important;
-    }}
-    /* 사이드바 블록 간격 조정 */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="sidebar_btn_update_v3"]) {{
-        margin-bottom: -22px !important;
+    /* 버튼(1행)과 날짜 텍스트(2행) 사이의 여백을 좁혀서 하나의 덩어리처럼 보이게 함 */
+    div[data-testid="stSidebar"] div.element-container:has(button[key="btn_update_2row"]) {{
+        margin-bottom: -10px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼 (기존 키값 유지)
-    if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
+    # 4. 업데이트 버튼 (표의 1행 역할: 테두리 있는 화이트 버튼)
+    if st.button("🔄 업데이트", key="btn_update_2row", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+    # 5. 업데이트 날짜 표시 (표의 2행 역할: 테두리선 없이 텍스트만 깔끔하게)
+    st.markdown(f"<div style='text-align: center; font-size: 14.5px; color: #777; font-weight: 500; margin-bottom: 25px; letter-spacing: -0.3px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 5. 하단 메뉴 선택
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change))
+    # 하단 라디오 버튼 (메뉴 선택)
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1442,9 +1413,6 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
-
-
-
 
 
 
