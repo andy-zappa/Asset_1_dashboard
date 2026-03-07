@@ -590,33 +590,31 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 💡 [핵심 CSS] 사이드바의 '가장 마지막' 버튼(Admin)의 박스를 완전히 날려버립니다.
+    # 💡 [CSS 단순화] 겹치는 투명 박스 원인 모두 제거! 왼쪽 정렬 & 노란색 적용
     st.markdown("""
         <style>
-        div[data-testid="stSidebar"] div.stButton:last-of-type button {
-            background-color: transparent !important;
+        button[key="admin_lock_btn"] {
+            background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            color: #e5b300 !important; /* 노란/금색 계열 */
-            font-weight: 800 !important;
-            padding: 0 !important;
-            min-height: 0 !important;
-            display: flex;
-            justify-content: flex-end;
+            color: #FFD700 !important; /* 노란/금색 */
+            font-size: 14px !important;
+            font-weight: bold !important;
+            padding-left: 10px !important; /* 위 카드와 줄 맞춤 */
+            justify-content: flex-start !important; /* 왼쪽 정렬 */
+            margin-top: -10px !important; /* 유령 박스 안 생기는 선에서 간격만 살짝 좁힘 */
         }
-        div[data-testid="stSidebar"] div.stButton:last-of-type button:hover {
+        button[key="admin_lock_btn"]:hover {
             color: #ffc107 !important;
-            background-color: transparent !important;
-            transform: scale(1.05); /* 마우스 올리면 글씨만 살짝 커짐 */
+            background: transparent !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    col_empty, col_lock = st.columns([0.7, 0.3])
-    with col_lock:
-        if st.button("🔒 Admin", key="admin_btn"):
-            st.session_state['show_admin_page'] = True
-            st.rerun()
+    # 💡 좁은 컬럼(columns)에 억지로 넣지 않고 자연스럽게 왼쪽 정렬! (글씨 뭉개짐 해결)
+    if st.button("🔒 Admin", key="admin_lock_btn"):
+        st.session_state['show_admin_page'] = True
+        st.rerun()
 
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
@@ -1601,6 +1599,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
