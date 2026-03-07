@@ -406,19 +406,33 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 상태 박스 (인라인 제거, 클릭 효과 제거)
+    # 1. 💡 [혁신적 UI 적용] 하나의 박스 안에서 ON/OFF 상태를 직관적으로 토글!
     if is_oracle_online:
         status_html = """
-        <div class='status-box online-status'>
-            <span style='font-size: 16px;'>🟢</span>
-            <span>실시간 데이터 연동 중 (오라클)</span>
+        <div class='status-box'>
+            <div class='status-item active-green'>
+                <span class='icon'>🟢</span>
+                <span class='text'>실시간 연동</span>
+            </div>
+            <div class='divider'></div>
+            <div class='status-item dimmed'>
+                <span class='icon'>🔴</span>
+                <span class='text'>백업 데이터</span>
+            </div>
         </div>
         """
     else:
         status_html = """
-        <div class='status-box offline-status'>
-            <span style='font-size: 16px;'>🔴</span>
-            <span>로컬 백업 데이터 표출 중</span>
+        <div class='status-box'>
+            <div class='status-item dimmed'>
+                <span class='icon'>🟢</span>
+                <span class='text'>실시간 연동</span>
+            </div>
+            <div class='divider'></div>
+            <div class='status-item active-red'>
+                <span class='icon'>🔴</span>
+                <span class='text'>백업 데이터</span>
+            </div>
         </div>
         """
     st.markdown(status_html, unsafe_allow_html=True)
@@ -432,41 +446,53 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 정밀 교정] 상태 박스 마이너스 밀착 & 업데이트 버튼 바운스 확립!
+    # 3. 💡 [강력 CSS] 상태창 디자인 & 업데이트 버튼 바운스 강제 구동!
     st.markdown(f"""
     <style>
-    /* 🚀 1. 상단 상태 박스 (마이너스 마진으로 극한의 밀착!) */
+    /* 🚀 1. 혁신된 상단 상태 박스 (마이너스 마진으로 업데이트 버튼과 한 덩어리 유지) */
     .status-box {{
-        padding: 10px;
-        margin-bottom: -5px !important; /* 💡 0을 넘어 스트림릿 기본 여백까지 씹어먹는 마이너스 밀착 */
-        border-radius: 8px;
-        text-align: center;
-        font-size: 13.5px;
-        font-weight: 800;
-        letter-spacing: -0.5px;
         display: flex;
-        align-items: center;
         justify-content: center;
-        gap: 8px;
-        cursor: default; 
+        align-items: center;
+        gap: 15px;
+        padding: 12px 10px;
+        margin-bottom: -5px !important; /* 💡 업데이트 버튼과 바짝 밀착! */
+        background-color: #f8f9fa;
+        border: 1.2px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: default;
     }}
-    .online-status {{ border: 1.2px solid #34a853; background-color: #e6f4ea; color: #1e8e3e; }}
-    .offline-status {{ border: 1.2px solid #ea4335; background-color: #fce8e6; color: #d93025; }}
+    .status-item {{ display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; }}
+    .icon {{ font-size: 14px; }}
+    .text {{ font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px; }}
+    .divider {{ width: 1.5px; height: 14px; background-color: #cccccc; }}
+    
+    /* 켜진 상태 컬러 */
+    .active-green .text {{ color: #1e8e3e; }}
+    .active-red .text {{ color: #d93025; }}
+    /* 꺼진 상태 컬러 (흑백 처리 & 투명도) */
+    .dimmed {{ opacity: 0.3; filter: grayscale(100%); }}
 
-    /* 🚀 2. 업데이트 버튼 (본문 카드와 동일한 바운스/그림자 효과 적용!) */
+    /* 🚀 2. 업데이트 버튼 (바운스 강제 구동) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
         color: #111111 !important;
         min-height: 50px !important;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
+        width: 100% !important;
+        display: block !important;
+        position: relative !important;
+        /* GPU 가속을 사용해 바운스 애니메이션 강제 적용 */
+        will-change: transform; 
+        transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important; 
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important; /* 클릭 대상이므로 시원한 회색 적용 */
+        background-color: #f0f2f6 !important; 
         border-color: #666666 !important;
-        transform: translateY(-2px) !important; /* 💡 쫀득한 바운스 추가! */
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; /* 💡 입체감 있는 그림자 추가! */
+        /* 💡 드디어 튀어오릅니다! */
+        transform: translateY(-2px) !important; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }}
     div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
 
@@ -475,13 +501,9 @@ with st.sidebar:
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
         cursor: pointer !important; 
     }}
-    
-    /* 모든 카드(1~5번) 공통 호버 */
     .sidebar-card:hover {{
         transform: translateY(-2px) !important; 
     }}
-
-    /* 1번 제외(2~5번) 호버 시 배경/그림자 */
     .sidebar-card:not(#card-total):hover {{
         background-color: #f0f2f6 !important; 
         box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; 
@@ -490,7 +512,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # 4. 업데이트 버튼
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v17", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v18", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -571,7 +593,6 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -1445,6 +1466,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
