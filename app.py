@@ -652,7 +652,6 @@ def draw_pie_charts(g_data):
         </script></body></html>
         """
         components.html(html_code, height=520)
-    # 통합 종목별 상세 비중
     st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
     
     # 데이터 준비
@@ -669,17 +668,35 @@ def draw_pie_charts(g_data):
     
     cb1, cb2 = st.columns(2)
     
+    # 국기 아이콘 URL (Flaticon 기반 고화질)
+    flag_kr = "https://cdn-icons-png.flaticon.com/512/197/197598.png"
+    flag_us = "https://cdn-icons-png.flaticon.com/512/197/197484.png"
+
     with cb1: 
-        # 🌱 나뭇잎 유지 + 괄호 안에 태극기(🇰🇷) 적용
+        # 🌱 나뭇잎 + 🇰🇷 태극기 이미지 적용
+        title_kr = f"""
+        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_kr}' style='width: 22px; height: 16px; margin-top: 2px;'>
+            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
+        </div>
+        """
         if not df_dom_g.empty:
-            render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (🇰🇷)")
+            render_interactive_pie_area(df_dom_g, title_kr)
         else:
             st.info("한국 계좌 데이터가 없습니다.")
 
     with cb2: 
-        # 🌱 나뭇잎 유지 + 괄호 안에 성조기(🇺🇸) 적용
+        # 🌱 나뭇잎 + 🇺🇸 성조기 이미지 적용
+        title_us = f"""
+        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_us}' style='width: 22px; height: 16px; margin-top: 2px;'>
+            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
+        </div>
+        """
         if not df_usa_g.empty:
-            render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (🇺🇸)")
+            render_interactive_pie_area(df_usa_g, title_us)
         else:
             st.info("미국 계좌 데이터가 없습니다.")
 
@@ -1495,6 +1512,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
