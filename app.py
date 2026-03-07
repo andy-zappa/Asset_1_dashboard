@@ -471,9 +471,6 @@ with st.sidebar:
     # 5. 업데이트 날짜 표시 (표의 2행 역할: 테두리선 없이 텍스트만 깔끔하게)
     st.markdown(f"<div style='text-align: center; font-size: 14.5px; color: #777; font-weight: 500; margin-bottom: 25px; letter-spacing: -0.3px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 하단 라디오 버튼 (메뉴 선택)
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1413,6 +1410,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
