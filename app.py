@@ -408,10 +408,10 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 
 
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스 (상단)
+    # 1. 데이터 연동 상태 박스
     if is_oracle_online:
         status_html = """
-        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 10px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 15px; cursor: default; border-radius: 8px;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 16px;'>🟢</span>
                 <span style='color: #1e8e3e; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
@@ -420,7 +420,7 @@ with st.sidebar:
         """
     else:
         status_html = """
-        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 10px; cursor: default;'>
+        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 15px; cursor: default; border-radius: 8px;'>
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 16px;'>🔴</span>
                 <span style='color: #d93025; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
@@ -429,83 +429,57 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [KST 정정] 파이썬 최신 표준 방식으로 한국 시간(UTC+9) 강제 고정
+    # 2. KST 시간 계산 (가장 확실한 파이썬 표준 방식)
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 메뉴 방해 요소 제거 + 빨간색 완벽 박멸 + 쫀쫀한 간격
+    # 3. 💡 [버튼 전용 CSS] 오직 버튼 디자인과 "회색 Hover"만 담당. (꼼수 없음)
     st.markdown(f"""
     <style>
-    /* 기본 버튼 본체: 빨간색 제거 및 화이트 카드화 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
-        border: 1.2px solid #888888 !important;
-        border-radius: 12px !important;
-        padding: 10px 15px 28px 15px !important; /* 날짜가 들어갈 하단 여백만 확보 */
-        position: relative !important;
-        display: block !important;
-        width: 100% !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-        min-height: 65px !important; 
+        border: 1px solid #cccccc !important;
+        border-radius: 8px !important;
         color: #111111 !important;
+        padding: 8px 15px !important;
+        min-height: 45px !important;
         transition: all 0.2s ease !important;
     }}
-    
-    /* 💡 [핵심 교정] 마우스 오버, 클릭, 포커스 시 발생하는 모든 스트림릿 빨간색 강제 차단 -> 밝은 회색 적용 */
+    /* 마우스 오버, 클릭, 포커스 시 완벽한 밝은 회색 (빨간색 절대 차단) */
     div[data-testid="stSidebar"] button[kind="primary"]:hover,
     div[data-testid="stSidebar"] button[kind="primary"]:active,
-    div[data-testid="stSidebar"] button[kind="primary"]:focus,
-    div[data-testid="stSidebar"] button[kind="primary"]:focus:not(:active) {{
-        background-color: #f0f2f6 !important; /* 밝은 회색 */
-        border-color: #888888 !important;
+    div[data-testid="stSidebar"] button[kind="primary"]:focus {{
+        background-color: #f0f2f6 !important;
+        border-color: #999999 !important;
         color: #111111 !important;
         box-shadow: none !important;
         outline: none !important;
     }}
-
-    /* '업데이트' 글씨 스타일 */
+    /* 글씨 및 아이콘 */
     div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 20px !important;
-        font-weight: 700 !important;
-        color: #111111 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
         margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }}
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
-        content: '🔄';
-        margin-right: 6px;
-        font-size: 18px;
-    }}
-    
-    /* 날짜 위치를 버튼 내부 하단에 바짝 붙임 */
-    div[data-testid="stSidebar"] button[kind="primary"]::after {{
-        content: '{now_str}';
-        position: absolute !important;
-        bottom: 8px !important; 
-        left: 0 !important;
-        right: 0 !important;
-        text-align: center !important;
-        font-size: 14px !important;
-        color: #555555 !important;
-        font-weight: 500 !important;
+        content: '🔄 ';
+        font-size: 16px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (원본 유지)
-    if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
+    # 4. 💡 버튼 영역 (날짜와 완전 독립)
+    if st.button("업데이트", key="sidebar_btn_update_v4", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 버튼과 하단 메뉴 사이의 안전한 미세 간격 (메뉴 클릭을 방해하지 않음)
-    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+    # 5. 💡 날짜 영역 (버튼 밑에 따로 생성하되, margin-top을 음수로 줘서 버튼 쪽으로 확 끌어올림!)
+    st.markdown(f"<div style='text-align: center; font-size: 13.5px; color: #777777; margin-top: -12px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 5. 하단 메뉴 선택 (원본 유지 - 이제 클릭 정상 작동합니다!)
+    # 6. 하단 메뉴 선택 (이게 있어야 화면 전환이 됩니다!)
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
@@ -1447,6 +1421,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
