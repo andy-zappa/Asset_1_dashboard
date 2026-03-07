@@ -502,7 +502,6 @@ with st.sidebar:
     st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-
     ######################################################
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     ######################################################
@@ -1444,4 +1443,5 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
