@@ -590,32 +590,34 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 💡 [CSS 단순화] 겹치는 투명 박스 원인 모두 제거! 왼쪽 정렬 & 노란색 적용
+    # 💡 [CSS 단순화] 투명 박스 제거, 왼쪽 정렬, 찐 노란색(Gold) 강제 주입!
     st.markdown("""
         <style>
         button[key="admin_lock_btn"] {
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            color: #FFD700 !important; /* 노란/금색 */
-            font-size: 14px !important;
-            font-weight: bold !important;
-            padding-left: 10px !important; /* 위 카드와 줄 맞춤 */
-            justify-content: flex-start !important; /* 왼쪽 정렬 */
-            margin-top: -10px !important; /* 유령 박스 안 생기는 선에서 간격만 살짝 좁힘 */
+            padding-left: 5px !important;
+            justify-content: flex-start !important; 
+            margin-top: -15px !important;
         }
-        button[key="admin_lock_btn"]:hover {
+        /* 스트림릿이 강제로 덮는 폰트 색상을 무력화하기 위해 p 태그를 직접 타격합니다 */
+        button[key="admin_lock_btn"] p {
+            color: #FFD700 !important; 
+            font-size: 14.5px !important;
+            font-weight: 900 !important;
+        }
+        button[key="admin_lock_btn"]:hover p {
             color: #ffc107 !important;
-            background: transparent !important;
+            transform: scale(1.02);
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # 💡 좁은 컬럼(columns)에 억지로 넣지 않고 자연스럽게 왼쪽 정렬! (글씨 뭉개짐 해결)
-    if st.button("🔒 Admin", key="admin_lock_btn"):
+    # 💡 🔒 뒤에 보이지 않는 \uFE0F 를 붙여서 무조건 컬러 이모지로 렌더링되게 강제합니다.
+    if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
-
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -1599,6 +1601,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
