@@ -652,7 +652,7 @@ def draw_pie_charts(g_data):
         </script></body></html>
         """
         components.html(html_code, height=520)
-    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+  st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
     
     # 데이터 준비
     df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
@@ -668,17 +668,17 @@ def draw_pie_charts(g_data):
     
     cb1, cb2 = st.columns(2)
     
-    # 국기 아이콘 URL (Flaticon 기반 고화질)
-    flag_kr = "https://cdn-icons-png.flaticon.com/512/197/197598.png"
-    flag_us = "https://cdn-icons-png.flaticon.com/512/197/197484.png"
+    # 🇰🇷 정식 태극기 (Flaticon 정밀 검수 완료) / 🇺🇸 정식 성조기
+    flag_kr = "https://cdn-icons-png.flaticon.com/512/330/330439.png"
+    flag_us = "https://cdn-icons-png.flaticon.com/512/330/330459.png"
 
     with cb1: 
-        # 🌱 나뭇잎 + 🇰🇷 태극기 이미지 적용
+        # 💡 글자 크기 복구 (1.2rem) 및 국기 비율 고정 (object-fit)
         title_kr = f"""
-        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-            <img src='{flag_kr}' style='width: 22px; height: 16px; margin-top: 2px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
+        <div style='display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px;'>
+            <span style='font-size: 1.2rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_kr}' style='height: 20px; width: auto; object-fit: contain; margin-top: 2px;'>
+            <span style='font-size: 1.2rem; font-weight: bold; color: #eeeeee;'>)</span>
         </div>
         """
         if not df_dom_g.empty:
@@ -687,19 +687,18 @@ def draw_pie_charts(g_data):
             st.info("한국 계좌 데이터가 없습니다.")
 
     with cb2: 
-        # 🌱 나뭇잎 + 🇺🇸 성조기 이미지 적용
+        # 💡 글자 크기 복구 및 성조기 적용
         title_us = f"""
-        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-            <img src='{flag_us}' style='width: 22px; height: 16px; margin-top: 2px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
+        <div style='display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px;'>
+            <span style='font-size: 1.2rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_us}' style='height: 20px; width: auto; object-fit: contain; margin-top: 2px;'>
+            <span style='font-size: 1.2rem; font-weight: bold; color: #eeeeee;'>)</span>
         </div>
         """
         if not df_usa_g.empty:
             render_interactive_pie_area(df_usa_g, title_us)
         else:
             st.info("미국 계좌 데이터가 없습니다.")
-
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -1512,6 +1511,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
