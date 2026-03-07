@@ -658,8 +658,12 @@ def draw_pie_charts(g_data):
     df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
     
     cb1, cb2 = st.columns(2)
-    with cb1: render_interactive_pie_area(df_dom_g, "🌱 일반계좌 통합 상세비중 (한국)")
-    with cb2: render_interactive_pie_area(df_usa_g, "🌱 일반계좌 통합 상세비중 (해외)")
+    with cb1: 
+    # 한국 국기 🇰🇷 적용
+    render_interactive_pie_area(df_dom_g, "일반계좌 통합 상세비중 (🇰🇷)")
+    with cb2: 
+    # 미국 국기 🇺🇸 적용 (기존 '해외'를 '미국' 혹은 '해외' 유지하며 국기 추가)
+    render_interactive_pie_area(df_usa_g, "일반계좌 통합 상세비중 (🇺🇸)")
 
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
@@ -1473,6 +1477,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
