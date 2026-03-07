@@ -405,36 +405,33 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # =========================================================
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
-
 import base64
 import os
 import streamlit as st
 
 with st.sidebar:
-    # 0. 💡 [핵심 기술] 로컬 이미지 파일을 읽어서 절대 안 깨지는 Base64 데이터로 변환
+    # 0. 💡 [로컬 이미지 연동] GitHub에 올리신 'robot.png'를 엑스박스 없이 불러옵니다.
     def get_image_base64(image_path):
         if os.path.exists(image_path):
             with open(image_path, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
         return ""
     
-    # 파이썬 파일과 같은 폴더에 있는 'robot.png'를 불러옵니다.
     robot_b64 = get_image_base64("robot.png")
-    
-    # 💡 파일이 있으면 내 PC의 파일을 쓰고, 아직 안 넣었으면 외부 무료 아이콘(Icons8)을 임시로 씁니다.
     if robot_b64:
         robot_img_src = f"data:image/png;base64,{robot_b64}"
     else:
-        robot_img_src = "https://img.icons8.com/3d-fluency/94/robot.png" # 차단 없는 안전한 임시 URL
+        # 파일을 아직 안 올리셨을 때 엑스박스가 뜨지 않도록 투명 처리
+        robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
-    # 1. 💡 상태창 (여백 2칸 / 여백 2칸 완벽 적용)
+    # 1. 💡 상태창 (margin: 0 12px 적용으로 슬래시 양옆 2칸 확실하게 띄움!)
     if is_oracle_online:
         status_html = """
         <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:800; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px;'>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+            <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
@@ -446,7 +443,7 @@ with st.sidebar:
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px;'>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+            <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:800; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
@@ -463,38 +460,31 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력 CSS] 버튼 글씨 소멸 방지, 바운스 2px 표준화, 지구본 애니메이션
+    # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. 업데이트 버튼 (바운스 -2px 통일 & 내부 요소 차단 해킹) */
+    /* 🚀 1. 업데이트 버튼 애니메이션 (-2px 바운스) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important; border: 1.2px solid #888888 !important;
         border-radius: 8px !important; min-height: 50px !important; width: 100% !important;
-        display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important;
-        gap: 5px !important;
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s !important;
     }}
-    /* 💡 스트림릿이 내부적으로 렌더링하는 글자 컨테이너를 완벽히 숨깁니다! */
-    div[data-testid="stSidebar"] button[kind="secondary"] > * {{
-        display: none !important;
-    }}
-    
-    /* 💡 그리고 CSS를 이용해 버튼 표면에 글자를 새로 그립니다. (절대 안 사라짐) */
-    div[data-testid="stSidebar"] button[kind="secondary"]::before {{
-        content: "🔄 업데이트"; font-size: 15.5px !important; font-weight: 800 !important; color: #111111 !important; letter-spacing: -0.3px;
-    }}
-    div[data-testid="stSidebar"] button[kind="secondary"]::after {{
-        content: "(by KIS / UPbit)"; font-size: 12.5px !important; font-weight: 500 !important; color: #666666 !important; padding-top: 2px;
-    }}
-
-    /* 💡 기분 좋은 2px 바운스 */
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
         background-color: #f0f2f6 !important;
         transform: translateY(-2px) !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
     }}
+    
+    /* 💡 [텍스트 무적 방어] 파이썬에서 온 글자는 그대로 두고, CSS로 영문을 뒤에 추가합니다 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{
+        font-size: 15.5px !important; font-weight: 800 !important; color: #111111 !important; margin: 0 !important;
+    }}
+    div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
+        content: " (by KIS / UPbit)"; 
+        font-size: 12.5px !important; font-weight: 500 !important; color: #666666 !important;
+    }}
 
-    /* 🚀 2. 메뉴 카드 (.sidebar-card) 바운스 (-2px 표준화) */
+    /* 🚀 2. 메뉴 카드 (.sidebar-card) 애니메이션 (-2px 바운스 통일) */
     .sidebar-card {{
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
         cursor: pointer !important; 
@@ -508,8 +498,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼
-    if st.button("DUMMY", key="sidebar_btn_update_final", use_container_width=True):
+    # 4. 💡 업데이트 버튼 (이제 DUMMY가 아닌 진짜 글자를 파이썬이 던집니다!)
+    if st.button("🔄 업데이트", key="sidebar_btn_update_final4", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -517,7 +507,7 @@ with st.sidebar:
     # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 메뉴 선택 (파이썬 내부값은 "퀀트매매", 보이는 글자는 "AI 퀀트매매")
+    # 6. 메뉴 선택 
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
     def format_menu(option):
         return "AI 퀀트매매" if option == "퀀트매매" else option
@@ -585,7 +575,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 🤖 AI 퀀트매매 카드 (로컬 이미지 완벽 연동!)
+    # 11. 🤖 AI 퀀트매매 카드 (로컬 파일로 안전하게 표출!)
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 25px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
@@ -1467,5 +1457,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
