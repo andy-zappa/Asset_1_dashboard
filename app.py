@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 상태 박스 (인라인 제거 완료, 호버 효과 제거)
+    # 1. 상태 박스 (인라인 제거, 클릭 효과 제거)
     if is_oracle_online:
         status_html = """
         <div class='status-box online-status'>
@@ -432,13 +432,13 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 정밀 교정] 상태 박스 애니메이션 제거 & 간격 4px로 초밀착!
+    # 3. 💡 [CSS 정밀 교정] 상태 박스 마이너스 밀착 & 업데이트 버튼 바운스 확립!
     st.markdown(f"""
     <style>
-    /* 🚀 1. 상단 상태 박스 (호버 애니메이션 완벽 제거, 간격 축소) */
+    /* 🚀 1. 상단 상태 박스 (마이너스 마진으로 극한의 밀착!) */
     .status-box {{
         padding: 10px;
-        margin-bottom: 2px !important; /* 💡 업데이트 버튼과 한 덩어리처럼 보이게 4px로 바짝 붙임 */
+        margin-bottom: -5px !important; /* 💡 0을 넘어 스트림릿 기본 여백까지 씹어먹는 마이너스 밀착 */
         border-radius: 8px;
         text-align: center;
         font-size: 13.5px;
@@ -448,13 +448,12 @@ with st.sidebar:
         align-items: center;
         justify-content: center;
         gap: 8px;
-        cursor: default; /* 클릭이 안 되는 요소이므로 기본 포인터 유지 */
-        /* transition 속성을 제거하여 튀어오르는 효과 완전 박멸 */
+        cursor: default; 
     }}
     .online-status {{ border: 1.2px solid #34a853; background-color: #e6f4ea; color: #1e8e3e; }}
     .offline-status {{ border: 1.2px solid #ea4335; background-color: #fce8e6; color: #d93025; }}
 
-    /* 🚀 2. 업데이트 버튼 */
+    /* 🚀 2. 업데이트 버튼 (본문 카드와 동일한 바운스/그림자 효과 적용!) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
@@ -464,10 +463,10 @@ with st.sidebar:
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important;
+        background-color: #f0f2f6 !important; /* 클릭 대상이므로 시원한 회색 적용 */
         border-color: #666666 !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+        transform: translateY(-2px) !important; /* 💡 쫀득한 바운스 추가! */
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; /* 💡 입체감 있는 그림자 추가! */
     }}
     div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
 
@@ -491,7 +490,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # 4. 업데이트 버튼
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v15", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v17", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1446,6 +1445,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
