@@ -427,29 +427,28 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 실시간 날짜/시간 생성 (💡 KST 한국 표준시 강제 적용)
-    from datetime import datetime, timedelta
-    now_kst = datetime.utcnow() + timedelta(hours=9)
+    # 2. 실시간 날짜/시간 생성 (💡 KST 한국 표준시로 강제 조정)
+    from datetime import timedelta
+    now = datetime.utcnow() + timedelta(hours=9)
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
+    now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 업데이트 버튼을 카드 디자인으로 강제 개조 (Andy님 원본 복구)
+    # 3. [강력한 CSS] 업데이트 버튼을 카드 디자인으로 강제 개조 (Andy님 원본)
     st.markdown(f"""
     <style>
     /* 스트림릿 기본 버튼 스타일을 무력화하고 카드 디자인 적용 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
-        border-radius: 12px !important;
-        /* 💡 글자 간격을 좁히기 위해 하단 여백 대폭 축소 (35px -> 26px) */
-        padding: 12px 15px 26px 15px !important; 
+        border-radius: 15px !important;
+        padding: 10px 15px 26px 15px !important; /* 💡 여백 축소 (35px -> 26px) */
         position: relative !important;
         display: block !important;
         width: 100% !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-        margin-bottom: -15px !important;
+        margin-bottom: -15px !important; 
         height: auto !important;
-        min-height: 70px !important; 
+        min-height: 70px !important; /* 💡 높이 축소 (80px -> 70px) */
     }}
     /* 호버 시 배경색 살짝 변경 */
     div[data-testid="stSidebar"] button[kind="primary"]:hover {{
@@ -465,20 +464,19 @@ with st.sidebar:
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        line-height: 1.1 !important;
+        line-height: 1.2 !important;
     }}
     /* 아이콘 추가 */
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
         content: '🔄';
-        margin-right: 6px;
+        margin-right: 8px;
         font-size: 18px;
     }}
-    /* 💡 [핵심] 버튼 박스 내부 하단에 날짜/시간 강제 삽입 (위로 바짝 붙임!) */
+    /* 💡 [핵심] 버튼 박스 내부 하단에 날짜/시간 강제 삽입 */
     div[data-testid="stSidebar"] button[kind="primary"]::after {{
         content: '{now_str}';
         position: absolute !important;
-        /* 💡 날짜를 위로 올려서 '업데이트' 글씨와 밀착 (12px -> 8px) */
-        bottom: 8px !important; 
+        bottom: 6px !important; /* 💡 텍스트를 위로 바짝 올림 (12px -> 6px) */
         left: 0 !important;
         right: 0 !important;
         text-align: center !important;
@@ -494,7 +492,7 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (키값을 원본 그대로 복구)
+    # 4. 업데이트 실행 버튼 (키값 원본 유지)
     if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
@@ -1445,6 +1443,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
