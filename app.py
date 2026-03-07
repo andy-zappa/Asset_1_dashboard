@@ -575,9 +575,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-# 💡 [사이드바] 버튼 클릭 상태를 저장할 변수 초기화
-    if 'admin_mode' not in st.session_state:
-        st.session_state.admin_mode = False
+# 💡 [사이드바] 버튼 클릭 상태를 저장할 변수 초기화 (변수명 통일!)
+    if 'show_admin_page' not in st.session_state:
+        st.session_state['show_admin_page'] = False
 
     # 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
     st.markdown(f"""
@@ -589,33 +589,13 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    # 💡 [사이드바] 눈에 띄지 않게 우측 구석에 자물쇠 버튼만 살짝 배치
-    col_empty, col_btn = st.columns([5, 1])
-    with col_btn:
-        # 버튼을 누르면 admin_mode 상태가 True/False로 바뀝니다.
-        if st.button("🔒", key="admin_btn", help="Admin Only"):
-            st.session_state.admin_mode = not st.session_state.admin_mode
-
-# 💡 [메인 화면] 자물쇠 버튼이 클릭된 상태(True)일 때만 패스워드 창 표출
-if st.session_state.admin_mode:
-    st.markdown("---")
-    st.subheader("🔒 관리자 전용 페이지")
     
-    # 패스워드 입력창 (타이핑 시 **** 로 가려짐)
-    pwd_input = st.text_input("접근 패스워드를 입력하세요", type="password")
-    
-    # 패스워드가 맞을 경우
-    if pwd_input == "1234":  # 🚨여기에 Andy님만의 진짜 비밀번호를 설정하세요!
-        st.success("✅ 인증 완료! 관리자 메뉴가 활성화되었습니다.")
-        
-        # 💡 향후 여기에 주식수, 평단가 등 정보 입력 폼을 만드시면 됩니다!
-        st.info("여기에 상세 정보 입력 UI(평단가, 수량 등)가 들어갈 예정입니다.")
-        # ex) st.number_input("삼성전자 평단가 입력")
-        
-    elif pwd_input != "":
-        st.error("❌ 패스워드가 일치하지 않습니다.")
-    st.markdown("---")
+    # 💡 [핵심] 자물쇠 버튼을 누르면 'show_admin_page' 모드로 전환하도록 설정합니다.
+    col_empty, col_lock = st.columns([5, 1])
+    with col_lock:
+        if st.button("🔒", key="admin_btn"):
+            st.session_state['show_admin_page'] = True
+
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -741,7 +721,29 @@ def draw_pie_charts(g_data):
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
-if st.session_state.current_view == '대시보드':
+
+# 💡 [추가] 자물쇠 버튼(admin)이 눌렸을 때 패스워드 창을 먼저 띄웁니다!
+if st.session_state.get('show_admin_page', False):
+    
+    # 원래 화면으로 되돌아가는 버튼
+    if st.button("⬅️ 원래 화면으로 돌아가기"):
+        st.session_state['show_admin_page'] = False
+        st.rerun()
+
+    st.markdown("<h2 style='margin-top: 20px;'>🔒 Zappa Quant 관리자 시스템</h2>", unsafe_allow_html=True)
+    st.markdown("---")
+    
+    pwd_input = st.text_input("접근 패스워드를 입력하세요", type="password")
+    
+    if pwd_input == "1234":  # 🚨여기에 진짜 패스워드를 설정하세요
+        st.success("✅ 인증 완료!")
+        st.info("향후 여기에 주식수, 평단가 등 입력할 상세 페이지 폼이 들어갑니다.")
+        
+    elif pwd_input != "":
+        st.error("❌ 패스워드가 일치하지 않습니다.")
+
+# 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다. (if -> elif 로 변경됨)
+elif st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -1550,6 +1552,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
