@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 💡 [혁신적 UI 적용] 하나의 박스 안에서 ON/OFF 상태를 직관적으로 토글!
+    # 1. 💡 [혁신적 UI 적용] 켜진 쪽은 Bold 유지, 꺼진 쪽은 Bold 해제!
     if is_oracle_online:
         status_html = """
         <div class='status-box'>
@@ -437,7 +437,7 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 날짜 및 시간 계산 (요일 14.0px 유지)
+    # 2. 날짜 및 시간 계산
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
@@ -446,7 +446,7 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력 CSS] 테두리 색상 일치 & 텍스트 크기 최적화
+    # 3. 💡 [강력 CSS] Bold 토글 애니메이션 & 버튼 영문 텍스트 분리 제어
     st.markdown(f"""
     <style>
     /* 🚀 1. 혁신된 상단 상태 박스 */
@@ -458,21 +458,23 @@ with st.sidebar:
         padding: 12px 10px;
         margin-bottom: -5px !important; 
         background-color: #f8f9fa;
-        /* 💡 테두리 색상을 업데이트 버튼과 동일한 #888888 로 변경! */
         border: 1.2px solid #888888;
         border-radius: 8px;
         cursor: default;
     }}
     .status-item {{ display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; }}
     .icon {{ font-size: 14px; }}
-    .text {{ font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px; }}
+    /* 기본 텍스트 속성 */
+    .text {{ font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px; transition: font-weight 0.2s ease; }}
     .divider {{ width: 1.5px; height: 14px; background-color: #cccccc; }}
     
     /* 켜진 상태 컬러 */
-    .active-green .text {{ color: #1e8e3e; }}
-    .active-red .text {{ color: #d93025; }}
-    /* 꺼진 상태 컬러 */
-    .dimmed {{ opacity: 0.3; filter: grayscale(100%); }}
+    .active-green .text {{ color: #1e8e3e; font-weight: 800; }}
+    .active-red .text {{ color: #d93025; font-weight: 800; }}
+    
+    /* 💡 꺼진 상태 컬러 (흑백 처리 & 투명도 & 굵기 일반으로 변경!) */
+    .dimmed {{ opacity: 0.35; filter: grayscale(100%); }}
+    .dimmed .text {{ font-weight: 500 !important; }} 
 
     /* 🚀 2. 업데이트 버튼 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
@@ -493,8 +495,23 @@ with st.sidebar:
         transform: translateY(-2px) !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }}
-    /* 💡 글자가 길어졌으므로 폰트 사이즈를 15px로 안정적으로 축소 */
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 15px !important; font-weight: 800 !important; margin: 0 !important; letter-spacing: -0.3px; }}
+    
+    /* 한글 '업데이트' 부분 스타일 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{ 
+        font-size: 16px !important; 
+        font-weight: 800 !important; 
+        margin: 0 !important; 
+        letter-spacing: -0.3px; 
+    }}
+    /* 💡 [핵심 해킹] 영어 부분만 작고 얇게 만들어서 뒤에 붙이기! */
+    div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
+        content: " (with KIS / UPbit API)";
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        color: #777777 !important;
+        margin-left: 3px;
+        letter-spacing: 0px;
+    }}
 
     /* 🚀 3. 커스텀 메뉴 박스들 (.sidebar-card) */
     .sidebar-card {{
@@ -511,8 +528,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 텍스트가 변경된 업데이트 버튼
-    if st.button("🔄 업데이트 (증권사/업비트 API)", key="sidebar_btn_update_v19", use_container_width=True):
+    # 4. 💡 버튼 파이썬 코드 (영어 부분은 CSS가 자동으로 렌더링해 줍니다!)
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v20", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1466,6 +1483,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
