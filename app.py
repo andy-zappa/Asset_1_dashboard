@@ -579,40 +579,42 @@ with st.sidebar:
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-# 11. 🤖 AI 퀀트매매 카드 + 투명 🔒Admin 버튼
+# 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
     st.markdown(f"""
-    <div style='position: relative; margin-bottom: 25px;'>
-        <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
-            <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-            <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
-                <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
-                <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
-            </div>
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
+        <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
+        <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
+            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
+            <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
         </div>
     </div>
-    <style>
-        /* 버튼의 박스 테두리와 배경을 완전히 제거하고 노란색 자물쇠와 글씨만 강조 */
-        div[data-testid="column"]:has(button[key="admin_lock_btn"]) {{
-            text-align: right;
-        }}
-        button[key="admin_lock_btn"] {{
-            background: transparent !important;
+    """, unsafe_allow_html=True)
+    
+    # 💡 [핵심 CSS] 사이드바의 '가장 마지막' 버튼(Admin)의 박스를 완전히 날려버립니다.
+    st.markdown("""
+        <style>
+        div[data-testid="stSidebar"] div.stButton:last-of-type button {
+            background-color: transparent !important;
             border: none !important;
-            color: #FFD700 !important; /* 노란색 금색 */
-            font-size: 13px !important;
-            font-weight: bold !important;
             box-shadow: none !important;
+            color: #e5b300 !important; /* 노란/금색 계열 */
+            font-weight: 800 !important;
             padding: 0 !important;
-            float: right;
-            margin-top: -20px;
-        }}
-    </style>
+            min-height: 0 !important;
+            display: flex;
+            justify-content: flex-end;
+        }
+        div[data-testid="stSidebar"] div.stButton:last-of-type button:hover {
+            color: #ffc107 !important;
+            background-color: transparent !important;
+            transform: scale(1.05); /* 마우스 올리면 글씨만 살짝 커짐 */
+        }
+        </style>
     """, unsafe_allow_html=True)
 
-    # 💡 노란색 자물쇠 + Admin 텍스트 버튼
-    c_empty, c_lock = st.columns([0.6, 0.4])
-    with c_lock:
-        if st.button("🔒 Admin", key="admin_lock_btn"):
+    col_empty, col_lock = st.columns([0.7, 0.3])
+    with col_lock:
+        if st.button("🔒 Admin", key="admin_btn"):
             st.session_state['show_admin_page'] = True
             st.rerun()
 
@@ -742,25 +744,52 @@ def draw_pie_charts(g_data):
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
 
+# 💡 초기 비밀번호 설정 (세션에 없으면 기본값 1234)
+if 'admin_password' not in st.session_state:
+    st.session_state['admin_password'] = "1234"
+
 # 💡 [추가] 자물쇠 버튼(admin)이 눌렸을 때 패스워드 창을 먼저 띄웁니다!
 if st.session_state.get('show_admin_page', False):
+    import time
     
     # 원래 화면으로 되돌아가는 버튼
-    if st.button("⬅️ 원래 화면으로 돌아가기"):
+    if st.button("⬅️ 대시보드로 복귀"):
         st.session_state['show_admin_page'] = False
         st.rerun()
 
     st.markdown("<h2 style='margin-top: 20px;'>🔒 Zappa Quant 관리자 시스템</h2>", unsafe_allow_html=True)
+    st.write("관리자 인증이 필요한 페이지입니다.")
     st.markdown("---")
     
-    pwd_input = st.text_input("접근 패스워드를 입력하세요", type="password")
-    
-    if pwd_input == "1234":  # 🚨여기에 진짜 패스워드를 설정하세요
-        st.success("✅ 인증 완료!")
-        st.info("향후 여기에 주식수, 평단가 등 입력할 상세 페이지 폼이 들어갑니다.")
+    # 탭을 나누어 [로그인]과 [설정] 구성
+    tab_login, tab_setting = st.tabs(["🔑 인증하기", "⚙️ 패스워드 변경"])
+
+    with tab_login:
+        input_pwd = st.text_input("Access Password", type="password", placeholder="비밀번호를 입력하세요")
         
-    elif pwd_input != "":
-        st.error("❌ 패스워드가 일치하지 않습니다.")
+        if input_pwd:
+            if input_pwd == st.session_state['admin_password']:
+                st.success("✅ 인증 성공! 관리자 모드가 활성화되었습니다.")
+                st.divider()
+                st.subheader("📝 자산 정보 수정")
+                st.info("향후 여기에 주식수, 평단가 등 입력할 상세 페이지 폼이 들어갑니다.")
+            else:
+                st.error("❌ 패스워드가 일치하지 않습니다.")
+
+    with tab_setting:
+        st.subheader("비밀번호 수정")
+        current_p = st.text_input("현재 비밀번호 확인", type="password", key="cur_p")
+        new_p = st.text_input("새로운 비밀번호 입력", type="password", key="new_p")
+        
+        if st.button("패스워드 변경 저장"):
+            if current_p == st.session_state['admin_password']:
+                st.session_state['admin_password'] = new_p
+                st.success("✨ 비밀번호가 성공적으로 변경되었습니다!")
+                time.sleep(1)
+                st.session_state['show_admin_page'] = False
+                st.rerun()
+            else:
+                st.error("❌ 현재 비밀번호가 일치하지 않습니다.")
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다. (if -> elif 로 변경됨)
 elif st.session_state.current_view == '대시보드':
@@ -1572,6 +1601,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
