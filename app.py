@@ -427,16 +427,22 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [포맷 업데이트] 첨부 이미지와 동일한 [ YYYY/MM/DD(요일) / HH:MM:SS ] 구조로 변경
+    # 2. 💡 [디테일 교정] 요일 텍스트만 0.5px 작게(14.5px) 세팅
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    now_str = now_kst.strftime(f"[ %Y/%m/%d({wd_list[now_kst.weekday()]}) / %H:%M:%S ]")
+    
+    date_part = now_kst.strftime("%Y/%m/%d")
+    day_str = wd_list[now_kst.weekday()]
+    time_part = now_kst.strftime("%H:%M:%S")
+    
+    # HTML span 태그를 이용해 요일 부분만 폰트 사이즈를 깎아냅니다.
+    now_str = f"[ {date_part}(<span style='font-size: 14.5px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 격리 적용] 1번 메뉴와 2~5번 메뉴의 영향을 완전히 끊어냈습니다.
+    # 3. 💡 [CSS 강제 오버라이드] 스트림릿 내부 태그 뚫어버리기
     st.markdown(f"""
     <style>
-    /* 🔄 업데이트 버튼 튀어오르는 호버 효과 (유지) */
+    /* 🔄 업데이트 버튼 호버 효과 (유지) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
@@ -461,7 +467,7 @@ with st.sidebar:
         margin: 0 !important;
     }}
 
-    /* 🛡️ [완벽 격리 1] 1번 메뉴(대시보드/총자산통합) - 절대 움직이지 않도록 강제 고정 */
+    /* 🛡️ 1번 메뉴(대시보드) 강제 고정 */
     div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(1) {{
         transition: none !important;
         transform: none !important;
@@ -472,32 +478,31 @@ with st.sidebar:
         background-color: transparent !important;
     }}
 
-    /* 🚀 [완벽 격리 2] 2~5번 메뉴(절세, 일반, 가상, 퀀트) - 개별적으로 공중부양 호버 타겟팅 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(2),
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(3),
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(4),
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(5) {{
+    /* 🚀 2~5번 메뉴 호버 시 확실한 회색 박스화 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(n+2) {{
         transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
         border-radius: 8px !important;
+        padding: 8px 12px !important; /* 호버 시 회색 박스가 예쁘게 보이도록 내부 여백 추가 */
     }}
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(2):hover,
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(3):hover,
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(4):hover,
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(5):hover {{
-        background-color: #f4f6f9 !important;
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(n+2):hover {{
+        background-color: #e2e6ea !important; /* 확실하게 눈에 띄는 진한 회색 */
         transform: translateY(-3px) !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+    }}
+    /* 💡 [핵심 철퇴] 스트림릿이 내부 태그(div)에 하얀색을 우겨넣어 가리는 현상 박멸! */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(n+2):hover * {{
+        background-color: transparent !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
     # 4. 버튼 영역
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v7", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v8", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (업데이트된 포맷 렌더링)
+    # 5. 날짜 영역 (전체 15px, 요일만 14.5px 적용됨)
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -10px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
     # 6. 하단 메뉴 선택
@@ -1441,6 +1446,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
