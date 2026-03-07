@@ -405,8 +405,6 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # =========================================================
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
-
-
 with st.sidebar:
     # 1. 데이터 연동 상태 박스
     if is_oracle_online:
@@ -429,54 +427,54 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. KST 시간 계산 (성공한 방식 그대로 유지)
+    # 2. KST 시간 계산
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
 
-    # 3. 💡 [심플 CSS] 오직 Hover 시 '회색'으로 변하는 것에만 집중!
+    # 3. 💡 [CSS 전면 수정] 이제 primary가 아닌 secondary 기본 버튼을 타겟팅합니다!
     st.markdown(f"""
     <style>
-    /* 평상시 버튼: 하얀색 배경, 진한 회색 테두리 */
-    div[data-testid="stSidebar"] button[kind="primary"] {{
+    /* 하얀색 배경의 기본 버튼 스타일링 */
+    div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
-        border: 1px solid #aaaaaa !important;
+        border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
         color: #111111 !important;
-        min-height: 45px !important;
+        min-height: 50px !important;
         transition: all 0.2s ease !important;
     }}
-    /* 마우스 올렸을 때: 빨간색 절대 금지, 배경을 밝은 회색(#f0f2f6)으로 변경 */
-    div[data-testid="stSidebar"] button[kind="primary"]:hover,
-    div[data-testid="stSidebar"] button[kind="primary"]:active,
-    div[data-testid="stSidebar"] button[kind="primary"]:focus {{
-        background-color: #f0f2f6 !important;
-        border-color: #777777 !important;
+    /* 마우스 올렸을 때 깔끔한 밝은 회색으로 전환! */
+    div[data-testid="stSidebar"] button[kind="secondary"]:hover,
+    div[data-testid="stSidebar"] button[kind="secondary"]:active,
+    div[data-testid="stSidebar"] button[kind="secondary"]:focus {{
+        background-color: #e9ecef !important;
+        border-color: #555555 !important;
         color: #111111 !important;
-        box-shadow: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
         outline: none !important;
     }}
-    /* 글씨 크기 키우기 */
-    div[data-testid="stSidebar"] button[kind="primary"] p {{
+    /* 글씨 크기 및 굵기 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{
         font-size: 18px !important;
         font-weight: 800 !important;
+        margin: 0 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 버튼 영역 (CSS 대신 파이썬 문자열에 직접 🔄 이모지 삽입)
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v5", type="primary", use_container_width=True):
+    # 4. 💡 버튼 영역 (범인이었던 type="primary"를 완전히 삭제했습니다!)
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v6", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (성공한 방식 그대로 유지, 버튼 쪽으로 살짝 끌어올림)
+    # 5. 날짜 영역 (버튼 밑에 쫀쫀하게 밀착)
     st.markdown(f"<div style='text-align: center; font-size: 13.5px; color: #777777; margin-top: -12px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택 (화면 전환 필수 컴포넌트)
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    
+    # 6. 하단 메뉴 선택 (화면 전환 정상 작동)
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)    
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1416,6 +1414,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
