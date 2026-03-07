@@ -678,31 +678,11 @@ except NameError:
     # 💡 에러 방지용 임시 변수 (데이터가 아직 안 불러와졌을 때)
     p_up, p_dn, g_up, g_dn = 6, 3, 7, 15
 
-# 💡 1. 트리맵 영역 시작 (이 줄의 시작 위치를 윗줄과 꼭 맞춰주세요!)
+# 💡 좌우 2칸 나누기
 c1, c2 = st.columns(2)
 
-# 💡 [데이터 계산] 상승/하락 카운트 로직 (에러 방지용 try-except 포함)
-def get_counts(lst):
-    if not lst: return 0, 0
-    import pandas as pd
-    try:
-        df_c = pd.DataFrame(lst)
-        if df_c.empty: return 0, 0
-        df_c = df_c.groupby('종목명')['전일비'].mean().reset_index()
-        up_c = len(df_c[df_c['전일비'] > 0])
-        dn_c = len(df_c[df_c['전일비'] < 0])
-        return up_c, dn_c
-    except: return 0, 0
-
-# 변수가 없을 경우를 대비한 안전장치
-try:
-    p_up, p_dn = get_counts(all_pension_list)
-    g_up, g_dn = get_counts(all_gen_list)
-except NameError:
-    p_up, p_dn, g_up, g_dn = 6, 3, 7, 15
-
 with c1:
-    # 💡 [좌측] 숫자 하이라이트 (지수추종 ETF)
+    # 💡 [좌측] 카운트 박스 숫자 하이라이트 (지수추종 ETF)
     st.markdown(f"""
     <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
         [지수추종 ETF] &nbsp;&nbsp; 
@@ -711,13 +691,13 @@ with c1:
     </div>
     """, unsafe_allow_html=True)
     
+    # 원래 있던 좌측 트리맵 코드
     st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-    if 'all_pension_list' in locals() and all_pension_list:
-        st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
+    if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with c2:
-    # 💡 [우측] 숫자 하이라이트 (개별종목)
+    # 💡 [우측] 카운트 박스 숫자 하이라이트 (개별종목)
     st.markdown(f"""
     <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
         [개별종목] &nbsp;&nbsp; 
@@ -726,31 +706,39 @@ with c2:
     </div>
     """, unsafe_allow_html=True)
     
+    # 원래 있던 우측 트리맵 코드 (all_gen_list 적용)
     st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-    if 'all_gen_list' in locals() and all_gen_list:
-        st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
+    if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# 💡 2. 파이차트 영역 시작 (진짜 태극기 반영)
+# 💡 파이차트 영역 병합본 (IndentationError & NameError 해결)
+# 🚨 진짜 태극기 반영 완료!
+
 st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
 
-# 하단 여백 확보 CSS
+# 데이터 준비 (파이차트용)
+df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+
+# 💡 하단 여백 확보 (박스 뚫고 나가는 현상 방지)
 st.markdown("""
     <style>
     .stPlotlyChart { margin-bottom: 60px !important; }
-    div[data-testid="column"] { padding-bottom: 50px !important; }
+    div[data-testid="column"] { padding-bottom: 40px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# 🇰🇷 진짜 태극기 이미지 URL (image_2849de.png 기준 정식 규격)
+# 💡 고화질 정식 국기 URL (윈도우 호환성 100%)
+# 건곤감리가 선명한 진짜 태극기 이미지로 교체 완료!
 flag_kr_url = "https://cdn-icons-png.flaticon.com/512/330/330439.png"
 flag_us_url = "https://cdn-icons-png.flaticon.com/512/330/330459.png"
 
+# 3. 레이아웃 (2컬럼)
 cb1, cb2 = st.columns(2)
 
 with cb1:
-    # 🌱 + (🇰🇷) 구성
+    # 🌱 나뭇잎 + 🇰🇷 진짜 태극기 삽입 (글자 크기 시원시원하게 유지)
     title_kr = f"""
     <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
         <span style='font-size: 1.25rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
@@ -758,12 +746,16 @@ with cb1:
         <span style='font-size: 1.25rem; font-weight: bold; color: #eeeeee;'>)</span>
     </div>
     """
-    try:
-        if not df_dom_g.empty: render_interactive_pie_area(df_dom_g, title_kr)
-    except: st.info("한국 계좌 데이터 확인 중...")
+    if not df_dom_g.empty:
+        # render_interactive_pie_area 함수 내부에서 상세 리스트를 그려야 함.
+        # 이 부분은 해당 함수 내부를 수정해야 이미지 샘플과 똑같아짐.
+        # 일단 제목에 국기를 다는 것만 병합.
+        render_interactive_pie_area(df_dom_g, title_kr)
+    else:
+        st.info("한국 계좌 데이터가 없습니다.")
 
 with cb2:
-    # 🌱 + (🇺🇸) 구성
+    # 🌱 나뭇잎 + 🇺🇸 진짜 성조기 삽입 (글자 크기 시원시원하게 유지)
     title_us = f"""
     <div style='display: flex; align-items: center; justify-content: center; gap: 10px;'>
         <span style='font-size: 1.25rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
@@ -771,9 +763,14 @@ with cb2:
         <span style='font-size: 1.25rem; font-weight: bold; color: #eeeeee;'>)</span>
     </div>
     """
-    try:
-        if not df_usa_g.empty: render_interactive_pie_area(df_usa_g, title_us)
-    except: st.info("미국 계좌 데이터 확인 중...")
+    if not df_usa_g.empty:
+        # render_interactive_pie_area 함수 내부에서 상세 리스트를 그려야 함.
+        # 이 부분은 해당 함수 내부를 수정해야 이미지 샘플과 똑같아짐.
+        # 일단 제목에 국기를 다는 것만 병합.
+        render_interactive_pie_area(df_usa_g, title_us)
+    else:
+        st.info("미국 계좌 데이터가 없습니다.")
+
 
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
@@ -1587,8 +1584,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
-
 
 
 
