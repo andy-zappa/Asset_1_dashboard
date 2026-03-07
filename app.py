@@ -429,57 +429,52 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. KST 시간 계산 (가장 확실한 파이썬 표준 방식)
+    # 2. KST 시간 계산 (성공한 방식 그대로 유지)
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
 
-    # 3. 💡 [버튼 전용 CSS] 오직 버튼 디자인과 "회색 Hover"만 담당. (꼼수 없음)
+    # 3. 💡 [심플 CSS] 오직 Hover 시 '회색'으로 변하는 것에만 집중!
     st.markdown(f"""
     <style>
+    /* 평상시 버튼: 하얀색 배경, 진한 회색 테두리 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #aaaaaa !important;
         border-radius: 8px !important;
         color: #111111 !important;
-        padding: 8px 15px !important;
         min-height: 45px !important;
         transition: all 0.2s ease !important;
     }}
-    /* 마우스 오버, 클릭, 포커스 시 완벽한 밝은 회색 (빨간색 절대 차단) */
+    /* 마우스 올렸을 때: 빨간색 절대 금지, 배경을 밝은 회색(#f0f2f6)으로 변경 */
     div[data-testid="stSidebar"] button[kind="primary"]:hover,
     div[data-testid="stSidebar"] button[kind="primary"]:active,
     div[data-testid="stSidebar"] button[kind="primary"]:focus {{
         background-color: #f0f2f6 !important;
-        border-color: #999999 !important;
+        border-color: #777777 !important;
         color: #111111 !important;
         box-shadow: none !important;
         outline: none !important;
     }}
-    /* 글씨 및 아이콘 */
+    /* 글씨 크기 키우기 */
     div[data-testid="stSidebar"] button[kind="primary"] p {{
         font-size: 18px !important;
-        font-weight: bold !important;
-        margin: 0 !important;
-    }}
-    div[data-testid="stSidebar"] button[kind="primary"] p::before {{
-        content: '🔄 ';
-        font-size: 16px;
+        font-weight: 800 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 버튼 영역 (날짜와 완전 독립)
-    if st.button("업데이트", key="sidebar_btn_update_v4", type="primary", use_container_width=True):
+    # 4. 💡 버튼 영역 (CSS 대신 파이썬 문자열에 직접 🔄 이모지 삽입)
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v5", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 💡 날짜 영역 (버튼 밑에 따로 생성하되, margin-top을 음수로 줘서 버튼 쪽으로 확 끌어올림!)
+    # 5. 날짜 영역 (성공한 방식 그대로 유지, 버튼 쪽으로 살짝 끌어올림)
     st.markdown(f"<div style='text-align: center; font-size: 13.5px; color: #777777; margin-top: -12px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택 (이게 있어야 화면 전환이 됩니다!)
+    # 6. 하단 메뉴 선택 (화면 전환 필수 컴포넌트)
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
@@ -1421,6 +1416,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
