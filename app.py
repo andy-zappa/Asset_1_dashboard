@@ -579,22 +579,42 @@ with st.sidebar:
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-    # 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
+# 11. 🤖 AI 퀀트매매 카드 + 투명 🔒Admin 버튼
     st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
-        <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
-            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
-            <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
+    <div style='position: relative; margin-bottom: 25px;'>
+        <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
+            <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
+            <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
+                <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
+                <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
+            </div>
         </div>
     </div>
+    <style>
+        /* 버튼의 박스 테두리와 배경을 완전히 제거하고 노란색 자물쇠와 글씨만 강조 */
+        div[data-testid="column"]:has(button[key="admin_lock_btn"]) {{
+            text-align: right;
+        }}
+        button[key="admin_lock_btn"] {{
+            background: transparent !important;
+            border: none !important;
+            color: #FFD700 !important; /* 노란색 금색 */
+            font-size: 13px !important;
+            font-weight: bold !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            float: right;
+            margin-top: -20px;
+        }}
+    </style>
     """, unsafe_allow_html=True)
-    
-    # 💡 [핵심] 자물쇠 버튼을 누르면 'show_admin_page' 모드로 전환하도록 설정합니다.
-    col_empty, col_lock = st.columns([5, 1])
-    with col_lock:
-        if st.button("🔒", key="admin_btn"):
+
+    # 💡 노란색 자물쇠 + Admin 텍스트 버튼
+    c_empty, c_lock = st.columns([0.6, 0.4])
+    with c_lock:
+        if st.button("🔒 Admin", key="admin_lock_btn"):
             st.session_state['show_admin_page'] = True
+            st.rerun()
 
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
@@ -1552,6 +1572,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
