@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 상태 박스 (인라인 제거 완료)
+    # 1. 상태 박스 (인라인 제거 완료, 호버 효과 제거)
     if is_oracle_online:
         status_html = """
         <div class='status-box online-status'>
@@ -423,7 +423,7 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 날짜 및 시간 계산 (요일 14.0px)
+    # 2. 날짜 및 시간 계산 (요일 14.0px 유지)
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
@@ -432,13 +432,13 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 정밀 교정] 색상 일치, 바운스/그림자 다이어트, 간격 밀착!
+    # 3. 💡 [CSS 정밀 교정] 상태 박스 애니메이션 제거 & 간격 4px로 초밀착!
     st.markdown(f"""
     <style>
-    /* 🚀 1. 상단 상태 박스 */
+    /* 🚀 1. 상단 상태 박스 (호버 애니메이션 완벽 제거, 간격 축소) */
     .status-box {{
         padding: 10px;
-        margin-bottom: 8px; /* 💡 기존 15px -> 8px로 줄여서 업데이트 버튼과 한 덩어리 느낌 부여 */
+        margin-bottom: 4px !important; /* 💡 업데이트 버튼과 한 덩어리처럼 보이게 4px로 바짝 붙임 */
         border-radius: 8px;
         text-align: center;
         font-size: 13.5px;
@@ -448,17 +448,11 @@ with st.sidebar:
         align-items: center;
         justify-content: center;
         gap: 8px;
-        cursor: default;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, filter 0.2s ease !important;
+        cursor: default; /* 클릭이 안 되는 요소이므로 기본 포인터 유지 */
+        /* transition 속성을 제거하여 튀어오르는 효과 완전 박멸 */
     }}
     .online-status {{ border: 1.2px solid #34a853; background-color: #e6f4ea; color: #1e8e3e; }}
     .offline-status {{ border: 1.2px solid #ea4335; background-color: #fce8e6; color: #d93025; }}
-    
-    .status-box:hover {{
-        transform: translateY(-2px) !important; /* 💡 바운스 높이 축소 (-3px -> -2px) */
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; /* 💡 그림자 옅게 수정 */
-        filter: brightness(0.97) !important; 
-    }}
 
     /* 🚀 2. 업데이트 버튼 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
@@ -470,10 +464,10 @@ with st.sidebar:
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important; /* 💡 본문 박스와 동일한 은은한 회색으로 교체 */
+        background-color: #f0f2f6 !important;
         border-color: #666666 !important;
-        transform: translateY(-2px) !important; /* 💡 바운스 높이 축소 */
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; /* 💡 그림자 옅게 수정 */
+        transform: translateY(-2px) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
 
@@ -485,24 +479,24 @@ with st.sidebar:
     
     /* 모든 카드(1~5번) 공통 호버 */
     .sidebar-card:hover {{
-        transform: translateY(-2px) !important; /* 💡 바운스 높이 축소 (-3px -> -2px) */
+        transform: translateY(-2px) !important; 
     }}
 
     /* 1번 제외(2~5번) 호버 시 배경/그림자 */
     .sidebar-card:not(#card-total):hover {{
-        background-color: #f0f2f6 !important; /* 💡 본문 박스와 완벽히 동일한 은은한 회색 적용 */
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; /* 💡 그림자 옅게 수정 */
+        background-color: #f0f2f6 !important; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; 
     }}
     </style>
     """, unsafe_allow_html=True)
 
     # 4. 업데이트 버튼
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v14", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v15", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (업데이트 버튼과의 간격 유지)
+    # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
     # 6. 하단 메뉴 선택
@@ -1452,6 +1446,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
