@@ -433,48 +433,67 @@ with st.sidebar:
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
 
-    # 3. 💡 [CSS 전면 수정] 이제 primary가 아닌 secondary 기본 버튼을 타겟팅합니다!
+    # 3. 💡 [CSS 전면 수정] 튀어오르는(Bounce) 호버 효과 적용
     st.markdown(f"""
     <style>
-    /* 하얀색 배경의 기본 버튼 스타일링 */
+    /* 💡 1. 업데이트 버튼 튀어오르는 호버 효과 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
         color: #111111 !important;
         min-height: 50px !important;
-        transition: all 0.2s ease !important;
+        /* 탄력있는 애니메이션(공중부양) 추가 */
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
     }}
-    /* 마우스 올렸을 때 깔끔한 밝은 회색으로 전환! */
     div[data-testid="stSidebar"] button[kind="secondary"]:hover,
     div[data-testid="stSidebar"] button[kind="secondary"]:active,
     div[data-testid="stSidebar"] button[kind="secondary"]:focus {{
-        background-color: #e9ecef !important;
+        background-color: #f4f6f9 !important; /* 밝은 회색 */
         border-color: #555555 !important;
         color: #111111 !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+        /* 💡 마우스 오버 시 위로 살짝(-3px) 튀어오르고 그림자가 생김 */
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1) !important;
         outline: none !important;
     }}
-    /* 글씨 크기 및 굵기 */
     div[data-testid="stSidebar"] button[kind="secondary"] p {{
         font-size: 18px !important;
         font-weight: 800 !important;
         margin: 0 !important;
     }}
+
+    /* 💡 2. 하단 라디오 메뉴 박스들 튀어오르는 호버 효과 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label {{
+        /* 메뉴 박스들에도 동일한 탄력 애니메이션 부여 */
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
+        border-radius: 8px !important;
+    }}
+    /* 총 자산 통합(첫 번째 '대시보드' 항목)은 예외: 움직이지 않음 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:first-child:hover {{
+        transform: none !important;
+        box-shadow: none !important;
+    }}
+    /* 절세/일반/가상/퀀트 (두 번째 항목부터): 회색 배경 & 공중부양 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:not(:first-child):hover {{
+        background-color: #f4f6f9 !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 버튼 영역 (범인이었던 type="primary"를 완전히 삭제했습니다!)
+    # 4. 버튼 영역
     if st.button("🔄 업데이트", key="sidebar_btn_update_v6", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (버튼 밑에 쫀쫀하게 밀착)
+    # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 13.5px; color: #777777; margin-top: -12px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택 (화면 전환 정상 작동)
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)    
+    # 6. 하단 메뉴 선택
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1414,6 +1433,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
