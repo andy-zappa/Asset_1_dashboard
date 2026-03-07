@@ -727,11 +727,11 @@ def render_interactive_pie_area(df_pie, title):
 st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
     
     # 데이터 준비
-    df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
-    df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
     
     # 💡 하단 여백 대폭 확대 (80px)
-    st.markdown("""
+st.markdown("""
         <style>
         div[data-testid="column"] { padding-bottom: 80px !important; }
         </style>
@@ -1636,6 +1636,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
