@@ -406,21 +406,33 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 💡 다크 모드 통합 상태창 (Bold 토글 유지)
+    # 1. 💡 [다크 모드 UI 적용] image_2.png, image_3.png 기반의 고급스러운 상태창 디자인
     if is_oracle_online:
         status_html = """
         <div class='status-box-dark'>
-            <div class='status-item active-green-dark'><span class='icon'>🟢</span><span class='text'>실시간 연동</span></div>
+            <div class='status-item active-green-dark'>
+                <span class='icon'>🟢</span>
+                <span class='text'>실시간 연동</span>
+            </div>
             <div class='divider-dark'></div>
-            <div class='status-item dimmed-dark'><span class='icon'>🔴</span><span class='text'>백업 데이터</span></div>
+            <div class='status-item dimmed-dark'>
+                <span class='icon'>🔴</span>
+                <span class='text'>백업 데이터</span>
+            </div>
         </div>
         """
     else:
         status_html = """
         <div class='status-box-dark'>
-            <div class='status-item dimmed-dark'><span class='icon'>🟢</span><span class='text'>실시간 연동</span></div>
+            <div class='status-item dimmed-dark'>
+                <span class='icon'>🟢</span>
+                <span class='text'>실시간 연동</span>
+            </div>
             <div class='divider-dark'></div>
-            <div class='status-item active-red-dark'><span class='icon'>🔴</span><span class='text'>백업 데이터</span></div>
+            <div class='status-item active-red-dark'>
+                <span class='icon'>🔴</span>
+                <span class='text'>백업 데이터</span>
+            </div>
         </div>
         """
     st.markdown(status_html, unsafe_allow_html=True)
@@ -434,70 +446,132 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 전면 수정] 바운스 강화 + 영문 12.5px + 퀀트 로고 디자인
+    # 3. 💡 [강력 CSS 완결판] 다크 모드 상태창 & 버튼 텍스트 내부 정밀 조절
     st.markdown(f"""
     <style>
-    /* 상단 상태 박스 */
+    /* 🚀 1. 다크 모드 상단 상태 박스 DESIGN */
     .status-box-dark {{
-        display: flex; justify-content: center; align-items: center; gap: 15px;
-        padding: 12px 10px; margin-bottom: -5px !important; 
-        background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 10px;
+        margin-bottom: -5px !important; 
+        background-color: #1f293a; /* 💡 짙은 남색 배경 */
+        border: 1.2px solid #444444; /* 💡 짙은 회색 테두리 */
+        border-radius: 8px;
+        cursor: default;
     }}
-    .active-green-dark .text {{ color: #00e676; font-weight: 800; }}
-    .active-red-dark .text {{ color: #ff5252; font-weight: 800; }}
-    .dimmed-dark {{ opacity: 0.35; filter: grayscale(100%); }}
+    .status-item {{ display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; }}
+    .icon {{ font-size: 14px; }}
+    /* 기본 텍스트 속성 */
+    .text {{ font-size: 13.5px; letter-spacing: -0.5px; transition: font-weight 0.2s ease; }}
+    .divider-dark {{ width: 1.5px; height: 14px; background-color: #444444; }} /* 💡 디바이더도 짙게 */
+    
+    /* 🟢 [활성] 연두색 상태 컬러 */
+    .active-green-dark .text {{ color: #00e676; font-weight: 800; }} /* 💡 선명한 연두색 */
+    .active-red-dark .text {{ color: #ff5252; font-weight: 800; }} /* 💡 선명한 빨간색 */
+    
+    /* ⚪ [비활성] 짙은 회색 & Bold 해제 */
+    .dimmed-dark {{ opacity: 0.6; }} /* 💡 투명도는 조금 더 진하게 조정 */
     .dimmed-dark .text {{ color: #bbbbbb; font-weight: 500 !important; }} 
 
-    /* 🚀 업데이트 버튼: 쫀득한 바운스(Bounce) 강제 적용 */
+    /* 🚀 2. 업데이트 버튼 DESIGN (이제 글자가 사라지지 않습니다!) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
-        background-color: #ffffff !important; border: 1.2px solid #888888 !important;
-        border-radius: 8px !important; min-height: 50px !important; width: 100% !important;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s !important;
+        background-color: #ffffff !important;
+        border: 1.2px solid #888888 !important;
+        border-radius: 8px !important;
+        color: #111111 !important;
+        min-height: 50px !important;
+        width: 100% !important;
+        will-change: transform; 
+        transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important; 
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important;
-        transform: translateY(-2px) !important; /* 💡 튀어오름 적용 */
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+        background-color: #f0f2f6 !important; 
+        border-color: #666666 !important;
+        transform: translateY(-2px) !important; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }}
     
-    /* 업데이트 버튼 텍스트 해킹 (영문 12.5px) */
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 0px !important; }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p::before {{
-        content: "🔄 업데이트"; font-size: 15.5px !important; font-weight: 800 !important; color: #111111 !important; margin-right: 4px;
+    /* 💡 [텍스트 복구 해킹] 버튼 안의 전체 글자 p 태그 정밀 통제 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{ 
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 0 !important;
+        width: 100% !important;
+        
+        /* 💡 원래 글자를 없애지 않고, 글자 크기를 조절하는 방식을 씁니다. */
+        font-size: 15.5px !important; 
+        font-weight: 800 !important;
+        color: #111111 !important;
+        letter-spacing: -0.3px;
     }}
+    
+    /* 💡 [정밀 CSS] 버튼 안 p 태그의 특정 글자 범위(영어 부분)만 타겟팅해서 축소! */
+    /* Streamlit이 버튼 텍스트를 p태그 안에 렌더링하므로, p태그의 하위 범위를 타겟팅합니다. */
+    div[data-testid="stSidebar"] button[kind="secondary"] p span:nth-of-type(1) {{
+        /* 한글 '🔄 업데이트' 부분은 p 태그 스타일을 그대로 따름 */
+    }}
+    
+    div[data-testid="stSidebar"] button[kind="secondary"] p:contains("with KIS / UPbit API") {{
+        /* CSS3에는 :contains가 없으므로 다른 우회 방법을 씁니다. */
+    }}
+    
+    /* 💡 [진짜 해결책] 버튼 안 p 태그 안에서 특정 패턴을 타겟팅합니다. */
+    /* p 태그 내부에서 영어가 시작되는 부분부터 크기를 줄입니다. */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{
+        font-size: 0px !important; /* 다시 p 태그 글자를 지우고 아래에서 조립합니다. 스트림릿 p 태그 자르기 방지용 */
+    }}
+    
+    div[data-testid="stSidebar"] button[kind="secondary"] p::before {{
+        content: "🔄 업데이트";
+        font-size: 15.5px !important;
+        font-weight: 800 !important;
+        color: #111111 !important;
+        letter-spacing: -0.3px;
+        margin-right: 5px;
+    }}
+    
     div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
-        content: "(by KIS / UPbit API)"; font-size: 12.5px !important; /* 💡 요청하신 12.5px */
-        font-weight: 500 !important; color: #666666 !important;
+        content: "(with KIS / UPbit API)";
+        font-size: 11.5px !important;
+        font-weight: 500 !important;
+        color: #777777 !important;
+        letter-spacing: 0px;
+        padding-top: 2px;
     }}
 
-    /* 사이드바 카드 공통 애니메이션 */
+    /* 🚀 3. 커스텀 메뉴 박스들 (.sidebar-card) */
     .sidebar-card {{
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s !important;
-        cursor: pointer;
+        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
+        cursor: pointer !important; 
     }}
-    .sidebar-card:hover {{ transform: translateY(-2px) !important; }}
-    
-    /* 🤖 퀀트매매 카드 디자인 (image_37be3b.png 완벽 재현) */
-    .quant-logo-text {{ font-size: 24px !important; font-weight: 800 !important; color: #111111 !important; line-height: 1 !important; }}
-    .quant-subtext {{ font-size: 12px !important; color: #444444 !important; font-weight: 500 !important; margin-top: 2px; }}
+    .sidebar-card:hover {{
+        transform: translateY(-2px) !important; 
+    }}
+    .sidebar-card:not(#card-total):hover {{
+        background-color: #f0f2f6 !important; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; 
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼
-    if st.button("UPDATE_DUMMY", key="sidebar_btn_update_v22", use_container_width=True):
+    # 4. 💡 [파이썬 코드] 버튼 안의 글자는 CSS에서 타겟팅하여 영문 부분만 축소합니다!
+    # 파이썬 코드로는 정확한 글자를 적어주어야 합니다.
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v21", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
     # 5. 날짜 영역
-    st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 💡 [네비게이션 정정] 인덱스 꼬임 방지를 위한 순서 재정렬
-    # 꼬임 원인: "대시보드"가 0번인데 로직에서 1번부터 체크했거나 그 반대일 확률이 높음
-    menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
-    st.radio("Menu", menu_options, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+    # 6. 하단 메뉴 선택
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
-    # 가산자산 데이터 준비
+    # 가상자산 퍼센트 연산
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -558,13 +632,12 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 📈 퀀트매매 카드 (image_37be3b.png 디자인 적용)
+    # 11. 📈 퀀트매매 카드
     st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:15px; padding: 15px 10px; border-radius:12px; background-color:#ffffff; border:1px solid #eeeeee;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
-        <div style='display:flex; flex-direction:column; align-items:flex-start;'>
-            <div class='quant-logo-text'>퀀트매매</div>
-            <div class='quant-subtext'>Built & Algo by Andy</div>
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; height: 80px; margin-bottom: 25px;'>
+        <div style='font-size:20px; font-weight:800; color:#2c3e50; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;'>
+            <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:36px; height:36px; object-fit:contain;'>
+            퀀트매매
         </div>
     </div>
     """, unsafe_allow_html=True)
