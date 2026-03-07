@@ -783,7 +783,7 @@ if st.session_state.current_view == '대시보드':
             fig.update_layout(margin=dict(t=40, l=10, r=10, b=10), title=dict(text=title, font=dict(size=17, color='#ffffff', family='sans-serif'), x=0.02, y=0.97), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', height=450)
             return fig
 
- c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)
         
         # 💡 [핵심 데이터 로직] 상승/하락 종목 수 계산 함수 복구 완료!
         def get_counts(lst):
@@ -1473,6 +1473,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
