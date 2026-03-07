@@ -580,8 +580,8 @@ with st.sidebar:
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 25px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
         <div style='display:flex; flex-direction:column; align-items:flex-start; justify-content:center;'>
-            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:0.5;'>AI 퀀트매매</div>
-            <div style='font-size:11px; color:#555; font-weight:400; letter-spacing:0px; margin-top:2px; margin-left: 1.5px;'>Built & Algo by Andy</div>
+            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.0;'>AI 퀀트매매</div>
+            <div style='font-size:11px; color:#555; font-weight:400; letter-spacing:0px; margin-top:2px; margin-left: 0.5px;'>Built & Algo by Andy</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1512,6 +1512,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
