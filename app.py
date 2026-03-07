@@ -406,7 +406,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스 (상단)
+    # 1. 데이터 연동 상태 박스
     if is_oracle_online:
         status_html = """
         <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 10px; cursor: default;'>
@@ -427,35 +427,34 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 실시간 날짜/시간 생성 (💡 KST 한국 표준시로 강제 조정)
-    from datetime import timedelta
+    # 2. 💡 [KST 정정] 한국 표준시로 강제 적용 (UTC+9)
+    from datetime import datetime, timedelta
     now = datetime.utcnow() + timedelta(hours=9)
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 업데이트 버튼을 카드 디자인으로 강제 개조 (Andy님 원본)
+    # 3. [강력한 CSS] Andy님 원본 화이트 카드 디자인 + 간격 밀착 교정
     st.markdown(f"""
     <style>
-    /* 스트림릿 기본 버튼 스타일을 무력화하고 카드 디자인 적용 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 15px !important;
-        padding: 10px 15px 26px 15px !important; /* 💡 여백 축소 (35px -> 26px) */
+        /* 💡 글자 사이 간격 밀착을 위해 padding-bottom 축소 */
+        padding: 10px 15px 28px 15px !important; 
         position: relative !important;
         display: block !important;
         width: 100% !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
         margin-bottom: -15px !important; 
         height: auto !important;
-        min-height: 70px !important; /* 💡 높이 축소 (80px -> 70px) */
+        /* 💡 덩어리감을 위해 최소 높이 조정 */
+        min-height: 72px !important; 
     }}
-    /* 호버 시 배경색 살짝 변경 */
     div[data-testid="stSidebar"] button[kind="primary"]:hover {{
         background-color: #f9f9f9 !important;
         border-color: #555 !important;
     }}
-    /* '업데이트' 텍스트 및 아이콘 스타일 */
     div[data-testid="stSidebar"] button[kind="primary"] p {{
         font-size: 20px !important;
         font-weight: 700 !important;
@@ -464,41 +463,36 @@ with st.sidebar:
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        line-height: 1.2 !important;
     }}
-    /* 아이콘 추가 */
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
         content: '🔄';
         margin-right: 8px;
         font-size: 18px;
     }}
-    /* 💡 [핵심] 버튼 박스 내부 하단에 날짜/시간 강제 삽입 */
+    /* 💡 [핵심] 날짜 위치를 위로 바짝 올려서 '업데이트' 글씨와 밀착 */
     div[data-testid="stSidebar"] button[kind="primary"]::after {{
         content: '{now_str}';
         position: absolute !important;
-        bottom: 6px !important; /* 💡 텍스트를 위로 바짝 올림 (12px -> 6px) */
+        bottom: 8px !important; 
         left: 0 !important;
         right: 0 !important;
         text-align: center !important;
         font-size: 14.5px !important;
         color: #444444 !important;
         font-weight: 500 !important;
-        letter-spacing: -0.2px !important;
     }}
-    /* 버튼 사이의 기본 간격을 좁히기 위한 컨테이너 조정 */
     div[data-testid="stVerticalBlock"] > div:has(button[key="sidebar_btn_update_v3"]) {{
         margin-bottom: -20px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (키값 원본 유지)
+    # 4. 업데이트 실행 버튼 (원본 키값 유지)
     if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 버튼과 하단 카드 사이의 미세 간격 조정용 (12px 유지)
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
@@ -1443,6 +1437,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
