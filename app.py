@@ -968,7 +968,10 @@ elif st.session_state.current_view == '절세계좌':
                 a_prof = a_tot - a_prin
                 a_rate = (a_prof / a_prin * 100) if a_prin > 0 else 0
                 
-                item_count = ITEM_COUNTS.get(k, 0)
+                # 💡 [이슈 1 적용] 전체 종목에서 '예수금', '현금성자산', '[ 합  계 ]'를 제외하고 순수 카운트
+                details_for_cnt = a.get('상세', [])
+                item_count = len([i for i in details_for_cnt if isinstance(i, dict) and i.get('종목명', '') not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)']])
+                
                 k_date = DATE_TAGS.get(k, '')
                 
                 html_parts.append(f"<a href='#tax_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #888; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{k_date}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{P_MAP[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(a_tot)}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a_prof)}' style='font-size: 16px; font-weight: normal;'>{fmt(a_prof, True)}</div><div class='{col(a_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(a_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(a_prin)}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
@@ -1098,11 +1101,23 @@ elif st.session_state.current_view == '절세계좌':
                 a = data[k]
                 with st.expander(f"📂 [ {P_MAP[k]} ] 종목별 현황", expanded=False):
                     details = a.get('상세', [])
+                    
+                    # 💡 [이슈 6 적용] ISA 계좌에 '현금성자산(예수금)' 218,329원 강제 삽입/수정
+                    if k == 'ISA':
+                        has_cash = False
+                        for i in details:
+                            if '현금' in str(i.get('종목명','')) or '예수금' in str(i.get('종목명','')):
+                                i['총 자산'] = 218329; i['평가손익'] = 0; i['수익률(%)'] = 0; has_cash = True; break
+                        if not has_cash:
+                            details.append({'종목명': '현금성자산(예수금)', '총 자산': 218329, '평가손익': 0, '수익률(%)': 0, '수량': '-', '매입가': '-', '현재가': '-', '전일비': 0})
+
                     s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {})
-                    st.markdown(f"<div class='summary-text'>● 총 자산 : {fmt(a.get('총 자산',0))} KRW / 수익 : <span class='{col(s_data.get('평가손익',0))}'>{fmt(s_data.get('평가손익',0), True)}</span></div>", unsafe_allow_html=True)
+                    s_rate = s_data.get('수익률(%)', 0) # 💡 [이슈 3 적용] 합계 행에 있는 실제 손익률 추출
+                    
+                    # 💡 [이슈 4 적용] 제목 디자인을 '매입금액 대비' 폰트/구조와 동일하게 맞추고 손익률 추가
+                    st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산',0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익',0))}'>{fmt(s_data.get('평가손익',0), True)} ({fmt_p(s_rate)})</span></div>", unsafe_allow_html=True)
                     
                     # 💡 종목코드 및 등락률 헤더 로직
-                    code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
                     h3 = [f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                     
@@ -1222,7 +1237,10 @@ elif st.session_state.current_view == '일반계좌':
             a = g_data[k]
             acc_num_map = {'DOM1': '[ 6312-5329 ]', 'DOM2': '[ 7162669785-01 ]', 'USA1': '[ 6312-5329 ]', 'USA2': '[ 6443-5993 ]'}
             details = a.get('상세', [])
-            item_count = len([i for i in details if isinstance(i, dict) and i.get('종목명') not in ['[ 합  계 ]', '예수금']]) if isinstance(details, list) else 0
+            
+            # 💡 [핵심 교정 부분] 예수금, 현금성자산, 합계를 제외한 순수 종목만 카운트
+            item_count = len([i for i in details if isinstance(i, dict) and str(i.get('종목명', '')) not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)']]) if isinstance(details, list) else 0
+            
             html_parts.append(f"<a href='#gen_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{acc_num_map[k]}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{nm_table[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(safe_float(a.get('총자산_KRW', 0)))}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a.get('총수익_KRW', 0))}' style='font-size: 16px; font-weight: normal;'>{fmt(safe_float(a.get('총수익_KRW', 0)), True)}</div><div class='{col(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(principals[k])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
     html_parts.append("</div></div></div>")
     
@@ -1264,7 +1282,7 @@ elif st.session_state.current_view == '일반계좌':
     html_parts.append("</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.5%p < 보합 < +0.5%p ]</div></div>{zappa_html}</div></div>")
     st.markdown("".join(html_parts), unsafe_allow_html=True)
 
-    # ---------------- 일반계좌 요약 테이블 ----------------
+# ---------------- 일반계좌 요약 테이블 ----------------
     unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
     st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate)})</span></div></div>", unsafe_allow_html=True)
@@ -1323,7 +1341,8 @@ elif st.session_state.current_view == '일반계좌':
     with b6:
         lbl6 = "💻종목코드[-]" if st.session_state.show_code else "💻종목코드[+]"
         if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
-    st.markdown("<br>", unsafe_allow_html=True)
+
+   st.markdown("<br>", unsafe_allow_html=True)
 
     for k in GEN_ACC_ORDER:
         if k in g_data and isinstance(g_data[k], dict):
@@ -1331,11 +1350,29 @@ elif st.session_state.current_view == '일반계좌':
             is_usa = 'USA' in k
             with st.expander(f"📂 [ {nm_table_expander[k]} ] 종목별 현황", expanded=False):
                 details = a.get('상세', [])
-                s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {}) if isinstance(details, list) else {}
-                curr_asset = safe_float(a.get('총자산_KRW', 0)); a_prof = safe_float(a.get('총수익_KRW', 0))
-                a_rate = (a_prof / principals[k] * 100) if principals[k] else 0
                 
-                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(a_rate)})</span></div></div>", unsafe_allow_html=True)
+                # 💡 [이슈 5 적용] 일반계좌 예수금 강제 정정 (DOM1: 132563, USA2: 0)
+                if k == 'DOM1':
+                    for i in details:
+                        if isinstance(i, dict) and '예수금' in str(i.get('종목명','')): 
+                            i['총자산'] = 132563; break
+                elif k == 'USA2':
+                    has_cash = False
+                    for i in details:
+                        if isinstance(i, dict) and '예수금' in str(i.get('종목명','')): 
+                            i['총자산'] = 0; has_cash = True; break
+                    if not has_cash: # 없으면 새로 0원으로 추가
+                        details.append({'종목명': '예수금', '비중': 0, '총자산': 0, '평가손익': 0, '수익률(%)': 0, '전일비': 0, '수량': '-', '매입가': '-', '현재가': '-'})
+
+                s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {}) if isinstance(details, list) else {}
+                
+                # 💡 [이슈 3 적용] 합계 행에서 실제 '수익률(%)'을 가져옴
+                s_rate = s_data.get('수익률(%)', 0)
+                
+                curr_asset = safe_float(a.get('총자산_KRW', 0)); a_prof = safe_float(a.get('총수익_KRW', 0))
+                
+                # 💡 [이슈 3 적용] 표 제목에 자체 계산 수익률 대신 합계 행의 수익률(s_rate) 강제 반영
+                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(s_rate)})</span></div></div>", unsafe_allow_html=True)
                 
                 rate_val = safe_float(g_data.get('환율', 1443.1))
                 
@@ -1369,7 +1406,11 @@ elif st.session_state.current_view == '일반계좌':
                     else: return s_krw
 
                 for i in ([s_data] + items + [cash_item]):
-                    if not i or (i.get('종목명') == "예수금" and safe_float(i.get('총자산', 0)) == 0 and safe_float(s_data.get('총자산', 0)) > 0): continue
+                    # 💡 [이슈 5 적용] USA2 계좌는 예수금이 0원이어도 리스트에서 지우지 않고 무조건 노출
+                    if not i: continue
+                    if i.get('종목명') == "예수금" and safe_float(i.get('총자산', 0)) == 0 and k != 'USA2' and safe_float(s_data.get('총자산', 0)) > 0: 
+                        continue
+                        
                     is_s = (i.get('종목명') == "[ 합  계 ]")
                     row = f"<tr class='sum-row'>" if is_s else "<tr>"
                     orig_nm = '피그마' if i.get('종목명') == 'Figma' else str(i.get('종목명', ''))
@@ -1398,20 +1439,4 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                
