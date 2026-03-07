@@ -427,34 +427,38 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [KST 정정] 파이썬 최신 표준 방식으로 한국 시간(UTC+9) 강제 고정
+    # 2. 💡 [KST 정정] 한국 표준시(KST) 강제 적용 (2026-02-12 오더 준수)
     from datetime import datetime, timedelta, timezone
-    # 서버 환경과 관계없이 정확한 KST를 계산합니다.
+    # 서버 위치 상관없이 무조건 한국 시간(UTC+9)으로 계산
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 화이트 카드 디자인 유지 및 간격 초밀착
+    # 3. [강력한 CSS] 화이트 카드 고정 + 간격 밀착 (빨간색 완전 제거)
     st.markdown(f"""
     <style>
+    /* 1. 버튼 본체: 빨간색 제거 및 화이트 카드화 */
     div[data-testid="stSidebar"] button[kind="primary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
-        border-radius: 15px !important;
-        /* 💡 글자 사이 간격을 극도로 좁히기 위해 패딩 하단 조절 */
-        padding: 10px 15px 24px 15px !important; 
+        border-radius: 12px !important;
+        /* 💡 간격 밀착을 위해 padding-bottom 최소화 */
+        padding: 10px 15px 22px 15px !important; 
         position: relative !important;
         display: block !important;
         width: 100% !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-        margin-bottom: -18px !important; 
+        margin-bottom: -15px !important;
         height: auto !important;
-        min-height: 68px !important; 
+        min-height: 65px !important; 
     }}
+    /* 2. 마우스 오버: 밝은 회색으로 전환 */
     div[data-testid="stSidebar"] button[kind="primary"]:hover {{
-        background-color: #f9f9f9 !important;
+        background-color: #f8f9fa !important;
         border-color: #555 !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.15) !important;
     }}
+    /* 3. '업데이트' 글씨 스타일 */
     div[data-testid="stSidebar"] button[kind="primary"] p {{
         font-size: 20px !important;
         font-weight: 700 !important;
@@ -466,38 +470,38 @@ with st.sidebar:
     }}
     div[data-testid="stSidebar"] button[kind="primary"] p::before {{
         content: '🔄';
-        margin-right: 8px;
+        margin-right: 6px;
         font-size: 18px;
     }}
-    /* 💡 날짜를 '업데이트' 글씨 쪽으로 바짝 끌어올림 */
+    /* 4. 💡 [간격 밀착 핵심] 날짜 위치를 위로 바짝 올림 */
     div[data-testid="stSidebar"] button[kind="primary"]::after {{
         content: '{now_str}';
         position: absolute !important;
-        bottom: 6px !important; 
+        bottom: 5px !important; /* 바닥에서 5px 지점까지 올림 */
         left: 0 !important;
         right: 0 !important;
         text-align: center !important;
         font-size: 14px !important;
         color: #555555 !important;
         font-weight: 500 !important;
-        letter-spacing: -0.2px !important;
     }}
-    /* 버튼 컨테이너 여백 조정 */
+    /* 사이드바 블록 간격 조정 */
     div[data-testid="stVerticalBlock"] > div:has(button[key="sidebar_btn_update_v3"]) {{
         margin-bottom: -22px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (기존 키값 유지)
+    # 4. 업데이트 버튼 (기존 키값 유지)
     if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+    # 5. 하단 메뉴 선택
+    st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change))
     
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1438,6 +1442,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
