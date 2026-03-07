@@ -406,116 +406,120 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 데이터 연동 상태 박스
+    # 1. 💡 [수정] 상태 박스의 '인라인 스타일'을 제거하고 클래스 이름만 부여 (CSS에서 제어하기 위함)
     if is_oracle_online:
         status_html = """
-        <div class='sidebar-card' style='background-color: #e6f4ea; border: 1.2px solid #34a853; padding: 10px; margin-bottom: 15px; cursor: default; border-radius: 8px;'>
-            <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-                <span style='font-size: 16px;'>🟢</span>
-                <span style='color: #1e8e3e; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>실시간 데이터 연동 중 (오라클)</span>
-            </div>
+        <div class='status-box online-status'>
+            <span style='font-size: 16px;'>🟢</span>
+            <span>실시간 데이터 연동 중 (오라클)</span>
         </div>
         """
     else:
         status_html = """
-        <div class='sidebar-card' style='background-color: #fce8e6; border: 1.2px solid #ea4335; padding: 10px; margin-bottom: 15px; cursor: default; border-radius: 8px;'>
-            <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-                <span style='font-size: 16px;'>🔴</span>
-                <span style='color: #d93025; font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px;'>로컬 백업 데이터 표출 중</span>
-            </div>
+        <div class='status-box offline-status'>
+            <span style='font-size: 16px;'>🔴</span>
+            <span>로컬 백업 데이터 표출 중</span>
         </div>
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [디테일 교정] 요일 텍스트 14.0px 정밀 적용
+    # 2. 날짜 및 시간 계산 (요일 14.0px 유지)
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    
     date_part = now_kst.strftime("%Y/%m/%d")
     day_str = wd_list[now_kst.weekday()]
     time_part = now_kst.strftime("%H:%M:%S")
-    
-    # 요일 부분만 14.0px로 축소
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 강제 오버라이드] 라디오 버튼 최상단 끌어올리기 & BaseWeb 뚫어버리기
+    # 3. 💡 [강력한 CSS 완결판] 모든 요소를 통제합니다.
     st.markdown(f"""
     <style>
-    /* 🔄 업데이트 버튼 호버 효과 (유지) */
+    /* 🚀 1. 상태 박스 (인라인을 빼고 여기서 제어해야 호버가 먹힘) */
+    .status-box {{
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: default;
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, filter 0.2s ease !important;
+    }}
+    .online-status {{ border: 1.2px solid #34a853; background-color: #e6f4ea; color: #1e8e3e; }}
+    .offline-status {{ border: 1.2px solid #ea4335; background-color: #fce8e6; color: #d93025; }}
+    
+    /* 상태 박스 마우스 오버 시 바운스 & 살짝 진해짐 */
+    .status-box:hover {{
+        transform: translateY(-3px) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        filter: brightness(0.95) !important; 
+    }}
+
+    /* 🚀 2. 업데이트 버튼 (성공했던 원본 유지) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
         color: #111111 !important;
         min-height: 50px !important;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, background-color 0.2s ease !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"]:hover,
-    div[data-testid="stSidebar"] button[kind="secondary"]:active,
-    div[data-testid="stSidebar"] button[kind="secondary"]:focus {{
+    div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
         background-color: #f4f6f9 !important;
         border-color: #555555 !important;
-        color: #111111 !important;
         transform: translateY(-3px) !important;
         box-shadow: 0 6px 12px rgba(0,0,0,0.1) !important;
-        outline: none !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{
-        font-size: 18px !important;
-        font-weight: 800 !important;
-        margin: 0 !important;
-    }}
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{ font-size: 18px !important; font-weight: 800 !important; margin: 0 !important; }}
 
-    /* 🚨 [핵심 1] 라디오 메뉴 전체를 화면 최상단으로 올려서 마우스 간섭 완벽 차단 */
-    div[data-testid="stSidebar"] div[data-testid="stRadio"] {{
-        position: relative !important;
-        z-index: 9999 !important; 
-    }}
-
-    /* 🚀 [핵심 2] 스트림릿 고유의 양파 껍질(BaseWeb)을 직접 타겟팅하여 바운스 애니메이션 부여 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"] {{
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
+    /* 🚀 3. 라디오 메뉴 (스트림릿 내부 껍질 완벽 타격) */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label {{
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, background-color 0.2s ease !important;
         border-radius: 8px !important;
         padding: 8px 12px !important; 
-        margin-bottom: 2px !important;
         cursor: pointer !important;
     }}
     
-    /* 🚀 모든 메뉴 마우스 올렸을 때 위로 바운스! */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:hover {{
+    /* 전체 메뉴 호버 시 바운스! */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {{
         transform: translateY(-3px) !important;
     }}
 
-    /* 🛡️ 1번 메뉴(대시보드) - 바운스만 하고 배경은 투명 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(1):hover {{
+    /* 1번(대시보드) 배경 투명 예외 */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(1):hover {{
         background-color: transparent !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }}
 
-    /* 🚀 2~5번 메뉴 - 바운스 + 시원한 회색 배경 + 그림자 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(n+2):hover {{
+    /* 2~5번 메뉴 호버 시 회색 배경 */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(n+2):hover {{
         background-color: #e2e6ea !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
     }}
 
-    /* 💡 [핵심 철퇴] 2~5번 메뉴 안쪽의 숨겨진 투명/흰색 div 껍질들 전부 배경색 제거! */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(n+2):hover div {{
+    /* 방어막 무력화: 라디오 버튼 내부의 모든 div 배경을 투명하게 뚫어버림 */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] div[role="radiogroup"] > label:hover div {{
         background-color: transparent !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
     # 4. 버튼 영역
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v10", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v12", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 
+    # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -10px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택 (이제 z-index 최상단이라 무조건 클릭/호버 다 먹힙니다!)
+    # 6. 하단 메뉴 선택
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1455,6 +1459,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
