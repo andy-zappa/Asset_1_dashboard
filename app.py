@@ -652,54 +652,54 @@ def draw_pie_charts(g_data):
         </script></body></html>
         """
         components.html(html_code, height=520)
-    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
-    
-    # 데이터 준비
-    df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
-    df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
-    
-    # 💡 하단 여백 및 삐져나옴 방지 CSS
-    st.markdown("""
-        <style>
-        .stPlotlyChart { margin-bottom: 50px !important; }
-        div[data-testid="column"] { padding-bottom: 40px !important; }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    cb1, cb2 = st.columns(2)
-    
-    # 국기 아이콘 URL (Flaticon 기반 고화질)
-    flag_kr = "https://cdn-icons-png.flaticon.com/512/197/197598.png"
-    flag_us = "https://cdn-icons-png.flaticon.com/512/197/197484.png"
+        
+# 💡 1. 섹션 타이틀 (들여쓰기 윗줄과 똑같이 맞추기 주의!)
+st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
 
-    with cb1: 
-        # 🌱 나뭇잎 + 🇰🇷 태극기 이미지 적용
-        title_kr = f"""
-        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-            <img src='{flag_kr}' style='width: 22px; height: 16px; margin-top: 2px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
-        </div>
-        """
-        if not df_dom_g.empty:
-            render_interactive_pie_area(df_dom_g, title_kr)
-        else:
-            st.info("한국 계좌 데이터가 없습니다.")
+# 데이터 준비
+df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
 
-    with cb2: 
-        # 🌱 나뭇잎 + 🇺🇸 성조기 이미지 적용
-        title_us = f"""
-        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-            <img src='{flag_us}' style='width: 22px; height: 16px; margin-top: 2px;'>
-            <span style='font-size: 16px; font-weight: bold; color: #eeeeee;'>)</span>
-        </div>
-        """
-        if not df_usa_g.empty:
-            render_interactive_pie_area(df_usa_g, title_us)
-        else:
-            st.info("미국 계좌 데이터가 없습니다.")
+# 💡 2. [하단 여백 해결] 박스 하단이 눌려서 삐져나오지 않게 80px의 넉넉한 공간을 줍니다!
+st.markdown("""
+    <style>
+    .stPlotlyChart { margin-bottom: 80px !important; }
+    div[data-testid="column"] { padding-bottom: 80px !important; }
+    </style>
+""", unsafe_allow_html=True)
 
+# 💡 3. 글로벌 표준 Twemoji 기반 (절대 깨지거나 다른 나라 국기로 안 바뀌는) 정식 이미지!
+flag_kr_url = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
+flag_us_url = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png"
+
+cb1, cb2 = st.columns(2)
+
+with cb1:
+    # 🌱 + (🇰🇷 진짜 태극기) + 큼직한 글씨체
+    title_kr = f"""
+    <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+        <img src='{flag_kr_url}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
+        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
+    </div>
+    """
+    try:
+        if not df_dom_g.empty: render_interactive_pie_area(df_dom_g, title_kr)
+    except: st.info("한국 계좌 데이터 확인 중...")
+
+with cb2:
+    # 🌱 + (🇺🇸 진짜 성조기) + 큼직한 글씨체
+    title_us = f"""
+    <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+        <img src='{flag_us_url}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
+        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
+    </div>
+    """
+    try:
+        if not df_usa_g.empty: render_interactive_pie_area(df_usa_g, title_us)
+    except: st.info("미국 계좌 데이터 확인 중...")   
+    
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
@@ -1512,6 +1512,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
