@@ -406,16 +406,16 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # 📍 사이드바 렌더링 (디자인 일체화 및 날짜/시간 강제 노출)
 # =========================================================
 with st.sidebar:
-    # 1. 💡 [상태창 정밀 교정] 아이콘과 글자 밀착 & 슬래시(/) 좌우 1칸 여백
+    # 1. 💡 [상태창 정밀 교정] 아이콘 밀착 & 슬래시(/) 양옆 1칸 여백
     if is_oracle_online:
         status_html = """
         <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px;'>🟢</span><span style='font-size:13.5px; font-weight:800; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
+                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:800; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 4px;'>/</div>
+            <div style='color:#666666; font-size:14px;'>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
-                <span style='font-size:14px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
+                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
         </div>
         """
@@ -423,11 +423,11 @@ with st.sidebar:
         status_html = """
         <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
-                <span style='font-size:14px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
+                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 4px;'>/</div>
+            <div style='color:#666666; font-size:14px;'>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
             <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px;'>🔴</span><span style='font-size:13.5px; font-weight:800; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
+                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:800; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
         </div>
         """
@@ -442,52 +442,53 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력 CSS] 지구본 회전 & 버튼 물리적 바운스 해킹
+    # 3. 💡 [강력 CSS] 바운스, 글자 12.5px 정밀 해킹, 지구본 애니메이션
     st.markdown(f"""
     <style>
-    /* 🚀 1. 업데이트 버튼: transform 씹힘 방지를 위한 물리적 위치(top) 이동 바운스! */
+    /* 🚀 1. 업데이트 버튼: 강력한 바운스(Bounce) 애니메이션 적용! */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important; border: 1.2px solid #888888 !important;
         border-radius: 8px !important; min-height: 50px !important; width: 100% !important;
-        display: flex !important; justify-content: center !important; align-items: center !important;
-        position: relative !important; top: 0px !important; /* 물리적 기준점 */
-        transition: top 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s !important;
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, background-color 0.25s !important;
+        display: block !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
         background-color: #f0f2f6 !important;
-        top: -3px !important; /* 💡 스트림릿 방어막을 뚫고 무조건 위로 튀어 오릅니다! */
+        transform: translateY(-3px) !important; /* 💡 무조건 위로 튀어 오릅니다! */
         box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
     }}
     
-    /* 💡 [텍스트 100% 방어 해킹] 파이썬 글씨 완전 소멸 후 CSS로 재조립 */
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{ display: none !important; }}
-    
-    div[data-testid="stSidebar"] button[kind="secondary"]::before {{
-        content: "🔄 업데이트"; font-size: 15.5px !important; font-weight: 800 !important; 
-        color: #111111 !important; margin-right: 5px;
+    /* 💡 [텍스트 12.5px 해킹] 원본 글자 완전 투명화 & 새 글자 조립 */
+    div[data-testid="stSidebar"] button[kind="secondary"] p {{ 
+        font-size: 0px !important; color: transparent !important; margin: 0 !important;
+        display: flex !important; justify-content: center !important; align-items: center !important; gap: 4px !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"]::after {{
-        content: "(by KIS / UPbit)"; font-size: 12.5px !important; font-weight: 500 !important; 
-        color: #666666 !important; padding-top: 1px;
+    div[data-testid="stSidebar"] button[kind="secondary"] p::before {{
+        content: "🔄 업데이트"; font-size: 15.5px !important; font-weight: 800 !important; 
+        color: #111111 !important; visibility: visible !important; letter-spacing: -0.3px;
+    }}
+    div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
+        content: "(by KIS / UPbit)"; font-size: 12.5px !important; /* 💡 정확히 12.5px 적용 */
+        font-weight: 500 !important; color: #666666 !important; visibility: visible !important;
+        padding-top: 2px;
     }}
 
     /* 🚀 2. 커스텀 메뉴 박스들 (.sidebar-card) 바운스 */
     .sidebar-card {{
-        position: relative; top: 0px;
-        transition: top 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
+        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, background-color 0.25s !important;
         cursor: pointer !important; 
     }}
-    .sidebar-card:hover {{ top: -2px !important; }}
+    .sidebar-card:hover {{ transform: translateY(-2px) !important; }}
     .sidebar-card:not(#card-total):hover {{ background-color: #f0f2f6 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; }}
 
     /* 🚀 3. 지구본 스핀 애니메이션! */
     @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
-    .spin-globe {{ display: inline-block; animation: spin 5s linear infinite; margin-right: 2px; }}
+    .spin-globe {{ display: inline-block; animation: spin 5s linear infinite; margin-right: 3px; font-size: 14px; }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 버튼 (텍스트는 CSS에서 입히므로 더미 값 전달)
-    if st.button("DUMMY", key="sidebar_btn_update_v25", use_container_width=True):
+    # 4. 업데이트 버튼 (더미 텍스트 전송, 화면엔 CSS가 글자를 그려줍니다)
+    if st.button("UPDATE_DUMMY_TEXT", key="sidebar_btn_update_v29", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -495,7 +496,7 @@ with st.sidebar:
     # 5. 날짜 영역
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 💡 [네비게이션 텍스트 표시 해결] 파이썬 백엔드에는 "퀀트매매"로 보내고, 화면에는 "AI 퀀트매매"로 표출!
+    # 6. 💡 [메뉴 표출 해킹] 파이썬 내부는 "퀀트매매" 유지, 화면에만 "AI 퀀트매매" 표출!
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
     def format_menu(option):
         return "AI 퀀트매매" if option == "퀀트매매" else option
@@ -507,7 +508,7 @@ with st.sidebar:
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
 
-    # 7. 🌎 총 자산 통합 카드 (빙글빙글 지구본!)
+    # 7. 🌎 총 자산 통합 카드 (지구본에 spin-globe 클래스 적용)
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
@@ -563,7 +564,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 🤖 AI 퀀트매매 카드 (첨부 파일과 완벽히 동일한 디자인)
+    # 11. 🤖 AI 퀀트매매 카드 (오리지널 로봇 아이콘 복구 완료!)
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 25px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:52px; height:52px; object-fit:contain;'>
@@ -1446,6 +1447,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
