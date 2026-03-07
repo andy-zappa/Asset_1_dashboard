@@ -432,74 +432,46 @@ with st.sidebar:
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
     now_str = now.strftime(f"%m/%d({wd_list[now.weekday()]}), %H:%M:%S")
 
-    # 3. [강력한 CSS] 업데이트 버튼을 카드 디자인으로 강제 개조
+    # 3. [강력한 CSS] 스트림릿 기본 빨간색 무력화 및 2행 구조화
     st.markdown(f"""
     <style>
-    /* 스트림릿 기본 버튼 스타일을 무력화하고 카드 디자인 적용 */
-    div[data-testid="stSidebar"] button[kind="primary"] {{
+    /* 버튼 기본 빨간색 무력화 및 깔끔한 1행 테두리 구성 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"] {{
         background-color: #ffffff !important;
-        border: 1.2px solid #888888 !important;
-        border-radius: 15px !important;
-        padding: 10px 15px 35px 15px !important; /* 💡 시간 텍스트가 들어갈 하단 여백 확보 */
-        position: relative !important;
-        display: block !important;
+        border: 1.2px solid #dcdcdc !important;
+        border-radius: 12px !important;
+        padding: 10px 0 !important;
         width: 100% !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-        margin-bottom: -15px !important; /* 💡 하단 카드와 바짝 붙이기 위한 음수 마진 */
-        height: auto !important;
-        min-height: 80px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
     }}
-    /* 호버 시 배경색 살짝 변경 */
-    div[data-testid="stSidebar"] button[kind="primary"]:hover {{
-        background-color: #f9f9f9 !important;
-        border-color: #555 !important;
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"]:hover {{
+        background-color: #f8f9fa !important;
+        border-color: #bbb !important;
     }}
-    /* '업데이트' 텍스트 및 아이콘 스타일 */
-    div[data-testid="stSidebar"] button[kind="primary"] p {{
-        font-size: 20px !important;
+    /* '업데이트' 텍스트 스타일 */
+    div[data-testid="stSidebar"] button[kind="primary"][key="btn_update_2row"] p {{
+        font-size: 18px !important;
         font-weight: 700 !important;
         color: #111111 !important;
         margin: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        line-height: 1.2 !important;
     }}
-    /* 아이콘 추가 */
-    div[data-testid="stSidebar"] button[kind="primary"] p::before {{
-        content: '🔄';
-        margin-right: 8px;
-        font-size: 18px;
-    }}
-    /* 💡 [핵심] 버튼 박스 내부 하단에 날짜/시간 강제 삽입 */
-    div[data-testid="stSidebar"] button[kind="primary"]::after {{
-        content: '{now_str}';
-        position: absolute !important;
-        bottom: 12px !important;
-        left: 0 !important;
-        right: 0 !important;
-        text-align: center !important;
-        font-size: 14.5px !important;
-        color: #444444 !important;
-        font-weight: 500 !important;
-        letter-spacing: -0.2px !important;
-    }}
-    /* 버튼 사이의 기본 간격을 좁히기 위한 컨테이너 조정 */
-    div[data-testid="stVerticalBlock"] > div:has(button[key="sidebar_btn_update_final"]) {{
-        margin-bottom: -20px !important;
+    /* 버튼(1행)과 날짜 텍스트(2행) 사이의 여백을 좁혀서 하나의 덩어리처럼 보이게 함 */
+    div[data-testid="stSidebar"] div.element-container:has(button[key="btn_update_2row"]) {{
+        margin-bottom: -10px !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 업데이트 실행 버튼 (키값을 바꿔서 캐시 충돌 방지)
-    if st.button("업데이트", key="sidebar_btn_update_v3", type="primary", use_container_width=True):
+    # 4. 업데이트 버튼 (표의 1행 역할: 테두리 있는 화이트 버튼)
+    if st.button("🔄 업데이트", key="btn_update_2row", type="primary", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 버튼과 하단 카드 사이의 미세 간격 조정용 (12px 유지)
-    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+    # 5. 업데이트 날짜 표시 (표의 2행 역할: 테두리선 없이 텍스트만 깔끔하게)
+    st.markdown(f"<div style='text-align: center; font-size: 14.5px; color: #777; font-weight: 500; margin-bottom: 25px; letter-spacing: -0.3px;'>{now_str}</div>", unsafe_allow_html=True)
 
+    # 하단 라디오 버튼 (메뉴 선택)
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
     
     # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
@@ -1441,6 +1413,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
