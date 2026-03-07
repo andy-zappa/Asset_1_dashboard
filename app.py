@@ -590,6 +590,7 @@ with st.sidebar:
 # =========================================================
 def draw_pie_charts(g_data):
     if not isinstance(g_data, dict): return
+    
     def get_detailed_grouped_df(keys, is_usa=False):
         records = []
         fx = safe_float(g_data.get('환율', 1443.1)) if is_usa else 1
@@ -627,14 +628,14 @@ def draw_pie_charts(g_data):
             p_class = "#FF5252" if row['평가손익'] > 0 else ("#448AFF" if row['평가손익'] < 0 else "#9e9e9e")
             sign = "+" if row['평가손익'] > 0 else ""
             c_code = donut_colors[i % len(donut_colors)]
-            qty_str = f"{row['수량']:,.2f}".rstrip('0').rstrip('.') if row['수량'] % 1 != 0 else f"{int(row['수량']):,}" # 보유량 포맷팅
+            qty_str = f"{row['수량']:,.2f}".rstrip('0').rstrip('.') if row['수량'] % 1 != 0 else f"{int(row['수량']):,}"
             
-            # 💡 items_js에 qty 정보 삽입
             items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code, "qty": qty_str})
             list_html += f"<div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:4px;'><div class='leg-left' style='display:flex; align-items:center;'><div class='leg-color' style='width:14px; height:14px; border-radius:4px; margin-right:10px; background-color:{c_code};'></div>{logo}<span class='leg-name' style='color:#e2e8f0; font-size:15px; font-weight:500;'>{row['종목명']}</span></div><span class='leg-pct' style='color:#94a3b8; font-size:15px; font-weight:bold;'>{pct:.1f}%</span></div>"
             
+        # 💡 [핵심 수정] .box { height:560px; } 로 늘려서 마지막 행이 눌리는 현상 방지!
         html_code = f"""
-        <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; }}.box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:500px; border:1px solid #2c3140; box-sizing:border-box; }}.title {{ color:#fff; font-size:19px; font-weight:bold; margin-bottom:20px; }}.content {{ display:flex; height:100%; }}.left-panel {{ flex:1.1; display:flex; flex-direction:column; padding-right:20px; border-right:1px solid #2c3140; }}.hover-panel {{ min-height:100px; margin-bottom:15px; border-bottom:1px dashed #3a3f50; display:flex; flex-direction:column; justify-content:center; }}.list-area {{ flex:1; overflow-y:auto; padding-right:10px; }}.list-area::-webkit-scrollbar {{ width:6px; }}.list-area::-webkit-scrollbar-thumb {{ background:#4b5563; border-radius:3px; }}.chart-area {{ flex:1.2; position:relative; }}.legend-item {{ transition:all 0.2s; }}.legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(5px); border-left:3px solid #4CAF50; }}</style></head>
+        <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; }}.box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:560px; border:1px solid #2c3140; box-sizing:border-box; }}.title {{ color:#fff; font-size:19px; font-weight:bold; margin-bottom:20px; }}.content {{ display:flex; height:100%; }}.left-panel {{ flex:1.1; display:flex; flex-direction:column; padding-right:20px; border-right:1px solid #2c3140; }}.hover-panel {{ min-height:100px; margin-bottom:15px; border-bottom:1px dashed #3a3f50; display:flex; flex-direction:column; justify-content:center; }}.list-area {{ flex:1; overflow-y:auto; padding-right:10px; }}.list-area::-webkit-scrollbar {{ width:6px; }}.list-area::-webkit-scrollbar-thumb {{ background:#4b5563; border-radius:3px; }}.chart-area {{ flex:1.2; position:relative; }}.legend-item {{ transition:all 0.2s; }}.legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(5px); border-left:3px solid #4CAF50; }}</style></head>
         <body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="hover-panel" id="hover-info"><div style='color:#64748b; font-size:13px; text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div></div><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
         <script>
             var itemsData = {json.dumps(items_js, ensure_ascii=False)};
@@ -644,61 +645,67 @@ def draw_pie_charts(g_data):
             chart.on('mouseout', function(){{ clearHover(); highlightLegend(-1); }});
             function updateHover(idx){{ 
                 var d=itemsData[idx]; 
-                // 💡 첨부 이미지처럼 타이틀 밑에 보유 주식수(qty) 라벨 추가
                 document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span><span style='margin-left:8px; padding:3px 6px; background:#1e293b; color:#94a3b8; border-radius:4px; font-size:11.5px; font-weight:bold;'>보유 ${{d.qty}}주</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; 
             }}
             function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
             function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
         </script></body></html>
         """
-        components.html(html_code, height=520)
-        
-# 💡 1. 섹션 타이틀 (들여쓰기 윗줄과 똑같이 맞추기 주의!)
-st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+        # 💡 [핵심 수정] 컴포넌트 전체 높이도 520 -> 580으로 늘려서 짤림 완벽 방지
+        components.html(html_code, height=580)
 
-# 데이터 준비
-df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
-df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+    
+    # 데이터 준비
+    df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
+    df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
+    
+    # 💡 Streamlit 외부 컨테이너 하단 여백 대폭 확대 (80px)
+    st.markdown("""
+        <style>
+        div[data-testid="column"] { padding-bottom: 80px !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    cb1, cb2 = st.columns(2)
+    
+    # 💡 글로벌 표준 Twemoji 기반 1000% 확실한 태극기/성조기 URL
+    flag_kr = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
+    flag_us = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png"
 
-# 💡 2. [하단 여백 해결] 박스 하단이 눌려서 삐져나오지 않게 80px의 넉넉한 공간을 줍니다!
-st.markdown("""
-    <style>
-    .stPlotlyChart { margin-bottom: 80px !important; }
-    div[data-testid="column"] { padding-bottom: 80px !important; }
-    </style>
-""", unsafe_allow_html=True)
+    with cb1: 
+        # 🌱 나뭇잎 + 🇰🇷 진짜 태극기 + 큼직한 1.35rem 폰트
+        title_kr = f"""
+        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+            <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_kr}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
+            <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
+        </div>
+        """
+        try:
+            if not df_dom_g.empty:
+                render_interactive_pie_area(df_dom_g, title_kr)
+            else:
+                st.info("한국 계좌 데이터가 없습니다.")
+        except:
+            pass
 
-# 💡 3. 글로벌 표준 Twemoji 기반 (절대 깨지거나 다른 나라 국기로 안 바뀌는) 정식 이미지!
-flag_kr_url = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
-flag_us_url = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png"
-
-cb1, cb2 = st.columns(2)
-
-with cb1:
-    # 🌱 + (🇰🇷 진짜 태극기) + 큼직한 글씨체
-    title_kr = f"""
-    <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-        <img src='{flag_kr_url}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
-        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
-    </div>
-    """
-    try:
-        if not df_dom_g.empty: render_interactive_pie_area(df_dom_g, title_kr)
-    except: st.info("한국 계좌 데이터 확인 중...")
-
-with cb2:
-    # 🌱 + (🇺🇸 진짜 성조기) + 큼직한 글씨체
-    title_us = f"""
-    <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
-        <img src='{flag_us_url}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
-        <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
-    </div>
-    """
-    try:
-        if not df_usa_g.empty: render_interactive_pie_area(df_usa_g, title_us)
-    except: st.info("미국 계좌 데이터 확인 중...")   
+    with cb2: 
+        # 🌱 나뭇잎 + 🇺🇸 진짜 성조기 + 큼직한 1.35rem 폰트
+        title_us = f"""
+        <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+            <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+            <img src='{flag_us}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
+            <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
+        </div>
+        """
+        try:
+            if not df_usa_g.empty:
+                render_interactive_pie_area(df_usa_g, title_us)
+            else:
+                st.info("미국 계좌 데이터가 없습니다.")
+        except:
+            pass
     
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
@@ -1512,6 +1519,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
