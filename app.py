@@ -595,26 +595,6 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    # 7. 🌎 총 자산 통합 카드
-    st.markdown(f"""
-    <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'>🌎 총 자산 통합</div>
-        <div style='text-align: right;'>
-            <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:18px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
-        </div>
-        <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
-                <span style='font-size: 12.5px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
-                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
-            </div>
-            <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
-                <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
     
     # 8. ⏳ 절세계좌 카드
     st.markdown(f"""
@@ -1534,6 +1514,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
