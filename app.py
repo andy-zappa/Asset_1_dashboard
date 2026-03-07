@@ -16,39 +16,6 @@ import plotly.graph_objects as go
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
-# 💡 Zappa Quant 배너 & Admin 버튼 영역
-col_logo, col_title = st.columns([1, 15]) 
-
-with col_logo:
-    st.image("https://cdn-icons-png.flaticon.com/512/1175/1175086.png", width=60)
-    
-    st.markdown("""
-        <style>
-        div[data-testid="column"]:nth-of-type(1) button {
-            padding: 0px 4px !important;
-            font-size: 10px !important;
-            min-height: 0px !important;
-            height: 22px !important;
-            color: #666 !important;
-            background-color: transparent !important;
-            border: 1px solid #444 !important;
-            margin-top: -10px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    if st.button("🔒 Admin"):
-        st.toast("관리자 패스워드 모드 진입")
-
-with col_title:
-    st.markdown("""
-    <div style='display: inline-flex; flex-direction: column; margin-left: -5px;'>
-        <span style='font-size: 32px; font-weight: 900; letter-spacing: -1px; color: #eeeeee; line-height: 1.1;'>Zappa Quant</span>
-        <span style='font-size: 14px; color: #8b93a6; font-style: italic; text-align: right;'>Built & Algo by Andy</span>
-    </div>
-    """, unsafe_allow_html=True)
-# 🔼🔼🔼🔼 여기까지 🔼🔼🔼🔼
-
 # =========================================================
 # [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
 # =========================================================
@@ -608,16 +575,27 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 🤖 AI 퀀트매매 카드 (로컬 파일로 안전하게 표출!)
+# 💡 [사이드바] 버튼 클릭 상태를 저장할 변수 초기화
+    if 'admin_mode' not in st.session_state:
+        st.session_state.admin_mode = False
+
+    # 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
     st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 25px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        <div style='display:flex; flex-direction:column; align-items:flex-start; justify-content:center;'>
-            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1;'>Zappa Quant</div>
-            <div style='text-align: right; font-size:11px; color:#555; font-weight:400; letter-spacing:0px; margin-top:2px; margin-left: 1.5px;'>Built & Algo by Andy</div>
+        <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
+            <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
+            <div style='font-size:11px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # 💡 [사이드바] 눈에 띄지 않게 우측 구석에 자물쇠 버튼만 살짝 배치
+    col_empty, col_btn = st.columns([5, 1])
+    with col_btn:
+        # 버튼을 누르면 admin_mode 상태가 True/False로 바뀝니다.
+        if st.button("🔒", key="admin_btn", help="Admin Only"):
+            st.session_state.admin_mode = not st.session_state.admin_mode
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -1552,6 +1530,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
