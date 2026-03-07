@@ -438,7 +438,7 @@ with st.sidebar:
     /* 🚀 1. 상단 상태 박스 (호버 애니메이션 완벽 제거, 간격 축소) */
     .status-box {{
         padding: 10px;
-        margin-bottom: 4px !important; /* 💡 업데이트 버튼과 한 덩어리처럼 보이게 4px로 바짝 붙임 */
+        margin-bottom: 2px !important; /* 💡 업데이트 버튼과 한 덩어리처럼 보이게 4px로 바짝 붙임 */
         border-radius: 8px;
         text-align: center;
         font-size: 13.5px;
@@ -1446,6 +1446,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
