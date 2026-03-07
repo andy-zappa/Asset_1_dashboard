@@ -1342,7 +1342,7 @@ elif st.session_state.current_view == '일반계좌':
         lbl6 = "💻종목코드[-]" if st.session_state.show_code else "💻종목코드[+]"
         if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
-   st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
     for k in GEN_ACC_ORDER:
         if k in g_data and isinstance(g_data[k], dict):
@@ -1440,4 +1440,5 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
