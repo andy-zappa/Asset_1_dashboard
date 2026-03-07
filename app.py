@@ -1117,7 +1117,8 @@ elif st.session_state.current_view == '절세계좌':
                     # 💡 [이슈 4 적용] 제목 디자인을 '매입금액 대비' 폰트/구조와 동일하게 맞추고 손익률 추가
                     st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(a.get('총 자산',0))}</span> KRW / 총 손익 : <span class='summary-val {col(s_data.get('평가손익',0))}'>{fmt(s_data.get('평가손익',0), True)} ({fmt_p(s_rate)})</span></div>", unsafe_allow_html=True)
                     
-                    # 💡 종목코드 및 등락률 헤더 로직
+                    # 💡 [핵심 교정 부분] 종목코드 및 등락률 헤더 로직 정상화 (에러 해결)
+                    code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
                     h3 = [f"<table class='main-table'><tr><th>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                     
@@ -1440,5 +1441,6 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
