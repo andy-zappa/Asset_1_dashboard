@@ -1445,9 +1445,3 @@ elif st.session_state.current_view == '일반계좌':
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
 
-
-
-
-
-
-
