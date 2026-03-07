@@ -407,7 +407,7 @@ total_rate = (total_profit / total_orig * 100) if total_orig > 0 else 0
 # =========================================================
 
 
-   with st.sidebar:
+with st.sidebar:
     # 1. 데이터 연동 상태 박스 (상단)
     if is_oracle_online:
         status_html = """
@@ -1447,6 +1447,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
