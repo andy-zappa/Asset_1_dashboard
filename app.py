@@ -596,6 +596,26 @@ with st.sidebar:
         # 버튼을 누르면 admin_mode 상태가 True/False로 바뀝니다.
         if st.button("🔒", key="admin_btn", help="Admin Only"):
             st.session_state.admin_mode = not st.session_state.admin_mode
+
+# 💡 [메인 화면] 자물쇠 버튼이 클릭된 상태(True)일 때만 패스워드 창 표출
+if st.session_state.admin_mode:
+    st.markdown("---")
+    st.subheader("🔒 관리자 전용 페이지")
+    
+    # 패스워드 입력창 (타이핑 시 **** 로 가려짐)
+    pwd_input = st.text_input("접근 패스워드를 입력하세요", type="password")
+    
+    # 패스워드가 맞을 경우
+    if pwd_input == "1234":  # 🚨여기에 Andy님만의 진짜 비밀번호를 설정하세요!
+        st.success("✅ 인증 완료! 관리자 메뉴가 활성화되었습니다.")
+        
+        # 💡 향후 여기에 주식수, 평단가 등 정보 입력 폼을 만드시면 됩니다!
+        st.info("여기에 상세 정보 입력 UI(평단가, 수량 등)가 들어갈 예정입니다.")
+        # ex) st.number_input("삼성전자 평단가 입력")
+        
+    elif pwd_input != "":
+        st.error("❌ 패스워드가 일치하지 않습니다.")
+    st.markdown("---")
 # =========================================================
 # 🍩 일반계좌 파이차트 함수 (대시보드에서 사용)
 # =========================================================
@@ -1530,6 +1550,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
