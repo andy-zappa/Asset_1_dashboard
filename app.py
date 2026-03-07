@@ -427,7 +427,7 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 💡 [디테일 교정] 요일 텍스트 14.0px로 0.5px 추가 축소
+    # 2. 💡 [디테일 교정] 요일 텍스트 14.0px 정밀 적용
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
@@ -436,10 +436,10 @@ with st.sidebar:
     day_str = wd_list[now_kst.weekday()]
     time_part = now_kst.strftime("%H:%M:%S")
     
-    # HTML span 태그로 요일 폰트 사이즈를 14.0px로 정밀 조정합니다.
+    # 요일 부분만 14.0px로 축소
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [CSS 강제 오버라이드] 5개 메뉴 모두 바운스, 2~5번만 회색 배경
+    # 3. 💡 [CSS 강제 오버라이드] 라디오 버튼 최상단 끌어올리기 & BaseWeb 뚫어버리기
     st.markdown(f"""
     <style>
     /* 🔄 업데이트 버튼 호버 효과 (유지) */
@@ -449,7 +449,7 @@ with st.sidebar:
         border-radius: 8px !important;
         color: #111111 !important;
         min-height: 50px !important;
-        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
+        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover,
     div[data-testid="stSidebar"] button[kind="secondary"]:active,
@@ -467,40 +467,47 @@ with st.sidebar:
         margin: 0 !important;
     }}
 
-    /* 🚀 [모든 라디오 메뉴 공통] 부드러운 트랜지션 및 둥근 테두리 적용 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label {{
-        transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
+    /* 🚨 [핵심 1] 라디오 메뉴 전체를 화면 최상단으로 올려서 마우스 간섭 완벽 차단 */
+    div[data-testid="stSidebar"] div[data-testid="stRadio"] {{
+        position: relative !important;
+        z-index: 9999 !important; 
+    }}
+
+    /* 🚀 [핵심 2] 스트림릿 고유의 양파 껍질(BaseWeb)을 직접 타겟팅하여 바운스 애니메이션 부여 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"] {{
+        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
         border-radius: 8px !important;
         padding: 8px 12px !important; 
+        margin-bottom: 2px !important;
         cursor: pointer !important;
     }}
     
-    /* 🚀 [모든 메뉴 공통] 마우스 올렸을 때 공중부양(Bounce) 효과 적용 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:hover {{
+    /* 🚀 모든 메뉴 마우스 올렸을 때 위로 바운스! */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:hover {{
         transform: translateY(-3px) !important;
     }}
 
-    /* 🛡️ 1번 메뉴(대시보드) - 호버 시 배경색은 투명, 그림자만 살짝 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(1):hover {{
+    /* 🛡️ 1번 메뉴(대시보드) - 바운스만 하고 배경은 투명 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(1):hover {{
         background-color: transparent !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important;
     }}
 
-    /* 🚀 2~5번 메뉴 호버 시 확실한 회색 박스화 및 그림자 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(n+2):hover {{
+    /* 🚀 2~5번 메뉴 - 바운스 + 시원한 회색 배경 + 그림자 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(n+2):hover {{
         background-color: #e2e6ea !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
     }}
 
-    /* 💡 [핵심 철퇴] 2~5번 메뉴 호버 시 내부 텍스트 래퍼의 하얀색 배경 뚫어버리기 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(n+2):hover * {{
+    /* 💡 [핵심 철퇴] 2~5번 메뉴 안쪽의 숨겨진 투명/흰색 div 껍질들 전부 배경색 제거! */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label[data-baseweb="radio"]:nth-child(n+2):hover div {{
         background-color: transparent !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
     # 4. 버튼 영역
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v9", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v10", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -508,9 +515,8 @@ with st.sidebar:
     # 5. 날짜 영역 
     st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -10px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
-    # 6. 하단 메뉴 선택
+    # 6. 하단 메뉴 선택 (이제 z-index 최상단이라 무조건 클릭/호버 다 먹힙니다!)
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    # 💡 1. 가상자산 비중 추출 (카드 그리기 전 필수!)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -1449,6 +1455,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
