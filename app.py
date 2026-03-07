@@ -725,7 +725,32 @@ def render_interactive_pie_area(df_pie, title):
         components.html(html_code, height=540)
 
 st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
-    
+
+# 💡 데이터를 그룹화해주는 핵심 함수 (실수로 지워졌을 가능성이 큽니다!)
+def get_detailed_grouped_df(keys, is_usa=False):
+    records = []
+    # g_data는 전역 변수로 이미 로드되어 있어야 합니다.
+    fx = safe_float(g_data.get('환율', 1443.1)) if is_usa else 1
+    for k in keys:
+        if k in g_data and isinstance(g_data[k], dict):
+            details = g_data[k].get('상세', [])
+            if isinstance(details, list):
+                for it in details:
+                    if not isinstance(it, dict): continue
+                    nm = str(it.get('종목명', '')).strip()
+                    if nm in ['[ 합  계 ]', '예수금', '현금성자산', 'MMF', '이율보증', '']: continue
+                    if nm.upper() == 'FIGMA': nm = '피그마'
+                    asset = safe_float(it.get('총자산', 0)) * fx
+                    profit = safe_float(it.get('평가손익', 0)) * fx
+                    buy_amt = asset - profit
+                    qty = safe_float(it.get('수량', 0))
+                    records.append({'종목명': nm, '총자산': asset, '평가손익': profit, '매입금액': buy_amt, '수량': qty})
+    if not records: return pd.DataFrame()
+    df = pd.DataFrame(records)
+    df_g = df.groupby('종목명').sum().reset_index()
+    df_g['수익률'] = (df_g['평가손익'] / df_g['매입금액'] * 100).fillna(0)
+    df_g = df_g.sort_values('총자산', ascending=False).reset_index(drop=True)
+    return df_g
     # 데이터 준비
 df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
 df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
@@ -1636,6 +1661,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
