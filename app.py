@@ -783,8 +783,9 @@ if st.session_state.current_view == '대시보드':
             fig.update_layout(margin=dict(t=40, l=10, r=10, b=10), title=dict(text=title, font=dict(size=17, color='#ffffff', family='sans-serif'), x=0.02, y=0.97), paper_bgcolor='#1e222d', plot_bgcolor='#1e222d', height=450)
             return fig
 
-        c1, c2 = st.columns(2)
+ c1, c2 = st.columns(2)
         
+        # 💡 [핵심 데이터 로직] 상승/하락 종목 수 계산 함수 복구 완료!
         def get_counts(lst):
             if not lst: return 0, 0
             df_c = pd.DataFrame(lst)
@@ -798,7 +799,7 @@ if st.session_state.current_view == '대시보드':
         gen_up, gen_dn = get_counts(all_gen_list)
 
         with c1:
-            # 💡 [수정됨] 카운트 박스 숫자 하이라이트 및 텍스트 변경
+            # 💡 [좌측] 카운트 박스 숫자 하이라이트 및 텍스트 변경
             st.markdown(f"""
             <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
                 [지수추종 ETF] &nbsp;&nbsp; 
@@ -812,7 +813,7 @@ if st.session_state.current_view == '대시보드':
             st.markdown("</div>", unsafe_allow_html=True)
             
         with c2:
-            # 💡 [수정됨] 카운트 박스 숫자 하이라이트 및 텍스트 변경
+            # 💡 [우측] 카운트 박스 숫자 하이라이트 및 텍스트 변경
             st.markdown(f"""
             <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
                 [개별종목] &nbsp;&nbsp; 
@@ -821,8 +822,9 @@ if st.session_state.current_view == '대시보드':
             </div>
             """, unsafe_allow_html=True)
             
+            # 💡 all_general_list 가 아닌 진짜 변수명 all_gen_list 로 최종 교정 완료!
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-            if all_general_list: st.plotly_chart(render_treemap(all_general_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
+            if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
@@ -1471,6 +1473,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
