@@ -16,6 +16,39 @@ import plotly.graph_objects as go
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
+# 💡 Zappa Quant 배너 & Admin 버튼 영역
+col_logo, col_title = st.columns([1, 15]) 
+
+with col_logo:
+    st.image("https://cdn-icons-png.flaticon.com/512/1175/1175086.png", width=60)
+    
+    st.markdown("""
+        <style>
+        div[data-testid="column"]:nth-of-type(1) button {
+            padding: 0px 4px !important;
+            font-size: 10px !important;
+            min-height: 0px !important;
+            height: 22px !important;
+            color: #666 !important;
+            background-color: transparent !important;
+            border: 1px solid #444 !important;
+            margin-top: -10px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    if st.button("🔒 Admin"):
+        st.toast("관리자 패스워드 모드 진입")
+
+with col_title:
+    st.markdown("""
+    <div style='display: inline-flex; flex-direction: column; margin-left: -5px;'>
+        <span style='font-size: 32px; font-weight: 900; letter-spacing: -1px; color: #eeeeee; line-height: 1.1;'>Zappa Quant</span>
+        <span style='font-size: 14px; color: #8b93a6; font-style: italic; text-align: right;'>Built & Algo by Andy</span>
+    </div>
+    """, unsafe_allow_html=True)
+# 🔼🔼🔼🔼 여기까지 🔼🔼🔼🔼
+
 # =========================================================
 # [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
 # =========================================================
