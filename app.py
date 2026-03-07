@@ -653,17 +653,39 @@ def draw_pie_charts(g_data):
         """
         components.html(html_code, height=520)
 
+    # 1. 섹션 타이틀
     st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+    
+    # 2. 데이터 준비
     df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
     df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
     
+    # 💡 [하단 여백 해결] 차트와 리스트가 박스 밖으로 삐져나오지 않게 강제로 공간 확보
+    st.markdown("""
+        <style>
+        /* 모든 플롯 차트 하단에 넉넉한 여백 부여 */
+        .stPlotlyChart { margin-bottom: 50px !important; }
+        /* 파이차트 컨테이너 하단 여백 추가 */
+        div[data-testid="column"] { padding-bottom: 30px !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 3. 레이아웃 및 차트 출력
     cb1, cb2 = st.columns(2)
+    
     with cb1: 
-    # 한국 국기 🇰🇷 적용
-    render_interactive_pie_area(df_dom_g, "일반계좌 통합 상세비중 (🇰🇷)")
+        # 🇰🇷 한국 국기 적용 (들여쓰기 주의)
+        if not df_dom_g.empty:
+            render_interactive_pie_area(df_dom_g, "일반계좌 통합 상세비중 (🇰🇷)")
+        else:
+            st.info("한국 계좌 데이터가 없습니다.")
+
     with cb2: 
-    # 미국 국기 🇺🇸 적용 (기존 '해외'를 '미국' 혹은 '해외' 유지하며 국기 추가)
-    render_interactive_pie_area(df_usa_g, "일반계좌 통합 상세비중 (🇺🇸)")
+        # 🇺🇸 미국 국기 적용 (들여쓰기 주의)
+        if not df_usa_g.empty:
+            render_interactive_pie_area(df_usa_g, "일반계좌 통합 상세비중 (🇺🇸)")
+        else:
+            st.info("미국 계좌 데이터가 없습니다.")
 
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
@@ -1477,6 +1499,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
