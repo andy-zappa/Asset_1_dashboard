@@ -968,9 +968,9 @@ elif st.session_state.current_view == '절세계좌':
                 a_prof = a_tot - a_prin
                 a_rate = (a_prof / a_prin * 100) if a_prin > 0 else 0
                 
-                # 💡 [이슈 1 적용] 전체 종목에서 '예수금', '현금성자산', '[ 합  계 ]'를 제외하고 순수 카운트
+                # 💡 [핵심 교정] '현금'이나 '예수금' 단어가 포함된 모든 종목(예: 현금성자산(삼성증권))을 완벽히 제외하고 카운트
                 details_for_cnt = a.get('상세', [])
-                item_count = len([i for i in details_for_cnt if isinstance(i, dict) and i.get('종목명', '') not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)']])
+                item_count = len([i for i in details_for_cnt if isinstance(i, dict) and str(i.get('종목명', '')) != '[ 합  계 ]' and '현금' not in str(i.get('종목명', '')) and '예수금' not in str(i.get('종목명', ''))])
                 
                 k_date = DATE_TAGS.get(k, '')
                 
@@ -1441,6 +1441,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
