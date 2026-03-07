@@ -798,17 +798,31 @@ if st.session_state.current_view == '대시보드':
         gen_up, gen_dn = get_counts(all_gen_list)
 
         with c1:
-            # 💡 카운트 박스를 Treemap 차트 위로 배치
-            st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>상승종목 : <span style='color:#ff7675;'>{pen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#74b9ff;'>{pen_dn}개</span></div>", unsafe_allow_html=True)
+            # 💡 [수정됨] 카운트 박스 숫자 하이라이트 및 텍스트 변경
+            st.markdown(f"""
+            <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
+                [지수추종 ETF] &nbsp;&nbsp; 
+                상승↑ : <span style='color: #ff4b4b; font-size: 22px; font-weight: 900;'>{pen_up}</span> 종목 &nbsp; / &nbsp; 
+                하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{pen_dn}</span> 종목
+            </div>
+            """, unsafe_allow_html=True)
+            
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
             if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
             
         with c2:
-            # 💡 카운트 박스를 Treemap 차트 위로 배치
-            st.markdown(f"<div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>상승종목 : <span style='color:#ff7675;'>{gen_up}개</span> &nbsp;&nbsp;|&nbsp;&nbsp; 하락종목 : <span style='color:#74b9ff;'>{gen_dn}개</span></div>", unsafe_allow_html=True)
+            # 💡 [수정됨] 카운트 박스 숫자 하이라이트 및 텍스트 변경
+            st.markdown(f"""
+            <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
+                [개별종목] &nbsp;&nbsp; 
+                상승↑ : <span style='color: #ff4b4b; font-size: 22px; font-weight: 900;'>{gen_up}</span> 종목 &nbsp; / &nbsp; 
+                하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{gen_dn}</span> 종목
+            </div>
+            """, unsafe_allow_html=True)
+            
             st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-            if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
+            if all_general_list: st.plotly_chart(render_treemap(all_general_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         draw_pie_charts(g_data)
@@ -1457,6 +1471,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
