@@ -446,7 +446,7 @@ with st.sidebar:
     time_part = now_kst.strftime("%H:%M:%S")
     now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
-    # 3. 💡 [강력 CSS] Bold 토글 애니메이션 & 버튼 영문 텍스트 분리 제어
+    # 3. 💡 [강력 CSS] Bold 토글 애니메이션 & 0px 해킹을 통한 영문 분리!
     st.markdown(f"""
     <style>
     /* 🚀 1. 혁신된 상단 상태 박스 */
@@ -464,24 +464,20 @@ with st.sidebar:
     }}
     .status-item {{ display: flex; align-items: center; gap: 5px; transition: all 0.3s ease; }}
     .icon {{ font-size: 14px; }}
-    /* 기본 텍스트 속성 */
     .text {{ font-size: 13.5px; font-weight: 800; letter-spacing: -0.5px; transition: font-weight 0.2s ease; }}
     .divider {{ width: 1.5px; height: 14px; background-color: #cccccc; }}
     
-    /* 켜진 상태 컬러 */
     .active-green .text {{ color: #1e8e3e; font-weight: 800; }}
     .active-red .text {{ color: #d93025; font-weight: 800; }}
     
-    /* 💡 꺼진 상태 컬러 (흑백 처리 & 투명도 & 굵기 일반으로 변경!) */
     .dimmed {{ opacity: 0.35; filter: grayscale(100%); }}
     .dimmed .text {{ font-weight: 500 !important; }} 
 
-    /* 🚀 2. 업데이트 버튼 */
+    /* 🚀 2. 업데이트 버튼 설정 */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
-        color: #111111 !important;
         min-height: 50px !important;
         width: 100% !important;
         display: block !important;
@@ -496,21 +492,31 @@ with st.sidebar:
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important; 
     }}
     
-    /* 한글 '업데이트' 부분 스타일 */
+    /* 💡 [글씨 0px 해킹] 원래 글씨는 투명화시켜 버리고, 가짜 글씨 2개를 조립합니다! */
     div[data-testid="stSidebar"] button[kind="secondary"] p {{ 
-        font-size: 16px !important; 
-        font-weight: 800 !important; 
+        font-size: 0px !important; /* 원래 파이썬에서 넘긴 텍스트 증발 */
         margin: 0 !important; 
-        letter-spacing: -0.3px; 
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 5px !important; /* 한글과 영어 사이 간격 */
     }}
-    /* 💡 [핵심 해킹] 영어 부분만 작고 얇게 만들어서 뒤에 붙이기! */
+    /* 한글 부분 (크고 두껍게) */
+    div[data-testid="stSidebar"] button[kind="secondary"] p::before {{
+        content: "🔄 업데이트";
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        color: #111111 !important;
+        letter-spacing: -0.3px;
+    }}
+    /* 영문 부분 (작고 얇게) */
     div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
-        content: " (with KIS / UPbit API)";
-        font-size: 12px !important;
+        content: "(with KIS / UPbit API)";
+        font-size: 11.5px !important;
         font-weight: 500 !important;
         color: #777777 !important;
-        margin-left: 3px;
         letter-spacing: 0px;
+        padding-top: 2px; /* 한글이랑 높낮이 미세 조정 */
     }}
 
     /* 🚀 3. 커스텀 메뉴 박스들 (.sidebar-card) */
@@ -528,8 +534,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 버튼 파이썬 코드 (영어 부분은 CSS가 자동으로 렌더링해 줍니다!)
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v20", use_container_width=True):
+    # 4. 💡 파이썬 코드 (텍스트는 CSS에서 덮어씌우므로 아무거나 들어가도 상관없습니다)
+    if st.button("업데이트 더미 텍스트", key="sidebar_btn_update_v21", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1483,6 +1489,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
