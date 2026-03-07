@@ -427,32 +427,30 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. KST 시간 계산
+    # 2. 💡 [포맷 업데이트] 첨부 이미지와 동일한 [ YYYY/MM/DD(요일) / HH:MM:SS ] 구조로 변경
     from datetime import datetime, timedelta, timezone
     now_kst = datetime.now(timezone(timedelta(hours=9)))
     wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    now_str = now_kst.strftime(f"%m/%d({wd_list[now_kst.weekday()]}), %H:%M:%S")
+    now_str = now_kst.strftime(f"[ %Y/%m/%d({wd_list[now_kst.weekday()]}) / %H:%M:%S ]")
 
-    # 3. 💡 [CSS 전면 수정] 튀어오르는(Bounce) 호버 효과 적용
+    # 3. 💡 [CSS 격리 적용] 1번 메뉴와 2~5번 메뉴의 영향을 완전히 끊어냈습니다.
     st.markdown(f"""
     <style>
-    /* 💡 1. 업데이트 버튼 튀어오르는 호버 효과 */
+    /* 🔄 업데이트 버튼 튀어오르는 호버 효과 (유지) */
     div[data-testid="stSidebar"] button[kind="secondary"] {{
         background-color: #ffffff !important;
         border: 1.2px solid #888888 !important;
         border-radius: 8px !important;
         color: #111111 !important;
         min-height: 50px !important;
-        /* 탄력있는 애니메이션(공중부양) 추가 */
         transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover,
     div[data-testid="stSidebar"] button[kind="secondary"]:active,
     div[data-testid="stSidebar"] button[kind="secondary"]:focus {{
-        background-color: #f4f6f9 !important; /* 밝은 회색 */
+        background-color: #f4f6f9 !important;
         border-color: #555555 !important;
         color: #111111 !important;
-        /* 💡 마우스 오버 시 위로 살짝(-3px) 튀어오르고 그림자가 생김 */
         transform: translateY(-3px) !important;
         box-shadow: 0 6px 12px rgba(0,0,0,0.1) !important;
         outline: none !important;
@@ -463,19 +461,29 @@ with st.sidebar:
         margin: 0 !important;
     }}
 
-    /* 💡 2. 하단 라디오 메뉴 박스들 튀어오르는 호버 효과 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label {{
-        /* 메뉴 박스들에도 동일한 탄력 애니메이션 부여 */
+    /* 🛡️ [완벽 격리 1] 1번 메뉴(대시보드/총자산통합) - 절대 움직이지 않도록 강제 고정 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(1) {{
+        transition: none !important;
+        transform: none !important;
+    }}
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(1):hover {{
+        transform: none !important;
+        box-shadow: none !important;
+        background-color: transparent !important;
+    }}
+
+    /* 🚀 [완벽 격리 2] 2~5번 메뉴(절세, 일반, 가상, 퀀트) - 개별적으로 공중부양 호버 타겟팅 */
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(2),
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(3),
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(4),
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(5) {{
         transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s ease !important;
         border-radius: 8px !important;
     }}
-    /* 총 자산 통합(첫 번째 '대시보드' 항목)은 예외: 움직이지 않음 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:first-child:hover {{
-        transform: none !important;
-        box-shadow: none !important;
-    }}
-    /* 절세/일반/가상/퀀트 (두 번째 항목부터): 회색 배경 & 공중부양 */
-    div[data-testid="stSidebar"] div[role="radiogroup"] > label:not(:first-child):hover {{
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(2):hover,
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(3):hover,
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(4):hover,
+    div[data-testid="stSidebar"] div[role="radiogroup"] > label:nth-child(5):hover {{
         background-color: #f4f6f9 !important;
         transform: translateY(-3px) !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
@@ -484,13 +492,13 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # 4. 버튼 영역
-    if st.button("🔄 업데이트", key="sidebar_btn_update_v6", use_container_width=True):
+    if st.button("🔄 업데이트", key="sidebar_btn_update_v7", use_container_width=True):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역
-    st.markdown(f"<div style='text-align: center; font-size: 13.5px; color: #777777; margin-top: -12px; margin-bottom: 25px;'>{now_str}</div>", unsafe_allow_html=True)
+    # 5. 날짜 영역 (업데이트된 포맷 렌더링)
+    st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -10px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
 
     # 6. 하단 메뉴 선택
     st.radio("카테고리 선택", ("대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"), label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
@@ -1433,6 +1441,7 @@ elif st.session_state.current_view == '일반계좌':
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
                 
+
 
 
 
