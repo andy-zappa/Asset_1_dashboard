@@ -737,7 +737,7 @@ st.markdown("""
         </style>
     """, unsafe_allow_html=True)
     
-    cb1, cb2 = st.columns(2)
+cb1, cb2 = st.columns(2)
     
     # 글로벌 표준 Twemoji 기반 태극기/성조기 URL
     flag_kr = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
@@ -1636,6 +1636,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
