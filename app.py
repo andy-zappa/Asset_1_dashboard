@@ -724,7 +724,7 @@ def render_interactive_pie_area(df_pie, title):
         # 💡 바깥쪽 Iframe 공간도 540px로 꽉 묶어줍니다!
         components.html(html_code, height=540)
 
-    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
     
     # 데이터 준비
     df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
@@ -1636,6 +1636,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
