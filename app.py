@@ -463,36 +463,9 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. Update 버튼 (투명/테두리 제거 & GPS 마커를 이용한 완벽한 우측 정렬) */
-    div.element-container:has(span#update-btn-target) + div.element-container {{
-        display: flex !important; 
-        justify-content: flex-end !important; 
-        margin-bottom: -22px !important; /* 💡 아래 날짜를 위로 확 끌어올려 밀착 */
-        position: relative; z-index: 20;
-    }}
-    div.element-container:has(span#update-btn-target) + div.element-container > div,
-    div.element-container:has(span#update-btn-target) + div.element-container div[data-testid="stButton"] {{
-        display: flex !important; justify-content: flex-end !important; width: 100% !important;
-    }}
-    
-    /* 💡 테두리 완전 제거 및 투명화 (Andy님 선호 스타일) */
-    div.element-container:has(span#update-btn-target) + div.element-container button {{
-        background: transparent !important; 
-        border: none !important; 
-        box-shadow: none !important;
-        padding: 0px 2px !important; /* 날짜 우측 끝선과 칼맞춤 */
-        min-height: 20px !important; height: auto !important; width: auto !important;
-        transition: transform 0.2s ease !important;
-    }}
-    div.element-container:has(span#update-btn-target) + div.element-container button p {{
-        font-size: 13px !important; font-weight: 600 !important; color: #888888 !important; margin: 0 !important;
-    }}
-    div.element-container:has(span#update-btn-target) + div.element-container button:hover {{
-        transform: translateY(-1px) !important;
-    }}
-    div.element-container:has(span#update-btn-target) + div.element-container button:hover p {{
-        color: #111111 !important; /* 마우스 올리면 글씨만 진해짐 */
-    }}
+    /* 🚀 1. 파이썬 진짜 버튼 숨기기 (스트림릿 레이아웃 방해 원천 차단) */
+    div.element-container:has(.hidden-update-marker) {{ display: none !important; }}
+    div.element-container:has(.hidden-update-marker) + div.element-container {{ display: none !important; }}
 
     /* 🚀 2. 메뉴 카드 (.sidebar-card) 애니메이션 (-2px 바운스 통일) */
     .sidebar-card {{
@@ -508,14 +481,14 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 업데이트 버튼 (정밀 타겟팅용 GPS 마커 삽입)
-    st.markdown("<span id='update-btn-target'></span>", unsafe_allow_html=True)
-    if st.button("🔄 Update", key="sidebar_btn_update_final6", use_container_width=False):
+    # 4. 💡 숨겨진 업데이트 버튼 (화면엔 안 보이고 백그라운드에서 캐시만 삭제함)
+    st.markdown("<div class='hidden-update-marker'></div>", unsafe_allow_html=True)
+    if st.button("TRIGGER_UPDATE_BACKEND"):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (한글 요일 12px / 그 외 모든 기호 및 숫자 12.5px)
+    # 5. 💡 날짜 영역 + 텍스트 버튼 합체 (순수 HTML로 강제 우측 정렬!)
     now_str_merged = (
         f"<span style='font-size: 12.5px;'>"
         f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
@@ -523,12 +496,40 @@ with st.sidebar:
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 10px; margin-bottom: -15px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 5px; margin-bottom: -15px; position: relative; z-index: 10; line-height: 1.7;'>
+            <span id='fake-update-btn' style='font-size: 13px; font-weight: 600; color: #888888; cursor: pointer; display: inline-block; transition: color 0.2s ease;'>
+                🔄 Update
+            </span><br>
             <span style='color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str_merged}
             </span>
         </div>
     """, unsafe_allow_html=True)
+
+    # 5.5 💡 텍스트 클릭 스크립트 (가짜 글씨를 누르면 숨겨진 진짜 버튼을 때려줌)
+    components.html("""
+    <script>
+    const parent = window.parent.document;
+    const interval = setInterval(() => {
+        const fakeBtn = parent.getElementById('fake-update-btn');
+        if (fakeBtn && !fakeBtn.hasAttribute('data-binded')) {
+            fakeBtn.setAttribute('data-binded', 'true');
+            
+            // 마우스 올리면 글씨 진해지게 (호버 효과)
+            fakeBtn.addEventListener('mouseenter', () => { fakeBtn.style.color = '#111111'; });
+            fakeBtn.addEventListener('mouseleave', () => { fakeBtn.style.color = '#888888'; });
+            
+            // 클릭하면 파이썬 버튼 몰래 실행
+            fakeBtn.addEventListener('click', () => {
+                const btns = Array.from(parent.querySelectorAll('button p'));
+                const target = btns.find(el => el.innerText.includes('TRIGGER_UPDATE_BACKEND'));
+                if (target) target.closest('button').click();
+            });
+            clearInterval(interval);
+        }
+    }, 500);
+    </script>
+    """, height=0)
     
     # 6. 메뉴 선택 
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
@@ -1633,6 +1634,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
