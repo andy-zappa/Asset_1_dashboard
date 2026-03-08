@@ -463,12 +463,20 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. Update 버튼 (Admin 스타일처럼 투명/초소형 + 날짜 위 우측 밀착) */
+    /* 🚀 1. Update 버튼 (우측 정렬 및 날짜 영역과 밀착) */
     div.element-container:has(button[key="sidebar_btn_update_final4"]) {{
-        display: flex !important; justify-content: flex-end !important; 
-        margin-bottom: -22px !important; /* 아래 날짜를 위로 확 끌어올림 */
+        display: flex !important; 
+        justify-content: flex-end !important; 
+        margin-bottom: -28px !important; /* 💡 아래 날짜를 위로 강하게 끌어올림 */
         position: relative; z-index: 20;
     }}
+    /* 💡 Streamlit 내부 숨겨진 div까지 완벽하게 우측으로 밀어냅니다 */
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) > div,
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) div[data-testid="stButton"] {{
+        display: flex !important; justify-content: flex-end !important; width: 100% !important;
+    }}
+    
+    /* 💡 Admin 버튼 스타일 적용 (투명, 초소형) */
     div.element-container:has(button[key="sidebar_btn_update_final4"]) button {{
         background: transparent !important; border: none !important; box-shadow: none !important;
         padding: 0px 4px !important; min-height: 20px !important; height: auto !important; width: auto !important;
@@ -498,13 +506,13 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 업데이트 버튼 (초소형 'Update', 우측 정렬)
+    # 4. 💡 업데이트 버튼 (영문 'Update'로 변경)
     if st.button("🔄 Update", key="sidebar_btn_update_final4", use_container_width=False):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (위쪽 Update 버튼에 바싹 밀착)
+    # 5. 날짜 영역 (한글 요일 12px / 그 외 모든 기호 및 숫자 12.5px)
     now_str_merged = (
         f"<span style='font-size: 12.5px;'>"
         f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
@@ -512,7 +520,7 @@ with st.sidebar:
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -15px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 10px; margin-bottom: -15px; position: relative; z-index: 10;'>
             <span style='color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str_merged}
             </span>
@@ -1622,6 +1630,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
