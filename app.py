@@ -185,7 +185,13 @@ def to_kst(time_str):
         return str(time_str)
 
 def safe_float(val):
-    try: return float(val) if val not in ['-', '', None] else 0.0
+    try:
+        if val in [None, "", "-", "None"]: return 0.0
+        # 💡 하이픈이나 문자가 들어간 문자열도 숫자 변환 전에 미리 0으로 청소합니다.
+        if isinstance(val, str): 
+            val = val.replace(",", "").strip()
+            if val == "-": return 0.0
+        return float(val)
     except: return 0.0
 
 def fmt(v, sign=False, decimal=0):
@@ -1702,6 +1708,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
