@@ -529,7 +529,7 @@ with st.sidebar:
         </div>
         <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
-                <span style='font-size: 12.5px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
+                <span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
                 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
             <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
@@ -1610,72 +1610,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
