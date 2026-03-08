@@ -626,7 +626,7 @@ with st.sidebar:
 # 🚦 [화면 관리자] Admin 및 페이지 전환 로직
 # =========================================================
 # 💡 Admin 모드일 때 보여줄 화면
-    if st.session_state.get('show_admin_page', False):
+if st.session_state.get('show_admin_page', False):
     st.markdown("### 🔒 Zappa Admin Control Panel")
     if st.button("⬅️ Back to Dashboard"):
         st.session_state['show_admin_page'] = False
@@ -1152,23 +1152,22 @@ elif st.session_state.current_view == '절세계좌':
 
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'><div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 손익률 우수종목 (TOP 5)</div><table class='main-table' style='margin-bottom: 20px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
 # 💡 [2번 수정부] 표 깨짐 방지 및 통일성 강화 로직
+        # 💡 HTML 깨짐 방지를 위해 변수명을 nm_td, diff_td로 통일한 새 버전입니다.
         for idx, it in enumerate(tax_best):
             orig_nm = str(it.get('종목명', ''))
             logo_html = get_logo_html(orig_nm)
             disp_nm = short_name(orig_nm)
             acc_tag = f"<br><span style='font-size:11px; color:#888;'>({it.get('계좌', '')})</span>"
             
-            c_p = safe_float(it.get('현재가', 0))
+            c_price = safe_float(it.get('현재가', 0))
             d_rate = safe_float(it.get('전일비', 0))
-            # 안전자산('-')일 경우 대비 계산 방어막
-            diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
+            diff_amt = (c_price - (c_price / (1 + d_rate / 100))) if c_price > 0 and d_rate != 0 else 0
             
             d_class = col(d_rate)
-            diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            diff_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            nm_td = f"<td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td>"
             
-            # 한 줄로 합쳐서 HTML 생성
-            row_html = f"<tr><td>{idx+1}</td><td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>"
-            html_parts.append(row_html)
+            html_parts.append(f"<tr><td>{idx+1}</td>{nm_td}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_td}</tr>")
 
         html_parts.append("</table><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 손익률 부진종목</div><table class='main-table' style='margin-bottom: 0px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
         
@@ -1178,15 +1177,15 @@ elif st.session_state.current_view == '절세계좌':
             disp_nm = short_name(orig_nm)
             acc_tag = f"<br><span style='font-size:11px; color:#888;'>({it.get('계좌', '')})</span>"
             
-            c_p = safe_float(it.get('현재가', 0))
+            c_price = safe_float(it.get('현재가', 0))
             d_rate = safe_float(it.get('전일비', 0))
-            diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
+            diff_amt = (c_price - (c_price / (1 + d_rate / 100))) if c_price > 0 and d_rate != 0 else 0
             
             d_class = col(d_rate)
-            diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            diff_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            nm_td = f"<td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td>"
             
-            row_html = f"<tr><td>{idx+1}</td><td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>"
-            html_parts.append(row_html)
+            html_parts.append(f"<tr><td>{idx+1}</td>{nm_td}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_td}</tr>")
 
         # ---------------------------------------------------------
         # 📊 기존 테이블 (투자원금 대비 및 매입금액 대비 요약)
@@ -1606,6 +1605,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
