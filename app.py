@@ -623,43 +623,120 @@ with st.sidebar:
         st.rerun()
         
 # =========================================================
-# 🚦 [화면 관리자] Admin 및 페이지 전환 로직
+# 🔒 [Zappa Admin] 통합 관리 패널 (Andy님의 모든 아이디어 집대성)
 # =========================================================
-# 💡 Admin 모드일 때 보여줄 화면
 if st.session_state.get('show_admin_page', False):
+    # 💡 [Andy님 요청] Deploy 버튼을 밝은 파란색으로 만들기 위한 강제 CSS
+    st.markdown("""
+        <style>
+        div.stButton > button[kind="primary"] {
+            background-color: #0088ff !important;
+            color: white !important;
+            border: none !important;
+            font-weight: bold !important;
+            height: 3rem !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("### 🔒 Zappa Admin Control Panel")
     if st.button("⬅️ Back to Dashboard"):
         st.session_state['show_admin_page'] = False
         st.rerun()
-        
+
     st.markdown("---")
-    admin_pw = st.text_input("🔑 관리자 비밀번호를 입력하세요", type="password")
     
-    # 💡 기본 비밀번호를 zappa123 으로 설정했습니다.
+    admin_pw = st.text_input("🔑 관리자 비밀번호", type="password")
     if admin_pw == "zappa123":
-        st.success("✅ 인증 완료! master_config.json 데이터를 수정할 수 있습니다.")
-        config_path = "master_config.json"
-        
+        # 1. 설정 로드 (기존 값 불러오기 기본 탑재)
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config_data = f.read()
-        except:
-            config_data = "{}"
-            
-        new_config = st.text_area("📝 master_config.json 편집", value=config_data, height=500)
+            with open("master_config.json", "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except: cfg = {}
+
+        # 2. 계좌 선택 및 통화 단위 설정
+        acc_map = {
+            "퇴직연금(DC)계좌": ("DC", "KRW"), "퇴직연금(IRP)계좌": ("IRP", "KRW"), 
+            "연금저축(CMA)계좌": ("PENSION", "KRW"), "ISA(중개형)계좌": ("ISA", "KRW"),
+            "키움증권(국내1)": ("DOM1", "KRW"), "삼성증권(국내2)": ("DOM2", "KRW"), 
+            "키움증권(해외1)": ("USA1", "USD"), "키움증권(해외2)": ("USA2", "USD"),
+            "가상자산(Upbit)": ("CRYPTO", "KRW")
+        }
+        sel_acc_nm = st.selectbox("📂 수정할 계좌를 선택하세요", options=list(acc_map.keys()))
+        sel_key, unit = acc_map[sel_acc_nm]
+        unit_sym = "₩" if unit == "KRW" else "$"
+
+        st.subheader(f"📍 {sel_acc_nm} 상세 관리")
+
+        # 3. 데이터 편집기 (Andy님 아이디어: 기존 값 유지 + 동적 행)
+        st.markdown(f"**1️⃣ 보유 종목 리스트 (단위: {unit_sym})**")
+        curr_items = cfg.get(sel_key, [])
         
-        if st.button("💾 변경사항 저장"):
-            try:
-                json.loads(new_config) # JSON 문법 검사
-                with open(config_path, "w", encoding="utf-8") as f:
-                    f.write(new_config)
-                st.success("✅ 정상적으로 저장되었습니다! 10초 내로 오라클 서버 로봇이 새 데이터를 반영합니다.")
-            except Exception as e:
-                st.error(f"❌ JSON 형식이 올바르지 않습니다. 콤마(,)나 따옴표(\")를 확인해주세요.\n에러내용: {e}")
+        # 가상자산/일반주식 컬럼 순서 및 명칭 뙇! 불러오기
+        if sel_key == "CRYPTO":
+            df_items = pd.DataFrame(curr_items)
+            if df_items.empty: 
+                df_items = pd.DataFrame(columns=["name", "ticker", "qty", "avg_price"])
+            else:
+                df_items = df_items[["name", "ticker", "qty", "avg_price"]]
+            
+            col_cfg = {
+                "name": st.column_config.TextColumn("종목명"),
+                "ticker": st.column_config.TextColumn("코드"),
+                "qty": st.column_config.NumberColumn("보유량", format="%.8f"), # 소수점 8자리
+                "avg_price": st.column_config.NumberColumn(f"매입가({unit_sym})", format="#,##0.00")
+            }
+        else:
+            df_items = pd.DataFrame(curr_items)
+            if df_items.empty: 
+                df_items = pd.DataFrame(columns=["종목명", "코드", "수량", "매입가"])
+            else:
+                df_items = df_items[["종목명", "코드", "수량", "매입가"]]
+            
+            col_cfg = {
+                "종목명": st.column_config.TextColumn("종목명"),
+                "코드": st.column_config.TextColumn("코드"),
+                "수량": st.column_config.NumberColumn("보유량", format="#,##0.####"),
+                "매입가": st.column_config.NumberColumn(f"매입가({unit_sym})", format="#,##0.##")
+            }
+
+        # 💡 [Andy님 요청] 입력창에 기존 값이 뙇 뜨고 행 추가/삭제 자유로움
+        edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"edit_{sel_key}")
+
+        # 4. 현금성 자산 입력 (기본값 뙇 불러오기)
+        st.markdown(f"**2️⃣ {sel_acc_nm} 현금성 자산 (예수금)**")
+        cash_key = f"{sel_key}_CASH"
+        curr_cash = cfg.get(cash_key, 0)
+        new_cash = st.number_input(f"금액 입력 (단위: {unit_sym})", value=float(curr_cash), format="%.2f", key=f"cash_{sel_key}")
+
+        # 5. 안전자산(이자율) 설정 - 절세계좌 전용 (기본값 뙇 불러오기)
+        if sel_key in ["DC", "IRP", "PENSION", "ISA"]:
+            st.markdown(f"**3️⃣ {sel_acc_nm} 안전자산 (이율보증형)**")
+            safe_key = f"{sel_key}_SAFE"
+            df_safe = pd.DataFrame(cfg.get(safe_key, []))
+            if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
+            edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, key=f"safe_{sel_key}")
+
+        # 6. 저장 버튼 (밝은 파란색 Deploy 버튼)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
+            # 데이터 변환
+            cfg[sel_key] = edited_df.to_dict('records')
+            cfg[cash_key] = new_cash
+            if sel_key in ["DC", "IRP", "PENSION", "ISA"]:
+                cfg[f"{sel_key}_SAFE"] = edited_safe.to_dict('records')
+            
+            with open("master_config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=4)
+            
+            # 💡 [Andy님 패치 요청] 10초~30초 대기 문구 반영
+            st.success("✅ 서버에 데이터가 배포되었습니다! 안전한 동기화를 위해 약 30초 후 대시보드에 반영됩니다.")
+            time.sleep(2) # 저장 확인용 2초 대기
+            st.rerun()
+            
     elif admin_pw != "":
         st.error("❌ 비밀번호가 틀렸습니다.")
-        
-    st.stop() # Admin 화면일 때는 아래 대시보드 코드를 실행하지 않음
+    st.stop()
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
@@ -1632,6 +1709,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
