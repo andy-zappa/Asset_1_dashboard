@@ -463,32 +463,30 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. Update 버튼 (우측 정렬 및 날짜 영역과 밀착) */
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) {{
-        display: flex !important; 
-        justify-content: flex-end !important; 
-        margin-bottom: -28px !important; /* 💡 아래 날짜를 위로 강하게 끌어올림 */
+    /* 🚀 1. Update 버튼 (마커를 이용한 절대 표적 지정 방식 & 우측 정렬) */
+    div.element-container:has(#update-marker) + div.element-container {{
+        display: flex !important; justify-content: flex-end !important; 
+        margin-bottom: -28px !important; /* 💡 아래 날짜를 위로 확 끌어올려 밀착 */
         position: relative; z-index: 20;
     }}
-    /* 💡 Streamlit 내부 숨겨진 div까지 완벽하게 우측으로 밀어냅니다 */
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) > div,
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) div[data-testid="stButton"] {{
+    div.element-container:has(#update-marker) + div.element-container > div,
+    div.element-container:has(#update-marker) + div.element-container div[data-testid="stButton"] {{
         display: flex !important; justify-content: flex-end !important; width: 100% !important;
     }}
     
     /* 💡 Admin 버튼 스타일 적용 (투명, 초소형) */
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) button {{
+    div.element-container:has(#update-marker) + div.element-container button {{
         background: transparent !important; border: none !important; box-shadow: none !important;
         padding: 0px 4px !important; min-height: 20px !important; height: auto !important; width: auto !important;
         transition: transform 0.2s ease !important;
     }}
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) button p {{
+    div.element-container:has(#update-marker) + div.element-container button p {{
         font-size: 12.5px !important; font-weight: 600 !important; color: #888888 !important; margin: 0 !important;
     }}
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) button:hover {{
+    div.element-container:has(#update-marker) + div.element-container button:hover {{
         transform: translateY(-1px) !important;
     }}
-    div.element-container:has(button[key="sidebar_btn_update_final4"]) button:hover p {{
+    div.element-container:has(#update-marker) + div.element-container button:hover p {{
         color: #111111 !important; /* 마우스 올리면 글씨만 진해짐 */
     }}
 
@@ -506,7 +504,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 업데이트 버튼 (영문 'Update'로 변경)
+    # 4. 💡 업데이트 버튼 (절대 표적 마커 삽입 후 버튼 생성)
+    st.markdown("<div id='update-marker'></div>", unsafe_allow_html=True)
     if st.button("🔄 Update", key="sidebar_btn_update_final4", use_container_width=False):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
@@ -526,7 +525,7 @@ with st.sidebar:
             </span>
         </div>
     """, unsafe_allow_html=True)
-
+    
     # 6. 메뉴 선택 
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
     def format_menu(option):
@@ -1630,6 +1629,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
