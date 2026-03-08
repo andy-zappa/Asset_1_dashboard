@@ -836,8 +836,8 @@ elif st.session_state.current_view == '대시보드':
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-        # 🍩 대시보드 전용: 파이차트 그리기 (여기로 옮겨왔습니다!)
-        # ---------------------------------------------------------
+# 🍩 대시보드 전용: 파이차트 그리기 (여기로 옮겨왔습니다!)
+# ---------------------------------------------------------
         st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
         
         def get_detailed_grouped_df(keys, is_usa=False):
@@ -1625,6 +1625,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
