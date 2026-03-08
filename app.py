@@ -463,25 +463,25 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. 업데이트 버튼 슬림화 및 우측 정렬 */
+    /* 🚀 1. Update 버튼 (Admin 스타일처럼 투명/초소형 + 날짜 위 우측 밀착) */
     div.element-container:has(button[key="sidebar_btn_update_final4"]) {{
-        display: flex !important; justify-content: flex-end !important; margin-bottom: -8px !important;
+        display: flex !important; justify-content: flex-end !important; 
+        margin-bottom: -22px !important; /* 아래 날짜를 위로 확 끌어올림 */
+        position: relative; z-index: 20;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"] {{
-        background-color: transparent !important; border: 1px solid #dcdcdc !important;
-        border-radius: 6px !important; min-height: 28px !important; height: 28px !important;
-        width: auto !important; padding: 0px 10px !important; margin: 0 !important;
-        transition: all 0.2s ease !important; box-shadow: none !important;
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) button {{
+        background: transparent !important; border: none !important; box-shadow: none !important;
+        padding: 0px 4px !important; min-height: 20px !important; height: auto !important; width: auto !important;
+        transition: transform 0.2s ease !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important; border-color: #bbbbbb !important;
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) button p {{
+        font-size: 12.5px !important; font-weight: 600 !important; color: #888888 !important; margin: 0 !important;
+    }}
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) button:hover {{
         transform: translateY(-1px) !important;
     }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p {{
-        font-size: 13px !important; font-weight: 500 !important; color: #555555 !important; margin: 0 !important;
-    }}
-    div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
-        content: none !important; /* 버튼이 작아지므로 긴 영문 텍스트 제거 */
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) button:hover p {{
+        color: #111111 !important; /* 마우스 올리면 글씨만 진해짐 */
     }}
 
     /* 🚀 2. 메뉴 카드 (.sidebar-card) 애니메이션 (-2px 바운스 통일) */
@@ -498,14 +498,13 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 업데이트 버튼 (슬림형, use_container_width=False 적용)
-    if st.button("🔄 업데이트", key="sidebar_btn_update_final4", use_container_width=False):
+    # 4. 💡 업데이트 버튼 (초소형 'Update', 우측 정렬)
+    if st.button("🔄 Update", key="sidebar_btn_update_final4", use_container_width=False):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (한글 요일 12px / 그 외 모든 기호 및 숫자 12.5px)
-    # 괄호, 슬래시, 대괄호까지 모두 12.5px로 감싸서 한글만 튀지 않게 조절합니다.
+    # 5. 날짜 영역 (위쪽 Update 버튼에 바싹 밀착)
     now_str_merged = (
         f"<span style='font-size: 12.5px;'>"
         f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
@@ -513,7 +512,7 @@ with st.sidebar:
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -15px; position: relative; z-index: 10;'>
             <span style='color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str_merged}
             </span>
@@ -1623,6 +1622,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
