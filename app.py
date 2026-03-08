@@ -504,8 +504,14 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역
-    st.markdown(f"<div style='text-align: center; font-size: 15px; color: #555555; margin-top: -6px; margin-bottom: 25px; font-weight: 500;'>{now_str}</div>", unsafe_allow_html=True)
+   # 5. 날짜 영역 (하단 박스와 밀착 및 우측 정렬)
+    st.markdown(f"""
+        <div style='text-align: right; padding-right: 5px; margin-top: -24px; margin-bottom: 0px;'>
+            <span style='font-size: 11.5px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px;'>
+                {now_str}
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
 
     # 6. 메뉴 선택 
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
@@ -1610,6 +1616,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
