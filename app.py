@@ -286,12 +286,14 @@ def normalize_insight(raw_data):
     calc_asset, calc_profit, calc_orig = 0, 0, 0
     for k in ['DC', 'IRP', 'PENSION', 'ISA']:
         if k in raw_data and isinstance(raw_data[k], dict):
-            calc_asset += safe_float(raw_data[k].get('총 자산', raw_data[k].get('총자산', 0)))
-            calc_profit += safe_float(raw_data[k].get('총 수익', raw_data[k].get('총수익', 0)))
-            calc_orig += safe_float(raw_data[k].get('원금', 0))
+            acc = raw_data[k]
+            calc_asset += safe_float(acc.get('총 자산', acc.get('총자산', 0)))
+            # 💡 [핵심 교정] 로봇이 보내는 '평가손익'을 대시보드가 이해하도록 합산
+            calc_profit += safe_float(acc.get('평가손익', acc.get('총 수익', acc.get('총수익', 0))))
+            calc_orig += safe_float(acc.get('원금', 0))
             
     calc_rate = (calc_profit / calc_orig * 100) if calc_orig > 0 else 0
-    return {'총자산': calc_asset, '총수익': calc_profit, '수익률(%)': calc_rate, '원금합': calc_orig, '조회시간': '자체 집계 모드'}
+    return {'총자산': calc_asset, '총수익': calc_profit, '수익률(%)': calc_rate, '원금합': calc_orig, '조회시간': '실시간 동기화'}
 
 tot = normalize_insight(data)
 
@@ -620,142 +622,8 @@ with st.sidebar:
         st.session_state['show_admin_page'] = True
         st.rerun()
     
-import os, json, requests, time
-from datetime import datetime, timezone, timedelta
-
-APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
-APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
-URL_BASE = "https://openapi.koreainvestment.com:9443"
-TOKEN_FILE = "kis_token.json"
-
-# 💡 빈칸이나 문자열 오류를 방어하는 안전 장치
-def safe_float(v):
-    try:
-        if v in [None, "", "-", "None"]: return 0.0
-        if isinstance(v, str): v = v.replace(",", "").strip()
-        return float(v)
-    except: return 0.0
-
-def get_access_token():
-    if os.path.exists(TOKEN_FILE):
-        try:
-            with open(TOKEN_FILE, 'r') as f:
-                d = json.load(f)
-                if datetime.now() < datetime.fromisoformat(d['expired_at']): return d['access_token']
-        except: pass
-    try:
-        r = requests.post(f"{URL_BASE}/oauth2/tokenP", headers={"content-type":"application/json"}, data=json.dumps({"grant_type":"client_credentials","appkey":APP_KEY,"appsecret":APP_SECRET}))
-        if r.status_code == 200:
-            t = r.json()["access_token"]
-            with open(TOKEN_FILE, 'w') as f: json.dump({'access_token':t, 'expired_at':(datetime.now()+timedelta(hours=20)).isoformat()}, f)
-            return t
-    except: pass
-    return None
-
-def get_dom_price(code, token):
-    if not token or code == "-" or not code: return None, None
-    try:
-        r = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", headers={"Content-Type":"application/json","authorization":f"Bearer {token}","appkey":APP_KEY,"appsecret":APP_SECRET,"tr_id":"FHKST01010100"}, params={"fid_cond_mrkt_div_code":"J","fid_input_iscd":code})
-        if r.status_code == 200: return float(r.json()['output']['stck_prpr']), float(r.json()['output']['prdy_ctrt'])
-    except: pass
-    return None, None
-
-def generate_asset_data():
-    print("🔄 ZAPPA: KIS 절세계좌 및 안전자산 수집 시작...")
-    token = get_access_token()
-    if not token: return
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    try:
-        with open(os.path.join(BASE_DIR, "master_config.json"), "r", encoding="utf-8") as f: config = json.load(f)
-        
-        # 1. 일반 주식/ETF 리스트
-        dc_items = config.get("DC", []); dc_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("DC_CASH", 91187834)), "매입금액": safe_float(config.get("DC_CASH", 91187834))})
-        pension_items = config.get("PENSION", []); pension_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("PENSION_CASH", 1445678)), "매입금액": safe_float(config.get("PENSION_CASH", 1445678))})
-        irp_items = config.get("IRP", []); irp_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("IRP_CASH", 1141610)), "매입금액": safe_float(config.get("IRP_CASH", 1141610))})
-        isa_items = config.get("ISA", []); isa_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("ISA_CASH", 218329)), "매입금액": safe_float(config.get("ISA_CASH", 218329))})
-        
-        # 2. 💡 새로 추가된 원리금보장형(안전자산) 리스트
-        dc_safe = config.get("DC_SAFE", [])
-        pension_safe = config.get("PENSION_SAFE", [])
-        irp_safe = config.get("IRP_SAFE", [])
-        isa_safe = config.get("ISA_SAFE", [])
-        
-    except: return
-
-    def process_account(items, safe_items=None):
-        processed = []; s_ast = 0; s_buy = 0
-        
-        # 1) 일반 주식 계산 로직
-        for it in items:
-            code = str(it.get("코드", "")).strip()
-            if code and code != "-" and code != "None":
-                cp, dr = get_dom_price(code, token)
-                current_price = cp if cp is not None else safe_float(it.get("매입가", 0))
-                day_rate = dr if dr is not None else 0
-                
-                it["현재가"] = current_price
-                it["전일비"] = day_rate
-                
-                it["총자산"] = safe_float(it.get("수량", 0)) * current_price
-                it["매입금액"] = safe_float(it.get("수량", 0)) * safe_float(it.get("매입가", 0))
-                
-            s_ast += safe_float(it.get("총자산", 0))
-            s_buy += safe_float(it.get("매입금액", 0))
-            prof = safe_float(it.get("총자산", 0)) - safe_float(it.get("매입금액", 0))
-            processed.append({"종목명":it.get("종목명", ""), "비중":0, "총 자산":it.get("총자산", 0), "평가손익":prof, "수익률(%)":(prof/safe_float(it.get("매입금액", 0))*100) if safe_float(it.get("매입금액", 0)) else 0, "수량":it.get("수량", 0), "매입가":it.get("매입가", 0), "현재가":it.get("현재가", 0), "전일비":it.get("전일비", 0)})
-
-        # 2) 💡 원리금보장 안전자산 이자 일할 계산 로직
-        if safe_items:
-            for sit in safe_items:
-                name = str(sit.get("종목명", "")).strip()
-                if not name or name == "None": continue
-                
-                prin = safe_float(sit.get("투자원금", 0))
-                rate = safe_float(sit.get("연이율(%)", 0))
-                buy_date_str = str(sit.get("매입일자", "")).strip()
-                
-                try:
-                    # 가입일로부터 오늘까지 며칠 지났는지 계산
-                    buy_date = datetime.strptime(buy_date_str, "%Y-%m-%d").date()
-                    today = datetime.now(timezone(timedelta(hours=9))).date()
-                    days = max(0, (today - buy_date).days)
-                except:
-                    days = 0 # 날짜 형식이 잘못되면 이자 0원
-                    
-                # 일할 이자 계산 (단리)
-                prof = prin * (rate / 100.0) * (days / 365.0)
-                ast = prin + prof
-                
-                s_ast += ast
-                s_buy += prin
-                
-                processed.append({
-                    "종목명": name, "비중": 0, "총 자산": ast, "평가손익": prof, 
-                    "수익률(%)": (prof/prin*100) if prin else 0, 
-                    "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
-                })
-
-        # 비중 업데이트 및 합계 계산
-        for p in processed: p["비중"] = (p["총 자산"]/s_ast*100) if s_ast else 0
-        s_p = s_ast - s_buy
-        processed.append({"종목명":"[ 합  계 ]", "비중":100, "총 자산":s_ast, "평가손익":s_p, "수익률(%)":(s_p/s_buy*100) if s_buy else 0, "수량":"-", "매입가":"-", "현재가":"-", "전일비":0})
-        
-        return {"상세":processed, "총 자산":s_ast, "원금":s_buy, "매입금액":s_buy, "평가손익":s_p, "수익률(%)":(s_p/s_buy*100) if s_buy else 0, "평가손익(7일전)":s_p*0.98}
-
-    with open('data_tax_advantaged.json', 'w', encoding='utf-8') as f: 
-        json.dump({
-            "DC": process_account(dc_items, dc_safe), 
-            "PENSION": process_account(pension_items, pension_safe), 
-            "IRP": process_account(irp_items, irp_safe), 
-            "ISA": process_account(isa_items, isa_safe), 
-            "조회시간": datetime.now(timezone(timedelta(hours=9))).strftime("%Y/%m/%d %H:%M:%S")
-        }, f, ensure_ascii=False, indent=4)
-
-if __name__ == "__main__": generate_asset_data()
-    
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
-elif st.session_state.current_view == '대시보드':
+if st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -1708,6 +1576,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
