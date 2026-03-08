@@ -623,10 +623,10 @@ with st.sidebar:
         st.rerun()
         
 # =========================================================
-# 🔒 [Zappa Admin] 통합 관리 패널 (Andy님의 모든 아이디어 집대성)
+# 🔒 [Zappa Admin] 통합 자산 관리 패널 (Pro 마스터 버전)
 # =========================================================
 if st.session_state.get('show_admin_page', False):
-    # 💡 [Andy님 요청] Deploy 버튼을 밝은 파란색으로 만들기 위한 강제 CSS
+    # 💡 [CSS] Deploy 버튼을 밝은 파란색으로 강제 변경
     st.markdown("""
         <style>
         div.stButton > button[kind="primary"] {
@@ -646,53 +646,82 @@ if st.session_state.get('show_admin_page', False):
 
     st.markdown("---")
     
-    admin_pw = st.text_input("🔑 관리자 비밀번호", type="password")
-    if admin_pw == "zappa123":
-        # 1. 설정 로드 (기존 값 불러오기 기본 탑재)
-        try:
-            with open("master_config.json", "r", encoding="utf-8") as f:
+    # 1. 설정 로드 (데이터 유실 방지 및 자동 불러오기)
+    CONFIG_FILE = "master_config.json"
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
-        except: cfg = {}
+        else: cfg = {}
+    except: cfg = {}
 
-        # 2. 계좌 선택 및 통화 단위 설정
-        acc_map = {
-            "퇴직연금(DC)계좌": ("DC", "KRW"), "퇴직연금(IRP)계좌": ("IRP", "KRW"), 
-            "연금저축(CMA)계좌": ("PENSION", "KRW"), "ISA(중개형)계좌": ("ISA", "KRW"),
-            "키움증권(국내1)": ("DOM1", "KRW"), "삼성증권(국내2)": ("DOM2", "KRW"), 
-            "키움증권(해외1)": ("USA1", "USD"), "키움증권(해외2)": ("USA2", "USD"),
-            "가상자산(Upbit)": ("CRYPTO", "KRW")
-        }
-        sel_acc_nm = st.selectbox("📂 수정할 계좌를 선택하세요", options=list(acc_map.keys()))
-        sel_key, unit = acc_map[sel_acc_nm]
-        unit_sym = "₩" if unit == "KRW" else "$"
+    # 2. 비밀번호 인증 (기본값: zappa123)
+    current_pw = cfg.get("ADMIN_PW", "zappa123")
+    admin_pw = st.text_input("🔑 관리자 비밀번호를 입력하세요", type="password")
+    
+    if admin_pw == current_pw:
+        st.success("✅ 관리자 인증 완료")
+        
+        # ⚙️ [기능] 비밀번호 변경창
+        with st.expander("🔐 관리자 비밀번호 변경"):
+            new_pw = st.text_input("새로운 비밀번호 입력", type="password")
+            if st.button("비밀번호 업데이트"):
+                if new_pw:
+                    cfg["ADMIN_PW"] = new_pw
+                    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                        json.dump(cfg, f, ensure_ascii=False, indent=4)
+                    st.success("비밀번호가 변경되었습니다. 다음 로그인부터 적용됩니다.")
+                else: st.warning("비밀번호를 입력해주세요.")
 
-        st.subheader(f"📍 {sel_acc_nm} 상세 관리")
+        st.markdown("---")
 
-        # 3. 데이터 편집기 (Andy님 아이디어: 기존 값 유지 + 동적 행)
+        # 📂 [기능] 2단계 드롭다운 계좌 선택
+        col_cat, col_acc = st.columns(2)
+        with col_cat:
+            category = st.selectbox("1️⃣ 자산 유형 선택", ["절세계좌", "일반계좌", "가상자산"])
+        
+        if category == "절세계좌":
+            acc_list = {"퇴직연금(DC)": "DC", "퇴직연금(IRP)": "IRP", "연금저축(CMA)": "PENSION", "ISA(중개형)": "ISA"}
+        elif category == "일반계좌":
+            acc_list = {"키움증권(국내1)": "DOM1", "삼성증권(국내2)": "DOM2", "키움증권(해외1)": "USA1", "키움증권(해외2)": "USA2"}
+        else:
+            acc_list = {"Upbit 가상자산": "CRYPTO"}
+
+        with col_acc:
+            sel_acc_label = st.selectbox("2️⃣ 세부 계좌 선택", options=list(acc_list.keys()))
+        
+        sel_key = acc_list[sel_acc_label]
+        unit = "USD" if "USA" in sel_key else "KRW"
+        unit_sym = "$" if unit == "USD" else "₩"
+
+        st.subheader(f"📍 {sel_acc_label} 관리")
+
+        # 📝 [기능] 데이터 편집기 (기존 값 뙇 로드 & 포맷 분리)
         st.markdown(f"**1️⃣ 보유 종목 리스트 (단위: {unit_sym})**")
         curr_items = cfg.get(sel_key, [])
-        
-        # 가상자산/일반주식 컬럼 순서 및 명칭 뙇! 불러오기
+        df_items = pd.DataFrame(curr_items)
+
         if sel_key == "CRYPTO":
-            df_items = pd.DataFrame(curr_items)
-            if df_items.empty: 
-                df_items = pd.DataFrame(columns=["name", "ticker", "qty", "avg_price"])
-            else:
+            if df_items.empty: df_items = pd.DataFrame(columns=["name", "ticker", "qty", "avg_price"])
+            else: 
+                # 에러 방지용 컬럼 검사
+                for col in ["name", "ticker", "qty", "avg_price"]:
+                    if col not in df_items.columns: df_items[col] = None
                 df_items = df_items[["name", "ticker", "qty", "avg_price"]]
-            
+                
             col_cfg = {
-                "name": st.column_config.TextColumn("종목명"),
-                "ticker": st.column_config.TextColumn("코드"),
-                "qty": st.column_config.NumberColumn("보유량", format="%.8f"), # 소수점 8자리
+                "name": st.column_config.TextColumn("종목명", placeholder="예: 비트코인"),
+                "ticker": st.column_config.TextColumn("코드", placeholder="BTC"),
+                "qty": st.column_config.NumberColumn("보유량", format="%.8f"),
                 "avg_price": st.column_config.NumberColumn(f"매입가({unit_sym})", format="#,##0.00")
             }
         else:
-            df_items = pd.DataFrame(curr_items)
-            if df_items.empty: 
-                df_items = pd.DataFrame(columns=["종목명", "코드", "수량", "매입가"])
-            else:
+            if df_items.empty: df_items = pd.DataFrame(columns=["종목명", "코드", "수량", "매입가"])
+            else: 
+                for col in ["종목명", "코드", "수량", "매입가"]:
+                    if col not in df_items.columns: df_items[col] = None
                 df_items = df_items[["종목명", "코드", "수량", "매입가"]]
-            
+                
             col_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "코드": st.column_config.TextColumn("코드"),
@@ -700,42 +729,59 @@ if st.session_state.get('show_admin_page', False):
                 "매입가": st.column_config.NumberColumn(f"매입가({unit_sym})", format="#,##0.##")
             }
 
-        # 💡 [Andy님 요청] 입력창에 기존 값이 뙇 뜨고 행 추가/삭제 자유로움
-        edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"edit_{sel_key}")
+        edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
 
-        # 4. 현금성 자산 입력 (기본값 뙇 불러오기)
-        st.markdown(f"**2️⃣ {sel_acc_nm} 현금성 자산 (예수금)**")
+        # 💵 [기능] 현금(예수금) 전용 입력
         cash_key = f"{sel_key}_CASH"
         curr_cash = cfg.get(cash_key, 0)
-        new_cash = st.number_input(f"금액 입력 (단위: {unit_sym})", value=float(curr_cash), format="%.2f", key=f"cash_{sel_key}")
+        st.markdown(f"**2️⃣ 현금성 자산 / 예수금 ({unit_sym})**")
+        new_cash = st.number_input("입력창", value=float(curr_cash), format="%.2f", step=1000.0, label_visibility="collapsed")
 
-        # 5. 안전자산(이자율) 설정 - 절세계좌 전용 (기본값 뙇 불러오기)
-        if sel_key in ["DC", "IRP", "PENSION", "ISA"]:
-            st.markdown(f"**3️⃣ {sel_acc_nm} 안전자산 (이율보증형)**")
+        # 🛡️ [기능] 안전자산(이율보증형) 설정 - 달력 포함 (절세계좌 전용)
+        if category == "절세계좌":
+            st.markdown(f"**3️⃣ 안전자산 (이율보증형)**")
             safe_key = f"{sel_key}_SAFE"
             df_safe = pd.DataFrame(cfg.get(safe_key, []))
             if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
-            edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, key=f"safe_{sel_key}")
+            else:
+                for col in ["종목명", "투자원금", "연이율(%)", "매입일자"]:
+                    if col not in df_safe.columns: df_safe[col] = None
+                df_safe = df_safe[["종목명", "투자원금", "연이율(%)", "매입일자"]]
 
-        # 6. 저장 버튼 (밝은 파란색 Deploy 버튼)
+            safe_cfg = {
+                "종목명": st.column_config.TextColumn("종목명", placeholder="예: 삼성화재 이율보증"),
+                "투자원금": st.column_config.NumberColumn("투자원금", format="#,##0"),
+                "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f"),
+                "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")
+            }
+            edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
+
+        # 🚀 [기능] 파란색 Deploy 버튼 & JSON 안정화 로직
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
-            # 데이터 변환
-            cfg[sel_key] = edited_df.to_dict('records')
-            cfg[cash_key] = new_cash
-            if sel_key in ["DC", "IRP", "PENSION", "ISA"]:
-                cfg[f"{sel_key}_SAFE"] = edited_safe.to_dict('records')
+            try:
+                cfg[sel_key] = edited_df.to_dict('records')
+                cfg[cash_key] = new_cash
+                
+                # 💡 날짜(Date) 타입이 JSON 에러를 일으키지 않도록 문자열 강제 변환
+                if category == "절세계좌": 
+                    safe_records = edited_safe.to_dict('records')
+                    for r in safe_records:
+                        if pd.notnull(r.get('매입일자')): r['매입일자'] = str(r['매입일자'])
+                    cfg[f"{sel_key}_SAFE"] = safe_records
+                
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, ensure_ascii=False, indent=4)
+                
+                st.success("✅ 서버에 데이터가 배포되었습니다! 안전한 동기화를 위해 약 30초 후 대시보드에 반영됩니다.")
+                time.sleep(2)
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ 데이터 저장 중 오류 발생: {e}")
             
-            with open("master_config.json", "w", encoding="utf-8") as f:
-                json.dump(cfg, f, ensure_ascii=False, indent=4)
-            
-            # 💡 [Andy님 패치 요청] 10초~30초 대기 문구 반영
-            st.success("✅ 서버에 데이터가 배포되었습니다! 안전한 동기화를 위해 약 30초 후 대시보드에 반영됩니다.")
-            time.sleep(2) # 저장 확인용 2초 대기
-            st.rerun()
-            
-    elif admin_pw != "":
+    elif admin_pw != "": 
         st.error("❌ 비밀번호가 틀렸습니다.")
+        
     st.stop()
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
@@ -1709,6 +1755,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
