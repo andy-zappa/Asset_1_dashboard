@@ -741,23 +741,29 @@ if st.session_state.get('show_admin_page', False):
         with cc2:
             new_prin = st.number_input("💰 투입원금", value=float(curr_prin), format="%.2f", step=1000.0, key=f"prin_{sel_key}")
 
-        # 🛡️ 안전자산 (에러 원인 제거 완료)
+# 🛡️ 안전자산 (Type Error 완벽 방어 및 달력 버그 픽스)
         if category == "절세계좌":
             st.markdown(f"**3️⃣ 안전자산 (이율보증형)**")
             safe_key = f"{sel_key}_SAFE"
-            df_safe = pd.DataFrame(cfg.get(safe_key, []))
-            if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
-            else:
-                for col in ["종목명", "투자원금", "연이율(%)", "매입일자"]:
-                    if col not in df_safe.columns: df_safe[col] = None
-                df_safe = df_safe[["종목명", "투자원금", "연이율(%)", "매입일자"]]
+            
+            raw_safe = cfg.get(safe_key, [])
+            df_safe = pd.DataFrame(raw_safe)
+            
+            # 💡 [핵심] DateColumn 에러(StreamlitAPIException) 방지를 위한 강제 형변환
+            if df_safe.empty: 
+                df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
+            
+            # 매입일자 컬럼을 반드시 datetime 형식으로 맞춰주어야 달력이 에러 없이 뜹니다.
+            if "매입일자" in df_safe.columns:
+                df_safe["매입일자"] = pd.to_datetime(df_safe["매입일자"], errors='coerce')
 
             safe_cfg = {
-                "종목명": st.column_config.TextColumn("종목명"),
-                "투자원금": st.column_config.NumberColumn("투자원금", format="#,##0"),
-                "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f"),
+                "종목명": st.column_config.TextColumn("종목명", placeholder="예: 삼성화재 이율보증"),
+                "투자원금": st.column_config.NumberColumn("투자원금", format="#,##0", step=1000000),
+                "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.1),
                 "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")
             }
+            
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
 
         # 🚀 Deploy
@@ -771,13 +777,17 @@ if st.session_state.get('show_admin_page', False):
                 if category == "절세계좌": 
                     safe_records = edited_safe.to_dict('records')
                     for r in safe_records:
-                        if pd.notnull(r.get('매입일자')): r['매입일자'] = str(r['매입일자'])
+                        # 💡 저장할 때는 달력 데이터를 다시 깔끔한 문자열(YYYY-MM-DD)로 변환
+                        if pd.notnull(r.get('매입일자')): 
+                            dt = r['매입일자']
+                            r['매입일자'] = dt.strftime('%Y-%m-%d') if hasattr(dt, 'strftime') else str(dt)[:10]
                     cfg[f"{sel_key}_SAFE"] = safe_records
                 
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                     json.dump(cfg, f, ensure_ascii=False, indent=4)
                 
-                st.success("✅ 서버에 데이터가 배포되었습니다! (⚠️주의: 변경된 master_config.json을 오라클 서버에도 복사해 주셔야 로봇이 인식합니다.)")
+                # 💡 내일 자동화 전까지 임시 안내 문구
+                st.success("✅ 대시보드 저장 완료! (봇 자동 연동 기능은 내일 구축됩니다. 오늘은 여기까지 하시고 푹 쉬세요!)")
                 time.sleep(2)
                 st.rerun()
             except Exception as e:
@@ -1760,6 +1770,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
