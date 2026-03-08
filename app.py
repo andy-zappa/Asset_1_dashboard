@@ -733,7 +733,7 @@ if st.session_state.get('show_admin_page', False):
                         try:
                             # 💡 [핵심 철통 방어] 저장 직전에 서버에서 가장 최신 데이터를 다시 불러와서, 안 건드린 다른 계좌가 지워지는 것을 원천 차단!
                             try:
-                                r_get = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=3)
+                                r_get = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=10) # 👈 여기 (3을 10으로)
                                 if r_get.status_code == 200 and "error" not in r_get.json():
                                     safe_cfg = r_get.json()
                                 else: safe_cfg = st.session_state.get('admin_config', {}).copy()
@@ -745,7 +745,7 @@ if st.session_state.get('show_admin_page', False):
                             
                             safe_cfg[selected_acc] = edit_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
                             
-                            r = requests.post(CONFIG_URL, json=safe_cfg, timeout=10)
+                            r = requests.post(CONFIG_URL, json=safe_cfg, timeout=30) # 👈 여기 (10을 30으로)
                             if r.status_code == 200:
                                 st.session_state.admin_config = safe_cfg
                                 st.success(f"✅ [{acc_options[category][selected_acc]}] 안전하게 서버 반영 완료! 이제 날아가지 않습니다.")
@@ -1724,6 +1724,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
