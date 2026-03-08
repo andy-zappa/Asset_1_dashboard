@@ -463,25 +463,25 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. 업데이트 버튼 애니메이션 (-2px 바운스) */
+    /* 🚀 1. 업데이트 버튼 슬림화 및 우측 정렬 */
+    div.element-container:has(button[key="sidebar_btn_update_final4"]) {{
+        display: flex !important; justify-content: flex-end !important; margin-bottom: -8px !important;
+    }}
     div[data-testid="stSidebar"] button[kind="secondary"] {{
-        background-color: #ffffff !important; border: 1.2px solid #888888 !important;
-        border-radius: 8px !important; min-height: 50px !important; width: 100% !important;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s !important;
+        background-color: transparent !important; border: 1px solid #dcdcdc !important;
+        border-radius: 6px !important; min-height: 28px !important; height: 28px !important;
+        width: auto !important; padding: 0px 10px !important; margin: 0 !important;
+        transition: all 0.2s ease !important; box-shadow: none !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"]:hover {{
-        background-color: #f0f2f6 !important;
-        transform: translateY(-2px) !important; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        background-color: #f0f2f6 !important; border-color: #bbbbbb !important;
+        transform: translateY(-1px) !important;
     }}
-    
-    /* 💡 [텍스트 무적 방어] 파이썬에서 온 글자는 그대로 두고, CSS로 영문을 뒤에 추가합니다 */
     div[data-testid="stSidebar"] button[kind="secondary"] p {{
-        font-size: 15.5px !important; font-weight: 800 !important; color: #111111 !important; margin: 0 !important;
+        font-size: 13px !important; font-weight: 500 !important; color: #555555 !important; margin: 0 !important;
     }}
     div[data-testid="stSidebar"] button[kind="secondary"] p::after {{
-        content: " (by KIS / UPbit)"; 
-        font-size: 12.5px !important; font-weight: 500 !important; color: #666666 !important;
+        content: none !important; /* 버튼이 작아지므로 긴 영문 텍스트 제거 */
     }}
 
     /* 🚀 2. 메뉴 카드 (.sidebar-card) 애니메이션 (-2px 바운스 통일) */
@@ -498,8 +498,8 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 업데이트 버튼 (이제 DUMMY가 아닌 진짜 글자를 파이썬이 던집니다!)
-    if st.button("🔄 업데이트", key="sidebar_btn_update_final4", use_container_width=True):
+    # 4. 💡 업데이트 버튼 (슬림형, use_container_width=False 적용)
+    if st.button("🔄 업데이트", key="sidebar_btn_update_final4", use_container_width=False):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
@@ -1623,6 +1623,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
