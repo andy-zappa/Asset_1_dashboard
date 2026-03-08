@@ -25,7 +25,7 @@ css = """
 html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { scroll-behavior: smooth !important; }
 [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }
 section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -15px !important; gap: 0 !important; }
-.sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background-color: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #eaeaea; margin-bottom: 12px; }
+.sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background-color: #ffffff; border-radius: 12px; padding: 12px 14px; border: 1px solid #eaeaea; margin-bottom: 10px; }
 .sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; border-color: #ccc !important; }
 .sidebar-card-dark { background-color: #1a1a1a !important; color: #ffffff !important; border: none !important; }
 .sidebar-card-dark:hover { box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; }
@@ -522,13 +522,13 @@ with st.sidebar:
     # 7. 🌎 총 자산 통합 카드
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:6px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
         <div style='text-align: right;'>
-            <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:18px; margin-top:4px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
+            <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
+            <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:bold;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
         </div>
-        <div style='margin-top: 15px; padding-top: 12px; border-top: 1px dashed #3a3a3a;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
+        <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed #3a3a3a;'>
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
                 <span style='font-size: 12.5px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
                 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
@@ -542,11 +542,11 @@ with st.sidebar:
     # 8. ⏳ 절세계좌 카드
     st.markdown(f"""
     <div id='card-pension' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>⏳ 절세계좌</div>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>⏳ 절세계좌</div>
         <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_all)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
+            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_all)})</span></div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -554,11 +554,11 @@ with st.sidebar:
     # 9. 🌱 일반계좌 카드
     st.markdown(f"""
     <div id='card-general' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🌱 일반계좌</div>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🌱 일반계좌</div>
         <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_all)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
+            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_all)})</span></div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -566,20 +566,20 @@ with st.sidebar:
     # 10. 🪙 가상자산 카드
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:6px;'>🪙 가상자산</div>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🪙 가상자산</div>
         <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.2;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:4px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:10px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
+            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum)})</span></div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)    
     
 # 💡 [사이드바] 버튼 클릭 상태를 저장할 변수 초기화 (변수명 통일!)
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-# 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
+    # 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
@@ -1625,6 +1625,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
