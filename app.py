@@ -510,7 +510,7 @@ with st.sidebar:
 
     st.markdown(f"""
         <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
-            <span style='font-size: 13px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
+            <span style='font-size: 12.5px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str_merged}
             </span>
         </div>
@@ -1619,6 +1619,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
