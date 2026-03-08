@@ -429,7 +429,7 @@ with st.sidebar:
         status_html = """
         <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:800; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
+                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
             <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
@@ -445,7 +445,7 @@ with st.sidebar:
             </div>
             <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
             <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:800; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
+                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:700; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
         </div>
         """
@@ -1610,6 +1610,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
