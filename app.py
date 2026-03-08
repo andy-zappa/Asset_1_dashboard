@@ -614,162 +614,140 @@ with st.sidebar:
         st.session_state['show_admin_page'] = True
         st.rerun()
     
-# =========================================================
-# 🔀 라우팅 제어 로직 (대시보드 화면)
-# =========================================================
+import os, json, requests, time
+from datetime import datetime, timezone, timedelta
 
-if 'admin_password' not in st.session_state:
-    st.session_state['admin_password'] = "1234"
+APP_KEY = "PSEk5DTSWQoYXgdxMMo4N8PHGGmNo0RG83cp"
+APP_SECRET = "5gBB/ztuZ3U2vP1pWl64HvBJGXvFaWddBeslA9NMu0jhqq4oAPqdac4ptcACuXsTHCMr+Zux19lmpDQDsaXZpHj0XpKal9m0isO2lYIJxg+mRoIsX6ncgwlwMdNkGfWa4Bo+syi+wRA2ceJmu2d1ysJBx3DimSY8tze8fHOV1B6b8+LYwns="
+URL_BASE = "https://openapi.koreainvestment.com:9443"
+TOKEN_FILE = "kis_token.json"
 
-if st.session_state.get('show_admin_page', False):
-    import time
-    import numpy as np
-    import pandas as pd
-    import requests
-    
-    if st.button("⬅️ 대시보드로 복귀"):
-        st.session_state['show_admin_page'] = False
-        st.rerun()
+# 💡 빈칸이나 문자열 오류를 방어하는 안전 장치
+def safe_float(v):
+    try:
+        if v in [None, "", "-", "None"]: return 0.0
+        if isinstance(v, str): v = v.replace(",", "").strip()
+        return float(v)
+    except: return 0.0
 
-    st.markdown("<h2 style='margin-top: 20px;'>🔒 Andy-Zappa 관리자 시스템</h2>", unsafe_allow_html=True)
-    st.write("관리자 인증이 필요한 페이지입니다.")
-    st.markdown("---")
-    
-    tab_login, tab_setting = st.tabs(["🔑 인증하기", "⚙️ 패스워드 변경"])
+def get_access_token():
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                d = json.load(f)
+                if datetime.now() < datetime.fromisoformat(d['expired_at']): return d['access_token']
+        except: pass
+    try:
+        r = requests.post(f"{URL_BASE}/oauth2/tokenP", headers={"content-type":"application/json"}, data=json.dumps({"grant_type":"client_credentials","appkey":APP_KEY,"appsecret":APP_SECRET}))
+        if r.status_code == 200:
+            t = r.json()["access_token"]
+            with open(TOKEN_FILE, 'w') as f: json.dump({'access_token':t, 'expired_at':(datetime.now()+timedelta(hours=20)).isoformat()}, f)
+            return t
+    except: pass
+    return None
 
-    with tab_login:
-        input_pwd = st.text_input("Access Password", type="password", placeholder="비밀번호를 입력하세요")
+def get_dom_price(code, token):
+    if not token or code == "-" or not code: return None, None
+    try:
+        r = requests.get(f"{URL_BASE}/uapi/domestic-stock/v1/quotations/inquire-price", headers={"Content-Type":"application/json","authorization":f"Bearer {token}","appkey":APP_KEY,"appsecret":APP_SECRET,"tr_id":"FHKST01010100"}, params={"fid_cond_mrkt_div_code":"J","fid_input_iscd":code})
+        if r.status_code == 200: return float(r.json()['output']['stck_prpr']), float(r.json()['output']['prdy_ctrt'])
+    except: pass
+    return None, None
+
+def generate_asset_data():
+    print("🔄 ZAPPA: KIS 절세계좌 및 안전자산 수집 시작...")
+    token = get_access_token()
+    if not token: return
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    try:
+        with open(os.path.join(BASE_DIR, "master_config.json"), "r", encoding="utf-8") as f: config = json.load(f)
         
-        if input_pwd:
-            if input_pwd == st.session_state['admin_password']:
-                st.success("✅ 인증 성공! 관리자 모드가 활성화되었습니다.")
-                st.divider()
+        # 1. 일반 주식/ETF 리스트
+        dc_items = config.get("DC", []); dc_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("DC_CASH", 91187834)), "매입금액": safe_float(config.get("DC_CASH", 91187834))})
+        pension_items = config.get("PENSION", []); pension_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("PENSION_CASH", 1445678)), "매입금액": safe_float(config.get("PENSION_CASH", 1445678))})
+        irp_items = config.get("IRP", []); irp_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("IRP_CASH", 1141610)), "매입금액": safe_float(config.get("IRP_CASH", 1141610))})
+        isa_items = config.get("ISA", []); isa_items.append({"종목명": "현금성자산", "코드": "-", "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0, "총자산": safe_float(config.get("ISA_CASH", 218329)), "매입금액": safe_float(config.get("ISA_CASH", 218329))})
+        
+        # 2. 💡 새로 추가된 원리금보장형(안전자산) 리스트
+        dc_safe = config.get("DC_SAFE", [])
+        pension_safe = config.get("PENSION_SAFE", [])
+        irp_safe = config.get("IRP_SAFE", [])
+        isa_safe = config.get("ISA_SAFE", [])
+        
+    except: return
+
+    def process_account(items, safe_items=None):
+        processed = []; s_ast = 0; s_buy = 0
+        
+        # 1) 일반 주식 계산 로직
+        for it in items:
+            code = str(it.get("코드", "")).strip()
+            if code and code != "-" and code != "None":
+                cp, dr = get_dom_price(code, token)
+                current_price = cp if cp is not None else safe_float(it.get("매입가", 0))
+                day_rate = dr if dr is not None else 0
                 
-                st.markdown("<h3 style='margin-bottom:15px;'>📝 자산 정보 동기화 (오라클 연동)</h3>", unsafe_allow_html=True)
-                st.info("💡 계좌를 선택하면 현재 서버에 저장된 값이 자동으로 채워집니다. 수정 후 저장하세요.")
-
-                ORACLE_IP = "158.179.172.40"
-                CONFIG_URL = f"http://{ORACLE_IP}:8000/update_config"
-
-                default_config = {
-                    "DC": [], "IRP": [], "PENSION": [], "ISA": [],
-                    "DOM1": [], "DOM2": [], "USA1": [], "USA2": [],
-                    "CRYPTO": [{"ticker": "BTC", "name": "비트코인"}, {"ticker": "ETH", "name": "이더리움"}, {"ticker": "TRX", "name": "트론"}],
-                    "DC_CASH": 91187834, "IRP_CASH": 1141610, "PENSION_CASH": 1445678, "ISA_CASH": 218329,
-                    "DOM1_CASH": 132563, "DOM2_CASH": 18730, "USA1_CASH": 249.42, "USA2_CASH": 0, "CRYPTO_CASH": 49875,
-                    "DOM1_PRIN": 110963075, "DOM2_PRIN": 5208948, "USA1_PRIN": 257915999, "USA2_PRIN": 7457930
-                }
-
-                if 'admin_config' not in st.session_state:
-                    try:
-                        res = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=3)
-                        if res.status_code == 200 and "error" not in res.json():
-                            st.session_state.admin_config = res.json()
-                        else:
-                            st.session_state.admin_config = default_config
-                    except Exception:
-                        st.session_state.admin_config = default_config
-
-                cfg = st.session_state.admin_config
-
-                acc_options = {
-                    "절세계좌": {"DC": "퇴직연금(DC)", "IRP": "퇴직연금(IRP)", "PENSION": "연금저축(CMA)", "ISA": "ISA(중개형)"},
-                    "일반계좌": {"DOM1": "키움증권(국내Ⅰ)", "DOM2": "삼성증권(국내Ⅱ)", "USA1": "키움증권(해외Ⅰ)", "USA2": "키움증권(해외Ⅱ)"},
-                    "가상자산": {"CRYPTO": "업비트(Upbit)"}
-                }
+                it["현재가"] = current_price
+                it["전일비"] = day_rate
                 
-                c_sel1, c_sel2 = st.columns([1, 2])
-                with c_sel1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
-                with c_sel2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
+                it["총자산"] = safe_float(it.get("수량", 0)) * current_price
+                it["매입금액"] = safe_float(it.get("수량", 0)) * safe_float(it.get("매입가", 0))
+                
+            s_ast += safe_float(it.get("총자산", 0))
+            s_buy += safe_float(it.get("매입금액", 0))
+            prof = safe_float(it.get("총자산", 0)) - safe_float(it.get("매입금액", 0))
+            processed.append({"종목명":it.get("종목명", ""), "비중":0, "총 자산":it.get("총자산", 0), "평가손익":prof, "수익률(%)":(prof/safe_float(it.get("매입금액", 0))*100) if safe_float(it.get("매입금액", 0)) else 0, "수량":it.get("수량", 0), "매입가":it.get("매입가", 0), "현재가":it.get("현재가", 0), "전일비":it.get("전일비", 0)})
 
-                st.markdown("---")
-
-                with st.form(f"form_{selected_acc}_final"):
-                    st.subheader(f"📊 {acc_options[category][selected_acc]} 관리")
-                    is_usa = "USA" in selected_acc
-                    unit = "USD" if is_usa else "KRW"
+        # 2) 💡 원리금보장 안전자산 이자 일할 계산 로직
+        if safe_items:
+            for sit in safe_items:
+                name = str(sit.get("종목명", "")).strip()
+                if not name or name == "None": continue
+                
+                prin = safe_float(sit.get("투자원금", 0))
+                rate = safe_float(sit.get("연이율(%)", 0))
+                buy_date_str = str(sit.get("매입일자", "")).strip()
+                
+                try:
+                    # 가입일로부터 오늘까지 며칠 지났는지 계산
+                    buy_date = datetime.strptime(buy_date_str, "%Y-%m-%d").date()
+                    today = datetime.now(timezone(timedelta(hours=9))).date()
+                    days = max(0, (today - buy_date).days)
+                except:
+                    days = 0 # 날짜 형식이 잘못되면 이자 0원
                     
-                    cur_cash = float(cfg.get(f"{selected_acc}_CASH", 0))
-                    cur_prin = float(cfg.get(f"{selected_acc}_PRIN", 0))
-                    cur_items = cfg.get(selected_acc, [])
+                # 일할 이자 계산 (단리)
+                prof = prin * (rate / 100.0) * (days / 365.0)
+                ast = prin + prof
+                
+                s_ast += ast
+                s_buy += prin
+                
+                processed.append({
+                    "종목명": name, "비중": 0, "총 자산": ast, "평가손익": prof, 
+                    "수익률(%)": (prof/prin*100) if prin else 0, 
+                    "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0
+                })
 
-                    cf1, cf2 = st.columns(2)
-                    with cf1:
-                        st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: {unit}</div>", unsafe_allow_html=True)
-                        # 💡 Streamlit 고질병 해결: 고유 key 부여
-                        cash_in = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{cur_cash:,.2f}" if is_usa else f"{cur_cash:,.0f}", key=f"cash_{selected_acc}")
-                    with cf2:
-                        if category != "가상자산":
-                            st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: KRW</div>", unsafe_allow_html=True)
-                            prin_in = st.text_input("🏦 계좌 총 투자원금", value=f"{cur_prin:,.0f}", key=f"prin_{selected_acc}")
-                        else: 
-                            prin_in = "0"
-                            st.write("")
+        # 비중 업데이트 및 합계 계산
+        for p in processed: p["비중"] = (p["총 자산"]/s_ast*100) if s_ast else 0
+        s_p = s_ast - s_buy
+        processed.append({"종목명":"[ 합  계 ]", "비중":100, "총 자산":s_ast, "평가손익":s_p, "수익률(%)":(s_p/s_buy*100) if s_buy else 0, "수량":"-", "매입가":"-", "현재가":"-", "전일비":0})
+        
+        return {"상세":processed, "총 자산":s_ast, "원금":s_buy, "매입금액":s_buy, "평가손익":s_p, "수익률(%)":(s_p/s_buy*100) if s_buy else 0, "평가손익(7일전)":s_p*0.98}
 
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    st.write("📃 보유 종목 리스트 (서버 원본 데이터)")
-                    
-                    if category == "가상자산":
-                        df_p = pd.DataFrame(cur_items if cur_items else [{"ticker": "", "name": "", "qty": 0.0, "avg_price": 0.0}])
-                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, key=f"editor_{selected_acc}",
-                                                 column_config={
-                                                     "ticker": "종목코드(영문)", "name": "한글명", 
-                                                     "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
-                                                     "avg_price": st.column_config.NumberColumn(f"매수평균가 (KRW)", format="%,.1f")
-                                                 })
-                    else:
-                        df_p = pd.DataFrame(cur_items if cur_items else [{"종목명": "", "코드": "", "수량": 0.0, "매입가": 0.0}])
-                        p_fmt = "%,.4f" if is_usa else "%,.1f"
-                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, key=f"editor_{selected_acc}",
-                                                 column_config={
-                                                     "수량": st.column_config.NumberColumn("수량", format="%,.4f" if is_usa else "%,.0f", step=0.0001),
-                                                     "매입가": st.column_config.NumberColumn(f"매입가 ({unit})", format=p_fmt, step=0.0001)
-                                                 })
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    st.markdown("<style>div[data-testid='stFormSubmitButton'] button { background-color: #64B5F6 !important; color: white !important; font-weight: bold !important; border: none !important; }</style>", unsafe_allow_html=True)
-                    
-                    if st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True):
-                        try:
-                            # 💡 [핵심 철통 방어] 저장 직전에 서버에서 가장 최신 데이터를 다시 불러와서, 안 건드린 다른 계좌가 지워지는 것을 원천 차단!
-                            try:
-                                r_get = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=10) # 👈 여기 (3을 10으로)
-                                if r_get.status_code == 200 and "error" not in r_get.json():
-                                    safe_cfg = r_get.json()
-                                else: safe_cfg = st.session_state.get('admin_config', {}).copy()
-                            except: safe_cfg = st.session_state.get('admin_config', {}).copy()
+    with open('data_tax_advantaged.json', 'w', encoding='utf-8') as f: 
+        json.dump({
+            "DC": process_account(dc_items, dc_safe), 
+            "PENSION": process_account(pension_items, pension_safe), 
+            "IRP": process_account(irp_items, irp_safe), 
+            "ISA": process_account(isa_items, isa_safe), 
+            "조회시간": datetime.now(timezone(timedelta(hours=9))).strftime("%Y/%m/%d %H:%M:%S")
+        }, f, ensure_ascii=False, indent=4)
 
-                            safe_cfg[f"{selected_acc}_CASH"] = float(cash_in.replace(",", "").strip())
-                            if category != "가상자산": 
-                                safe_cfg[f"{selected_acc}_PRIN"] = float(prin_in.replace(",", "").strip())
-                            
-                            safe_cfg[selected_acc] = edit_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
-                            
-                            r = requests.post(CONFIG_URL, json=safe_cfg, timeout=30) # 👈 여기 (10을 30으로)
-                            if r.status_code == 200:
-                                st.session_state.admin_config = safe_cfg
-                                st.success(f"✅ [{acc_options[category][selected_acc]}] 안전하게 서버 반영 완료! 이제 날아가지 않습니다.")
-                            else: 
-                                st.error(f"❌ 서버 전송 실패: {r.status_code}")
-                        except Exception as e: 
-                            st.error(f"🚨 오류: {str(e)}")
-
-            else:
-                st.error("❌ 패스워드가 일치하지 않습니다.")
-
-    with tab_setting:
-        st.subheader("비밀번호 수정")
-        c_p = st.text_input("현재 비밀번호", type="password", key="adm_curr_p")
-        n_p = st.text_input("새로운 비밀번호", type="password", key="adm_new_p")
-        if st.button("변경 저장", key="adm_pwd_save_btn"):
-            if c_p == st.session_state['admin_password']:
-                st.session_state['admin_password'] = n_p
-                st.success("✨ 변경 성공!")
-                st.session_state['show_admin_page'] = False
-                st.rerun()
-            else: 
-                st.error("❌ 비밀번호 불일치")
-
+if __name__ == "__main__": generate_asset_data()
+    
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 elif st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
@@ -1724,6 +1702,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
