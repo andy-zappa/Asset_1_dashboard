@@ -488,16 +488,23 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 💡 [한 줄 통합] Updated + 날짜/시간 (전체 12.5px / 요일 12px)
-    # 텍스트 전체를 클릭 가능하게 만들고 우측 정렬합니다.
+    # 5. 💡 [한 줄 통합] Updated + 날짜/시간 (0.5px 단위 정밀 교정)
+    # 숫자/기호: 12.5px / 요일,슬래시,괄호: 12.0px / 색상: 짙은 회색(#666666)
+    
+    # 0.5px 줄일 문자들을 개별 span으로 정밀 제어합니다.
+    slash = f"<span style='font-size: 12.0px;'>/</span>"
+    bracket_l = f"<span style='font-size: 12.0px;'>(</span>"
+    bracket_r = f"<span style='font-size: 12.0px;'>)</span>"
+    day_styled = f"<span style='font-size: 12.0px;'>{day_str}</span>"
+
     now_str_merged = (
-        f"<span id='unified-update-btn' style='font-size: 12.5px; color: #888888; cursor: pointer; transition: color 0.2s ease;'>"
-        f"🔄 Updated : [ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
+        f"<span id='unified-update-btn' style='font-size: 12.5px; color: #666666; cursor: pointer; transition: color 0.2s ease;'>"
+        f"🔄 Updated : [ {date_part}{bracket_l}{day_styled}{bracket_r} {slash} {time_part} ]"
         f"</span>"
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -35px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -45px; position: relative; z-index: 10;'>
             {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
@@ -1630,6 +1637,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
