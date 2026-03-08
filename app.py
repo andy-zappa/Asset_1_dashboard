@@ -618,7 +618,6 @@ with st.sidebar:
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
 
-# 💡 초기 비밀번호 설정
 if 'admin_password' not in st.session_state:
     st.session_state['admin_password'] = "1234"
 
@@ -661,7 +660,6 @@ if st.session_state.get('show_admin_page', False):
                     "DOM1_PRIN": 110963075, "DOM2_PRIN": 5208948, "USA1_PRIN": 257915999, "USA2_PRIN": 7457930
                 }
 
-                # 💡 [핵심] 서버에 저장된 '진짜 원본' 데이터를 무조건 우선으로 가져옵니다.
                 if 'admin_config' not in st.session_state:
                     try:
                         res = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=3)
@@ -681,10 +679,8 @@ if st.session_state.get('show_admin_page', False):
                 }
                 
                 c_sel1, c_sel2 = st.columns([1, 2])
-                with c_sel1: 
-                    category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
-                with c_sel2: 
-                    selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
+                with c_sel1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
+                with c_sel2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
 
                 st.markdown("---")
 
@@ -693,7 +689,6 @@ if st.session_state.get('show_admin_page', False):
                     is_usa = "USA" in selected_acc
                     unit = "USD" if is_usa else "KRW"
                     
-                    # 💡 데이터 리셋 방지 로직 적용
                     cur_cash = float(cfg.get(f"{selected_acc}_CASH", 0))
                     cur_prin = float(cfg.get(f"{selected_acc}_PRIN", 0))
                     cur_items = cfg.get(selected_acc, [])
@@ -701,11 +696,12 @@ if st.session_state.get('show_admin_page', False):
                     cf1, cf2 = st.columns(2)
                     with cf1:
                         st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: {unit}</div>", unsafe_allow_html=True)
-                        cash_in = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{cur_cash:,.2f}" if is_usa else f"{cur_cash:,.0f}")
+                        # 💡 Streamlit 고질병 해결: 고유 key 부여
+                        cash_in = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{cur_cash:,.2f}" if is_usa else f"{cur_cash:,.0f}", key=f"cash_{selected_acc}")
                     with cf2:
                         if category != "가상자산":
                             st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: KRW</div>", unsafe_allow_html=True)
-                            prin_in = st.text_input("🏦 계좌 총 투자원금", value=f"{cur_prin:,.0f}")
+                            prin_in = st.text_input("🏦 계좌 총 투자원금", value=f"{cur_prin:,.0f}", key=f"prin_{selected_acc}")
                         else: 
                             prin_in = "0"
                             st.write("")
@@ -715,7 +711,7 @@ if st.session_state.get('show_admin_page', False):
                     
                     if category == "가상자산":
                         df_p = pd.DataFrame(cur_items if cur_items else [{"ticker": "", "name": "", "qty": 0.0, "avg_price": 0.0}])
-                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, 
+                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, key=f"editor_{selected_acc}",
                                                  column_config={
                                                      "ticker": "종목코드(영문)", "name": "한글명", 
                                                      "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
@@ -724,7 +720,7 @@ if st.session_state.get('show_admin_page', False):
                     else:
                         df_p = pd.DataFrame(cur_items if cur_items else [{"종목명": "", "코드": "", "수량": 0.0, "매입가": 0.0}])
                         p_fmt = "%,.4f" if is_usa else "%,.1f"
-                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True,
+                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, key=f"editor_{selected_acc}",
                                                  column_config={
                                                      "수량": st.column_config.NumberColumn("수량", format="%,.4f" if is_usa else "%,.0f", step=0.0001),
                                                      "매입가": st.column_config.NumberColumn(f"매입가 ({unit})", format=p_fmt, step=0.0001)
@@ -735,23 +731,29 @@ if st.session_state.get('show_admin_page', False):
                     
                     if st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True):
                         try:
-                            up_cfg = st.session_state.get('admin_config', {}).copy()
-                            up_cfg[f"{selected_acc}_CASH"] = float(cash_in.replace(",", "").strip())
+                            # 💡 [핵심 철통 방어] 저장 직전에 서버에서 가장 최신 데이터를 다시 불러와서, 안 건드린 다른 계좌가 지워지는 것을 원천 차단!
+                            try:
+                                r_get = requests.get(f"http://{ORACLE_IP}:8000/get_config", timeout=3)
+                                if r_get.status_code == 200 and "error" not in r_get.json():
+                                    safe_cfg = r_get.json()
+                                else: safe_cfg = st.session_state.get('admin_config', {}).copy()
+                            except: safe_cfg = st.session_state.get('admin_config', {}).copy()
+
+                            safe_cfg[f"{selected_acc}_CASH"] = float(cash_in.replace(",", "").strip())
                             if category != "가상자산": 
-                                up_cfg[f"{selected_acc}_PRIN"] = float(prin_in.replace(",", "").strip())
+                                safe_cfg[f"{selected_acc}_PRIN"] = float(prin_in.replace(",", "").strip())
                             
-                            up_cfg[selected_acc] = edit_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
+                            safe_cfg[selected_acc] = edit_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
                             
-                            r = requests.post(CONFIG_URL, json=up_cfg, timeout=10)
+                            r = requests.post(CONFIG_URL, json=safe_cfg, timeout=10)
                             if r.status_code == 200:
-                                st.session_state.admin_config = up_cfg
-                                st.success(f"✅ [{acc_options[category][selected_acc]}] 서버 반영 완료! 이제 절대 날아가지 않습니다.")
+                                st.session_state.admin_config = safe_cfg
+                                st.success(f"✅ [{acc_options[category][selected_acc]}] 안전하게 서버 반영 완료! 이제 날아가지 않습니다.")
                             else: 
                                 st.error(f"❌ 서버 전송 실패: {r.status_code}")
                         except Exception as e: 
                             st.error(f"🚨 오류: {str(e)}")
 
-            # 💡 문제가 되었던 부분! 들여쓰기를 완벽하게 정렬하고 풀어서 썼습니다.
             else:
                 st.error("❌ 패스워드가 일치하지 않습니다.")
 
@@ -767,31 +769,6 @@ if st.session_state.get('show_admin_page', False):
                 st.rerun()
             else: 
                 st.error("❌ 비밀번호 불일치")
-
-    with tab_setting:
-        st.subheader("비밀번호 수정")
-        c_p = st.text_input("현재 비밀번호", type="password", key="adm_curr_p")
-        n_p = st.text_input("새로운 비밀번호", type="password", key="adm_new_p")
-        if st.button("변경 저장", key="adm_pwd_save_btn"):
-            if c_p == st.session_state['admin_password']:
-                st.session_state['admin_password'] = n_p
-                st.success("✨ 변경 성공!")
-                st.session_state['show_admin_page'] = False
-                st.rerun()
-            else: st.error("❌ 비밀번호 불일치")
-            else: st.error("❌ 패스워드가 일치하지 않습니다.")
-
-    with tab_setting:
-        st.subheader("비밀번호 수정")
-        c_p = st.text_input("현재 비밀번호", type="password", key="adm_curr_p")
-        n_p = st.text_input("새로운 비밀번호", type="password", key="adm_new_p")
-        if st.button("변경 저장", key="adm_pwd_save_btn"):
-            if c_p == st.session_state['admin_password']:
-                st.session_state['admin_password'] = n_p
-                st.success("✨ 변경 성공!")
-                st.session_state['show_admin_page'] = False
-                st.rerun()
-            else: st.error("❌ 비밀번호 불일치")
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 elif st.session_state.current_view == '대시보드':
@@ -1747,6 +1724,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
