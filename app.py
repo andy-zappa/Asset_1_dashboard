@@ -583,7 +583,7 @@ with st.sidebar:
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
+        <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:fiex-end;'>
             <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
             <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:right;'>Built & Algo by Andy</div>
         </div>
@@ -1625,6 +1625,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
