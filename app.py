@@ -424,14 +424,14 @@ with st.sidebar:
         # 파일을 아직 안 올리셨을 때 엑스박스가 뜨지 않도록 투명 처리
         robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
-    # 1. 💡 상태창 (margin: 0 12px 적용으로 슬래시 양옆 2칸 확실하게 띄움!)
+    # 1. 💡 상태창 (구분선 '|' 및 좌우 1칸 공백 정밀 조정)
     if is_oracle_online:
         status_html = """
         <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
+            <div style='color:#666666; font-size:14px; margin: 0 8px;'>|</div>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
@@ -443,7 +443,7 @@ with st.sidebar:
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 12px;'>/</div>
+            <div style='color:#666666; font-size:14px; margin: 0 8px;'>|</div>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:700; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
@@ -1637,6 +1637,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
