@@ -650,125 +650,106 @@ if st.session_state.get('show_admin_page', False):
                 ORACLE_IP = "158.179.172.40"
                 CONFIG_URL = f"http://{ORACLE_IP}:8000/update_config"
 
-                # 1. 계좌 선택 및 데이터 매핑
+                # 1. 계좌 선택 및 데이터 매핑 (NameError 방지를 위해 내부 정의)
                 acc_options = {
                     "절세계좌": {"DC": "퇴직연금(DC)", "IRP": "퇴직연금(IRP)", "PENSION": "연금저축(CMA)", "ISA": "ISA(중개형)"},
                     "일반계좌": {"DOM1": "키움증권(국내Ⅰ)", "DOM2": "삼성증권(국내Ⅱ)", "USA1": "키움증권(해외Ⅰ)", "USA2": "키움증권(해외Ⅱ)"},
                     "가상자산": {"CRYPTO": "업비트(Upbit)"}
                 }
+                g_prin_map = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
                 
                 c_sel1, c_sel2 = st.columns([1, 2])
                 with c_sel1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
                 with c_sel2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
 
-                # 💡 [핵심] 선택된 계좌의 '현재 실시간 데이터'를 추출하여 기본값으로 설정
-                current_live_val = 0
-                current_live_prin = 0
-                current_live_items = []
+                # 💡 [핵심] 선택된 계좌의 '현재 실시간 데이터'를 추출하여 자동 로드
+                cur_val = 0; cur_prin = 0; cur_items = []
                 
-                # 데이터 풀에서 해당 계좌 정보 찾기
-                target_src = data if category == "절세계좌" else g_data
+                t_src = data if category == "절세계좌" else g_data
                 if category == "가상자산":
                     if isinstance(crypto_data, dict):
-                        current_live_val = safe_float(crypto_data.get('total_krw', 0))
-                        for coin in crypto_data.get('coins', []):
-                            current_live_items.append({"ticker": coin.get('ticker'), "name": coin.get('name'), "qty": coin.get('qty'), "avg_price": coin.get('avg_price')})
+                        cur_val = safe_float(crypto_data.get('total_krw', 0))
+                        for cn in crypto_data.get('coins', []):
+                            cur_items.append({"ticker": cn.get('ticker'), "name": cn.get('name'), "qty": cn.get('qty'), "avg_price": cn.get('avg_price')})
                 else:
-                    acc_info = target_src.get(selected_acc, {})
-                    if isinstance(acc_info, dict):
-                        # 현금성 자산 추출
-                        details = acc_info.get('상세', [])
-                        cash_item = next((i for i in details if '예수금' in str(i.get('종목명','')) or '현금' in str(i.get('종목명',''))), {})
-                        current_live_val = safe_float(cash_item.get('총자산', cash_item.get('총 자산', 0)))
-                        
-                        # 원금 추출
-                        if category == "일반계좌":
-                            current_live_prin = principals.get(selected_acc, 0)
-                        else:
-                            current_live_prin = safe_float(acc_info.get('원금', 0))
-                            
-                        # 종목 리스트 추출
-                        for i in details:
+                    a_info = t_src.get(selected_acc, {})
+                    if isinstance(a_info, dict):
+                        det = a_info.get('상세', [])
+                        c_it = next((i for i in det if '예수금' in str(i.get('종목명','')) or '현금' in str(i.get('종목명',''))), {})
+                        cur_val = safe_float(c_it.get('총자산', c_it.get('총 자산', 0)))
+                        cur_prin = g_prin_map.get(selected_acc, safe_float(a_info.get('원금', 0)))
+                        for i in det:
                             nm = str(i.get('종목명',''))
                             if nm not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)'] and '현금' not in nm:
-                                current_live_items.append({"종목명": nm, "코드": i.get('코드',''), "수량": i.get('수량',0), "매입가": i.get('매입가',0)})
+                                cur_items.append({"종목명": nm, "코드": i.get('코드',''), "수량": i.get('수량',0), "매입가": i.get('매입가',0)})
 
                 st.markdown("---")
 
                 # 2. 편집 영역
-                with st.form(f"form_{selected_acc}_v2"):
+                with st.form(f"form_{selected_acc}_final"):
                     st.subheader(f"📊 {acc_options[category][selected_acc]} 관리")
-                    
                     is_usa = "USA" in selected_acc
                     unit = "USD" if is_usa else "KRW"
                     
-                    col_f1, col_f2 = st.columns(2)
-                    with col_f1:
-                        st.markdown(f"<div style='text-align:right; font-size:11px; color:gray; margin-bottom:-20px;'>Unit: {unit}</div>", unsafe_allow_html=True)
-                        cash_input = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{current_live_val:,.2f}" if is_usa else f"{current_live_val:,.0f}")
-                    with col_f2:
+                    cf1, cf2 = st.columns(2)
+                    with cf1:
+                        st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: {unit}</div>", unsafe_allow_html=True)
+                        cash_in = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{cur_val:,.2f}" if is_usa else f"{cur_val:,.0f}")
+                    with cf2:
                         if category != "가상자산":
-                            st.markdown(f"<div style='text-align:right; font-size:11px; color:gray; margin-bottom:-20px;'>Unit: KRW</div>", unsafe_allow_html=True)
-                            prin_input = st.text_input("🏦 계좌 총 투자원금", value=f"{current_live_prin:,.0f}")
-                        else:
-                            prin_input = "0"
-                            st.write("")
+                            st.markdown(f"<div style='text-align:right; font-size:11px; color:#64B5F6; font-weight:bold; margin-bottom:-20px;'>Unit: KRW</div>", unsafe_allow_html=True)
+                            prin_in = st.text_input("🏦 계좌 총 투자원금", value=f"{cur_prin:,.0f}")
+                        else: prin_in = "0"; st.write("")
 
                     st.markdown("<br>", unsafe_allow_html=True)
-                    st.write("📃 보유 종목 리스트 (실시간 데이터 자동 로드됨)")
+                    st.write("📃 보유 종목 리스트 (서버 데이터 자동 로드)")
                     
                     if category == "가상자산":
-                        df = pd.DataFrame(current_live_items if current_live_items else [{"ticker": "", "name": "", "qty": 0.0, "avg_price": 0.0}])
-                        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, 
-                                                   column_config={
-                                                       "ticker": "종목코드", "name": "한글명", 
-                                                       "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
-                                                       "avg_price": st.column_config.NumberColumn(f"매수평균가 ({unit})", format="%,.1f" if not is_usa else "%,.4f")
-                                                   })
+                        df_p = pd.DataFrame(cur_items if cur_items else [{"ticker": "", "name": "", "qty": 0.0, "avg_price": 0.0}])
+                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True, 
+                                                 column_config={
+                                                     "ticker": "종목코드", "name": "한글명", 
+                                                     "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
+                                                     "avg_price": st.column_config.NumberColumn(f"매수평균가 (KRW)", format="%,.1f")
+                                                 })
                     else:
-                        df = pd.DataFrame(current_live_items if current_live_items else [{"종목명": "", "코드": "", "수량": 0.0, "매입가": 0.0}])
-                        qty_fmt = "%,.4f" if is_usa else "%,.0f"
-                        # 💡 매입가 1000원 미만 소수점 1자리 표기 로직 반영 (format 옵션)
-                        price_fmt = "%,.4f" if is_usa else "%,.1f" 
-                        
-                        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True,
-                                                   column_config={
-                                                       "수량": st.column_config.NumberColumn("수량", format=qty_fmt, step=0.0001),
-                                                       "매입가": st.column_config.NumberColumn(f"매입가 ({unit})", format=price_fmt, step=0.0001)
-                                                   })
+                        df_p = pd.DataFrame(cur_items if cur_items else [{"종목명": "", "코드": "", "수량": 0.0, "매입가": 0.0}])
+                        # 💡 1,000원 미만 소수점 1자리 + 달러 소수점 4자리 반영 포맷팅
+                        p_fmt = "%,.4f" if is_usa else "%,.1f"
+                        edit_df = st.data_editor(df_p, num_rows="dynamic", use_container_width=True,
+                                                 column_config={
+                                                     "수량": st.column_config.NumberColumn("수량", format="%,.4f" if is_usa else "%,.0f", step=0.0001),
+                                                     "매입가": st.column_config.NumberColumn(f"매입가 ({unit})", format=p_fmt, step=0.0001)
+                                                 })
                     
                     st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    # 💡 버튼 색상: 밝은 파란색 적용
                     st.markdown("<style>div[data-testid='stFormSubmitButton'] button { background-color: #64B5F6 !important; color: white !important; font-weight: bold !important; border: none !important; }</style>", unsafe_allow_html=True)
                     
                     if st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True):
                         try:
-                            # 최신 master_config 구조 유지하며 업데이트
-                            new_cfg = st.session_state.get('admin_config', {}).copy()
-                            new_cfg[f"{selected_acc}_CASH"] = float(cash_input.replace(",", "").strip())
-                            if category != "가상자산": new_cfg[f"{selected_acc}_PRIN"] = float(prin_input.replace(",", "").strip())
+                            # 기존 config 구조 유지하며 실시간 업데이트
+                            up_cfg = st.session_state.get('admin_config', {}).copy()
+                            up_cfg[f"{selected_acc}_CASH"] = float(cash_in.replace(",", "").strip())
+                            if category != "가상자산": up_cfg[f"{selected_acc}_PRIN"] = float(prin_in.replace(",", "").strip())
+                            up_cfg[selected_acc] = edit_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
                             
-                            cleaned_list = edited_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
-                            new_cfg[selected_acc] = cleaned_list
-                            
-                            res = requests.post(CONFIG_URL, json=new_cfg, timeout=10)
-                            if res.status_code == 200:
-                                st.session_state.admin_config = new_cfg
-                                st.success(f"✅ [{acc_options[category][selected_acc]}] 서버 전송 완료! 10초 뒤 반영됩니다.")
-                            else: st.error(f"❌ 서버 전송 실패: {res.status_code}")
+                            r = requests.post(CONFIG_URL, json=up_cfg, timeout=10)
+                            if r.status_code == 200:
+                                st.session_state.admin_config = up_cfg
+                                st.success(f"✅ [{acc_options[category][selected_acc]}] 반영 완료! 10초 내 갱신됩니다.")
+                            else: st.error(f"❌ 서버 전송 실패: {r.status_code}")
                         except Exception as e: st.error(f"🚨 오류: {str(e)}")
 
             else: st.error("❌ 패스워드가 일치하지 않습니다.")
 
     with tab_setting:
         st.subheader("비밀번호 수정")
-        curr_p = st.text_input("현재 비밀번호", type="password")
-        new_p = st.text_input("새 비밀번호", type="password")
-        if st.button("변경 저장"):
-            if curr_p == st.session_state['admin_password']:
-                st.session_state['admin_password'] = new_p
-                st.success("✨ 변경 완료!")
+        c_p = st.text_input("현재 비밀번호", type="password", key="adm_curr_p")
+        n_p = st.text_input("새로운 비밀번호", type="password", key="adm_new_p")
+        if st.button("변경 저장", key="adm_pwd_save_btn"):
+            if c_p == st.session_state['admin_password']:
+                st.session_state['admin_password'] = n_p
+                st.success("✨ 변경 성공!")
                 st.session_state['show_admin_page'] = False
                 st.rerun()
             else: st.error("❌ 비밀번호 불일치")
@@ -1727,6 +1708,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
