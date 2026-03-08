@@ -585,7 +585,7 @@ with st.sidebar:
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
         <div style='display:flex; flex-direction:column; align-items:flex-start; align-self:flex-end; margin-bottom:2px; line-height:1.1;'>
             <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; margin-bottom:1px; text-align:left;'>Zappa Quant</div>
-            <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; text-align:left;'>Built & Algo by Andy</div>
+            <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; text-align:right;'>Built & Algo by Andy</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1621,6 +1621,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
