@@ -668,8 +668,11 @@ if st.session_state.get('show_admin_page', False):
                 # 세션에 없으면 서버에서 가져오거나 기본값 적용
                 if 'admin_config' not in st.session_state:
                     try:
-                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3)
-                        st.session_state.admin_config = res.json()
+                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3) # (참고: API에 이 엔드포인트가 열려있어야 함)
+                        if res.status_code == 200:
+                            st.session_state.admin_config = res.json()
+                        else:
+                            st.session_state.admin_config = default_config
                     except:
                         st.session_state.admin_config = default_config
 
@@ -766,9 +769,8 @@ if st.session_state.get('show_admin_page', False):
             else:
                 st.error("❌ 현재 비밀번호가 일치하지 않습니다.")
 
-# 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다. (if -> elif 로 변경됨)
+# 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 elif st.session_state.current_view == '대시보드':
-    
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -1721,6 +1723,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
