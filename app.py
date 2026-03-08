@@ -750,8 +750,7 @@ with tab_login:
 
             else:
                 st.error("❌ 패스워드가 일치하지 않습니다.")
-
-    with tab_setting:
+with tab_setting:
         st.subheader("비밀번호 수정")
         current_p = st.text_input("현재 비밀번호 확인", type="password", key="cur_p")
         new_p = st.text_input("새로운 비밀번호 입력", type="password", key="new_p")
@@ -768,6 +767,7 @@ with tab_login:
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다. (if -> elif 로 변경됨)
 elif st.session_state.current_view == '대시보드':
+    
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
     
     try:
@@ -1720,6 +1720,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
