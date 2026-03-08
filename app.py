@@ -504,11 +504,14 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (하단 검은 박스 상단에 밀착 및 우측 정렬)
+    # 5. 날짜 영역 (변수 설정 + 출력 스타일 통합본)
+    # 한글 요일은 12px, 전체 숫자는 13px로 세팅합니다.
+    now_str_merged = f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
+
     st.markdown(f"""
         <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
             <span style='font-size: 13px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
-                {now_str}
+                {now_str_merged}
             </span>
         </div>
     """, unsafe_allow_html=True)
@@ -1616,6 +1619,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
