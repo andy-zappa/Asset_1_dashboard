@@ -581,7 +581,7 @@ with st.sidebar:
 
     # 11. 🤖 AI 퀀트매매 카드 (끝선 정렬 및 기울임 적용)
     st.markdown(f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:12px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
+    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
         <div style='display:flex; flex-direction:column; align-items:stretch; justify-content:center;'>
             <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.1; text-align:left;'>Zappa Quant</div>
@@ -1625,6 +1625,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
