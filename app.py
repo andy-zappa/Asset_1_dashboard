@@ -579,11 +579,10 @@ with st.sidebar:
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-# 11. 🤖 AI 퀀트매매 카드 (바닥 정렬 후 미세 상향 조정 완료)
+# 11. 🤖 AI 퀀트매매 카드 (문법 및 정렬 교정 완료)
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        
         <div style='display:flex; flex-direction:column; align-items:flex-start; align-self:flex-end; margin-bottom:10px; line-height:1.0;'>
             <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; margin-bottom:3px; text-align:left;'>Zappa Quant</div>
             <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; text-align:left;'>Built & Algo by Andy</div>
@@ -591,10 +590,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 💡 [CSS 단순화] Admin 버튼 위치 및 색상 정밀 교정
+    # 💡 Admin 버튼 전용 CSS (유령 박스 제거)
     st.markdown("""
         <style>
-        /* 버튼이 퀀트 카드 바로 아래 자연스럽게 붙도록 마진 조정 */
         div.element-container:has(button[key="admin_lock_btn"]) {
             margin-top: -12px !important;
             margin-bottom: 0px !important;
@@ -605,28 +603,20 @@ with st.sidebar:
             box-shadow: none !important;
             padding-left: 10px !important;
             justify-content: flex-start !important;
-            min-height: 20px !important;
-            height: auto !important;
         }
-        /* 텍스트를 영롱한 골드색으로 고정 */
         button[key="admin_lock_btn"] p {
             color: #FFD700 !important; 
             font-size: 14.5px !important;
             font-weight: 900 !important;
             margin: 0 !important;
         }
-        button[key="admin_lock_btn"]:hover p {
-            color: #ffc107 !important;
-            transform: scale(1.02);
-        }
         </style>
     """, unsafe_allow_html=True)
 
-    # 💡 관리자 모드 버튼 (🔒\uFE0F 코드로 컬러 이모지 강제)
+    # 💡 관리자 페이지 버튼
     if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
-
     
 # =========================================================
 # 🔀 라우팅 제어 로직 (대시보드 화면)
@@ -1633,6 +1623,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
