@@ -623,10 +623,9 @@ with st.sidebar:
         st.rerun()
         
 # =========================================================
-# 🔒 [Zappa Admin] 통합 자산 관리 패널 (Pro 마스터 버전)
+# 🔒 [Zappa Admin] 통합 자산 관리 패널 (무결점 마스터 버전)
 # =========================================================
 if st.session_state.get('show_admin_page', False):
-    # 💡 [CSS] Deploy 버튼을 밝은 파란색으로 강제 변경
     st.markdown("""
         <style>
         div.stButton > button[kind="primary"] {
@@ -639,7 +638,8 @@ if st.session_state.get('show_admin_page', False):
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🔒 Zappa Admin Control Panel")
+    # 💡 [요청 반영] 타이틀 변경
+    st.markdown("### 🔒 Andy-Zappa Admin")
     if st.button("⬅️ Back to Dashboard"):
         st.session_state['show_admin_page'] = False
         st.rerun()
@@ -650,19 +650,17 @@ if st.session_state.get('show_admin_page', False):
     CONFIG_FILE = "master_config.json"
     try:
         if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f: cfg = json.load(f)
         else: cfg = {}
     except: cfg = {}
 
-    # 2. 비밀번호 인증 (기본값: zappa123)
-    current_pw = cfg.get("ADMIN_PW", "zappa123")
+    # 2. 비밀번호 인증 (💡 요청 반영: 초기화 비번 1234)
+    current_pw = cfg.get("ADMIN_PW", "1234")
     admin_pw = st.text_input("🔑 관리자 비밀번호를 입력하세요", type="password")
     
     if admin_pw == current_pw:
         st.success("✅ 관리자 인증 완료")
         
-        # ⚙️ [기능] 비밀번호 변경창
         with st.expander("🔐 관리자 비밀번호 변경"):
             new_pw = st.text_input("새로운 비밀번호 입력", type="password")
             if st.button("비밀번호 업데이트"):
@@ -675,7 +673,7 @@ if st.session_state.get('show_admin_page', False):
 
         st.markdown("---")
 
-        # 📂 [기능] 2단계 드롭다운 계좌 선택
+        # 📂 2단계 드롭다운 계좌 선택
         col_cat, col_acc = st.columns(2)
         with col_cat:
             category = st.selectbox("1️⃣ 자산 유형 선택", ["절세계좌", "일반계좌", "가상자산"])
@@ -696,7 +694,7 @@ if st.session_state.get('show_admin_page', False):
 
         st.subheader(f"📍 {sel_acc_label} 관리")
 
-        # 📝 [기능] 데이터 편집기 (기존 값 뙇 로드 & 포맷 분리)
+        # 📝 데이터 편집기 (💡 에러 났던 placeholder 속성 완벽 제거)
         st.markdown(f"**1️⃣ 보유 종목 리스트 (단위: {unit_sym})**")
         curr_items = cfg.get(sel_key, [])
         df_items = pd.DataFrame(curr_items)
@@ -704,14 +702,13 @@ if st.session_state.get('show_admin_page', False):
         if sel_key == "CRYPTO":
             if df_items.empty: df_items = pd.DataFrame(columns=["name", "ticker", "qty", "avg_price"])
             else: 
-                # 에러 방지용 컬럼 검사
                 for col in ["name", "ticker", "qty", "avg_price"]:
                     if col not in df_items.columns: df_items[col] = None
                 df_items = df_items[["name", "ticker", "qty", "avg_price"]]
                 
             col_cfg = {
-                "name": st.column_config.TextColumn("종목명", placeholder="예: 비트코인"),
-                "ticker": st.column_config.TextColumn("코드", placeholder="BTC"),
+                "name": st.column_config.TextColumn("종목명"),
+                "ticker": st.column_config.TextColumn("코드"),
                 "qty": st.column_config.NumberColumn("보유량", format="%.8f"),
                 "avg_price": st.column_config.NumberColumn(f"매입가({unit_sym})", format="#,##0.00")
             }
@@ -731,13 +728,20 @@ if st.session_state.get('show_admin_page', False):
 
         edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
 
-        # 💵 [기능] 현금(예수금) 전용 입력
+        # 💵 [요청 반영] 현금(예수금) 옆에 '투입원금' 입력창 나란히 배치
+        st.markdown(f"**2️⃣ 자산 요약 정보 ({unit_sym})**")
         cash_key = f"{sel_key}_CASH"
+        prin_key = f"{sel_key}_PRINCIPAL"
         curr_cash = cfg.get(cash_key, 0)
-        st.markdown(f"**2️⃣ 현금성 자산 / 예수금 ({unit_sym})**")
-        new_cash = st.number_input("입력창", value=float(curr_cash), format="%.2f", step=1000.0, label_visibility="collapsed")
+        curr_prin = cfg.get(prin_key, 0)
+        
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            new_cash = st.number_input("💵 현금성 자산 (예수금)", value=float(curr_cash), format="%.2f", step=1000.0, key=f"cash_{sel_key}")
+        with cc2:
+            new_prin = st.number_input("💰 투입원금", value=float(curr_prin), format="%.2f", step=1000.0, key=f"prin_{sel_key}")
 
-        # 🛡️ [기능] 안전자산(이율보증형) 설정 - 달력 포함 (절세계좌 전용)
+        # 🛡️ 안전자산 (에러 원인 제거 완료)
         if category == "절세계좌":
             st.markdown(f"**3️⃣ 안전자산 (이율보증형)**")
             safe_key = f"{sel_key}_SAFE"
@@ -749,21 +753,21 @@ if st.session_state.get('show_admin_page', False):
                 df_safe = df_safe[["종목명", "투자원금", "연이율(%)", "매입일자"]]
 
             safe_cfg = {
-                "종목명": st.column_config.TextColumn("종목명", placeholder="예: 삼성화재 이율보증"),
+                "종목명": st.column_config.TextColumn("종목명"),
                 "투자원금": st.column_config.NumberColumn("투자원금", format="#,##0"),
                 "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f"),
                 "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")
             }
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
 
-        # 🚀 [기능] 파란색 Deploy 버튼 & JSON 안정화 로직
+        # 🚀 Deploy
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             try:
                 cfg[sel_key] = edited_df.to_dict('records')
                 cfg[cash_key] = new_cash
+                cfg[prin_key] = new_prin # 투입원금 저장
                 
-                # 💡 날짜(Date) 타입이 JSON 에러를 일으키지 않도록 문자열 강제 변환
                 if category == "절세계좌": 
                     safe_records = edited_safe.to_dict('records')
                     for r in safe_records:
@@ -773,7 +777,7 @@ if st.session_state.get('show_admin_page', False):
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                     json.dump(cfg, f, ensure_ascii=False, indent=4)
                 
-                st.success("✅ 서버에 데이터가 배포되었습니다! 안전한 동기화를 위해 약 30초 후 대시보드에 반영됩니다.")
+                st.success("✅ 서버에 데이터가 배포되었습니다! (⚠️주의: 변경된 master_config.json을 오라클 서버에도 복사해 주셔야 로봇이 인식합니다.)")
                 time.sleep(2)
                 st.rerun()
             except Exception as e:
@@ -783,6 +787,7 @@ if st.session_state.get('show_admin_page', False):
         st.error("❌ 비밀번호가 틀렸습니다.")
         
     st.stop()
+
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
@@ -1755,6 +1760,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
