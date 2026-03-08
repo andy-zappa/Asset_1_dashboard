@@ -463,7 +463,7 @@ with st.sidebar:
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
     <style>
-    /* 🚀 1. 파이썬 진짜 버튼 숨기기 (스트림릿 레이아웃 방해 원천 차단) */
+    /* 🚀 1. 백그라운드 진짜 버튼 숨기기 */
     div.element-container:has(.hidden-update-marker) {{ display: none !important; }}
     div.element-container:has(.hidden-update-marker) + div.element-container {{ display: none !important; }}
 
@@ -481,46 +481,42 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 4. 💡 숨겨진 업데이트 버튼 (화면엔 안 보이고 백그라운드에서 캐시만 삭제함)
+    # 4. 💡 숨겨진 업데이트 버튼 (백그라운드 전용)
     st.markdown("<div class='hidden-update-marker'></div>", unsafe_allow_html=True)
     if st.button("TRIGGER_UPDATE_BACKEND"):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 💡 날짜 영역 + 텍스트 버튼 합체 (순수 HTML로 강제 우측 정렬!)
+    # 5. 💡 [한 줄 통합] Updated + 날짜/시간 (전체 12.5px / 요일 12px)
+    # 텍스트 전체를 클릭 가능하게 만들고 우측 정렬합니다.
     now_str_merged = (
-        f"<span style='font-size: 12.5px;'>"
-        f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
+        f"<span id='unified-update-btn' style='font-size: 12.5px; color: #888888; cursor: pointer; transition: color 0.2s ease;'>"
+        f"🔄 Updated : [ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
         f"</span>"
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 5px; margin-bottom: -15px; position: relative; z-index: 10; line-height: 1.7;'>
-            <span id='fake-update-btn' style='font-size: 13px; font-weight: 600; color: #888888; cursor: pointer; display: inline-block; transition: color 0.2s ease;'>
-                🔄 Update
-            </span><br>
-            <span style='color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
-                {now_str_merged}
-            </span>
+        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
+            {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
 
-    # 5.5 💡 텍스트 클릭 스크립트 (가짜 글씨를 누르면 숨겨진 진짜 버튼을 때려줌)
+    # 5.5 💡 클릭 스크립트 (통합 텍스트 클릭 시 업데이트 트리거)
     components.html("""
     <script>
     const parent = window.parent.document;
     const interval = setInterval(() => {
-        const fakeBtn = parent.getElementById('fake-update-btn');
-        if (fakeBtn && !fakeBtn.hasAttribute('data-binded')) {
-            fakeBtn.setAttribute('data-binded', 'true');
+        const unifiedBtn = parent.getElementById('unified-update-btn');
+        if (unifiedBtn && !unifiedBtn.hasAttribute('data-binded')) {
+            unifiedBtn.setAttribute('data-binded', 'true');
             
-            // 마우스 올리면 글씨 진해지게 (호버 효과)
-            fakeBtn.addEventListener('mouseenter', () => { fakeBtn.style.color = '#111111'; });
-            fakeBtn.addEventListener('mouseleave', () => { fakeBtn.style.color = '#888888'; });
+            // 호버 효과
+            unifiedBtn.addEventListener('mouseenter', () => { unifiedBtn.style.color = '#111111'; });
+            unifiedBtn.addEventListener('mouseleave', () => { unifiedBtn.style.color = '#888888'; });
             
-            // 클릭하면 파이썬 버튼 몰래 실행
-            fakeBtn.addEventListener('click', () => {
+            // 클릭 시 진짜 버튼 호출
+            unifiedBtn.addEventListener('click', () => {
                 const btns = Array.from(parent.querySelectorAll('button p'));
                 const target = btns.find(el => el.innerText.includes('TRIGGER_UPDATE_BACKEND'));
                 if (target) target.closest('button').click();
@@ -1634,6 +1630,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
