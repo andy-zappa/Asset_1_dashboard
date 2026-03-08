@@ -497,7 +497,7 @@ with st.sidebar:
     )
 
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -30px; position: relative; z-index: 10;'>
             {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
@@ -1630,6 +1630,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
