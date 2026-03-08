@@ -638,15 +638,116 @@ if st.session_state.get('show_admin_page', False):
     # 탭을 나누어 [로그인]과 [설정] 구성
     tab_login, tab_setting = st.tabs(["🔑 인증하기", "⚙️ 패스워드 변경"])
 
-    with tab_login:
+with tab_login:
         input_pwd = st.text_input("Access Password", type="password", placeholder="비밀번호를 입력하세요")
         
         if input_pwd:
             if input_pwd == st.session_state['admin_password']:
                 st.success("✅ 인증 성공! 관리자 모드가 활성화되었습니다.")
                 st.divider()
-                st.subheader("📝 자산 정보 수정")
-                st.info("향후 여기에 주식수, 평단가 등 입력할 상세 페이지 폼이 들어갑니다.")
+                
+                # ==========================================
+                # 🔥 [핵심] 최고급 Admin UI: 계좌 선택 & 엑셀형 편집기
+                # ==========================================
+                st.markdown("<h3 style='margin-bottom:15px;'>📝 자산 정보 동기화 (오라클 연동)</h3>", unsafe_allow_html=True)
+                st.info("💡 엑셀처럼 행을 추가/삭제할 수 있습니다. [저장]을 누르면 즉시 서버에 반영됩니다.")
+
+                ORACLE_IP = "158.179.172.40"
+                CONFIG_URL = f"http://{ORACLE_IP}:8000/update_config"
+
+                # 1. 기본값 세팅
+                default_config = {
+                    "DC": [], "IRP": [], "PENSION": [], "ISA": [],
+                    "DOM1": [], "DOM2": [], "USA1": [], "USA2": [],
+                    "CRYPTO": [{"ticker": "BTC", "name": "비트코인"}, {"ticker": "ETH", "name": "이더리움"}, {"ticker": "TRX", "name": "트론"}],
+                    "DC_CASH": 91187834, "IRP_CASH": 1141610, "PENSION_CASH": 1445678, "ISA_CASH": 218329,
+                    "DOM1_CASH": 132563, "DOM2_CASH": 18730, "USA1_CASH": 249.42, "USA2_CASH": 0, "CRYPTO_CASH": 49875,
+                    "DOM1_PRIN": 110963075, "DOM2_PRIN": 5208948, "USA1_PRIN": 257915999, "USA2_PRIN": 7457930
+                }
+                
+                # 세션에 없으면 서버에서 가져오거나 기본값 적용
+                if 'admin_config' not in st.session_state:
+                    try:
+                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3) # (참고: API에 이 엔드포인트가 열려있어야 함)
+                        st.session_state.admin_config = res.json()
+                    except:
+                        st.session_state.admin_config = default_config
+
+                cfg = st.session_state.admin_config
+
+                # 2. 계좌 선택 드롭다운
+                acc_options = {
+                    "절세계좌": {"DC": "퇴직연금(DC)", "IRP": "퇴직연금(IRP)", "PENSION": "연금저축(CMA)", "ISA": "ISA(중개형)"},
+                    "일반계좌": {"DOM1": "키움증권(국내Ⅰ)", "DOM2": "삼성증권(국내Ⅱ)", "USA1": "키움증권(해외Ⅰ)", "USA2": "키움증권(해외Ⅱ)"},
+                    "가상자산": {"CRYPTO": "업비트(Upbit)"}
+                }
+                
+                c1, c2 = st.columns([1, 2])
+                with c1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
+                with c2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
+
+                st.markdown("---")
+
+                # 3. 편집 영역 (현금성 자산 & 엑셀 테이블)
+                with st.form(f"form_{selected_acc}"):
+                    st.subheader(f"📊 {acc_options[category][selected_acc]} 관리")
+                    
+                    # (A) 현금 & 원금 입력부
+                    cash_key = f"{selected_acc}_CASH"
+                    prin_key = f"{selected_acc}_PRIN"
+                    
+                    col_c1, col_c2 = st.columns(2)
+                    with col_c1: 
+                        new_cash = st.number_input("💵 현금성 자산 (예수금)", value=float(cfg.get(cash_key, 0)), step=1000.0, format="%.2f")
+                    with col_c2:
+                        if category == "일반계좌": # 일반계좌만 원금 수정
+                            new_prin = st.number_input("🏦 계좌 투자원금", value=float(cfg.get(prin_key, 0)), step=10000.0, format="%.2f")
+                        else:
+                            new_prin = None
+                            st.write("") # 빈 공간
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    
+                    # (B) 종목 리스트 엑셀 편집기
+                    st.write("📃 보유 종목 리스트 (행 추가/삭제 가능)")
+                    current_list = cfg.get(selected_acc, [])
+                    
+                    if category == "가상자산":
+                        df = pd.DataFrame(current_list, columns=["ticker", "name", "qty", "avg_price"])
+                        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, 
+                                                   column_config={
+                                                       "ticker": "종목코드(영문)", "name": "한글명", 
+                                                       "qty": "보유수량", "avg_price": "매수평균가"
+                                                   })
+                    else:
+                        df = pd.DataFrame(current_list, columns=["종목명", "코드", "수량", "매입가"])
+                        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    
+                    # 4. 저장 로직
+                    submit = st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", type="primary", use_container_width=True)
+                    
+                    if submit:
+                        try:
+                            # 데이터 갱신
+                            cfg[cash_key] = new_cash
+                            if new_prin is not None: cfg[prin_key] = new_prin
+                            
+                            # 빈 행 제거 후 저장
+                            edited_list = edited_df.dropna(how='all').to_dict('records')
+                            cfg[selected_acc] = edited_list
+                            st.session_state.admin_config = cfg
+                            
+                            # 서버로 쏘기
+                            res = requests.post(CONFIG_URL, json=cfg, timeout=10)
+                            if res.status_code == 200:
+                                st.success(f"✅ [{acc_options[category][selected_acc]}] 서버 반영 완료! (로봇이 10초 내 갱신합니다)")
+                            else:
+                                st.error(f"❌ 서버 전송 실패: {res.status_code}")
+                        except Exception as e:
+                            st.error(f"🚨 저장 오류: {str(e)}")
+
             else:
                 st.error("❌ 패스워드가 일치하지 않습니다.")
 
@@ -1619,6 +1720,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
