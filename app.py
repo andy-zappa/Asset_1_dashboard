@@ -637,7 +637,7 @@ if st.session_state.get('show_admin_page', False):
         st.session_state['show_admin_page'] = False
         st.rerun()
 
-    st.markdown("<h2 style='margin-top: 20px;'>🔒 Zappa Quant 관리자 시스템</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='margin-top: 20px;'>🔒 Andy-Zappa 관리자 시스템</h2>", unsafe_allow_html=True)
     st.write("관리자 인증이 필요한 페이지입니다.")
     st.markdown("---")
     
@@ -1625,6 +1625,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
