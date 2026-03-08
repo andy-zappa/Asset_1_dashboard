@@ -638,7 +638,7 @@ if st.session_state.get('show_admin_page', False):
     # 탭을 나누어 [로그인]과 [설정] 구성
     tab_login, tab_setting = st.tabs(["🔑 인증하기", "⚙️ 패스워드 변경"])
 
-with tab_login:
+    with tab_login:
         input_pwd = st.text_input("Access Password", type="password", placeholder="비밀번호를 입력하세요")
         
         if input_pwd:
@@ -668,7 +668,7 @@ with tab_login:
                 # 세션에 없으면 서버에서 가져오거나 기본값 적용
                 if 'admin_config' not in st.session_state:
                     try:
-                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3) # (참고: API에 이 엔드포인트가 열려있어야 함)
+                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3)
                         st.session_state.admin_config = res.json()
                     except:
                         st.session_state.admin_config = default_config
@@ -750,7 +750,8 @@ with tab_login:
 
             else:
                 st.error("❌ 패스워드가 일치하지 않습니다.")
-with tab_setting:
+
+    with tab_setting:
         st.subheader("비밀번호 수정")
         current_p = st.text_input("현재 비밀번호 확인", type="password", key="cur_p")
         new_p = st.text_input("새로운 비밀번호 입력", type="password", key="new_p")
@@ -1720,6 +1721,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
