@@ -504,10 +504,10 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-   # 5. 날짜 영역 (하단 박스와 밀착 및 우측 정렬)
+    # 5. 날짜 영역 (하단 검은 박스 상단에 밀착 및 우측 정렬)
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 5px; margin-top: -24px; margin-bottom: 0px;'>
-            <span style='font-size: 11.5px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -38px; position: relative; z-index: 10;'>
+            <span style='font-size: 11px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str}
             </span>
         </div>
@@ -1616,6 +1616,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
