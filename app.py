@@ -583,7 +583,6 @@ with st.sidebar:
     st.markdown(f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:center; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        
         <div style='display:flex; flex-direction:column; align-items:flex-start; align-self:flex-end; margin-bottom:14px;'>
             <div style='font-size:22px; font-weight:600; color:#111111; letter-spacing:-1.5px; line-height:1.0; text-align:left;'>Zappa Quant</div>
             <div style='font-size:12px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; margin-top:2px; text-align:left;'>Built & Algo by Andy</div>
@@ -591,22 +590,29 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 💡 [CSS 단순화] 투명 박스 제거, 왼쪽 정렬, 찐 노란색(Gold) 강제 주입!
+    # 💡 [CSS 단순화] 유령 박스 제거 및 텍스트 색상 강제 주입
     st.markdown("""
         <style>
+        /* 버튼 컨테이너가 다른 영역을 침범하지 않도록 설정 */
+        div.element-container:has(button[key="admin_lock_btn"]) {
+            margin-top: -10px !important;
+            margin-bottom: 0px !important;
+        }
         button[key="admin_lock_btn"] {
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            padding-left: 5px !important;
-            justify-content: flex-start !important; 
-            margin-top: -15px !important;
+            padding-left: 10px !important;
+            justify-content: flex-start !important;
+            min-height: 20px !important;
+            height: auto !important;
         }
-        /* 스트림릿이 강제로 덮는 폰트 색상을 무력화하기 위해 p 태그를 직접 타격합니다 */
+        /* 텍스트 색상을 골드색으로 강제 고정 */
         button[key="admin_lock_btn"] p {
             color: #FFD700 !important; 
             font-size: 14.5px !important;
             font-weight: 900 !important;
+            margin: 0 !important;
         }
         button[key="admin_lock_btn"]:hover p {
             color: #ffc107 !important;
@@ -615,7 +621,7 @@ with st.sidebar:
         </style>
     """, unsafe_allow_html=True)
 
-    # 💡 🔒 뒤에 보이지 않는 \uFE0F 를 붙여서 무조건 컬러 이모지로 렌더링되게 강제합니다.
+    # 💡 🔒\uFE0F 코드로 컬러 이모지 강제 및 관리자 모드 전환
     if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
@@ -1626,6 +1632,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
