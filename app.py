@@ -504,15 +504,17 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (날짜 13px / 시간 12.5px / 한글 12px 정밀 분리)
-    # 1. 날짜(date_part)는 기본 12.5px를 따릅니다.
-    # 2. 요일(day_str)은 12px로 살짝 줄입니다.
-    # 3. 시간(time_part)은 12.5px로 정밀하게 세팅합니다.
-    now_str_merged = f"[ {date_part}(<span style='font-size: 12px;'>{day_str}</span>) / <span style='font-size: 12.5px;'>{time_part}</span> ]"
+    # 5. 날짜 영역 (날짜/시간 12.5px & 요일 12px 정밀 세팅)
+    # 각 요소를 span으로 감싸서 Andy님이 원하시는 크기를 강제 고정합니다.
+    now_str_merged = (
+        f"[ <span style='font-size: 12.5px;'>{date_part}</span>"
+        f"(<span style='font-size: 12.0px;'>{day_str}</span>) / "
+        f"<span style='font-size: 12.5px;'>{time_part}</span> ]"
+    )
 
     st.markdown(f"""
         <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -15px; position: relative; z-index: 10;'>
-            <span style='font-size: 12.5px; color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
+            <span style='color: #888888; font-family: sans-serif; letter-spacing: -0.5px; background-color: transparent;'>
                 {now_str_merged}
             </span>
         </div>
@@ -1621,6 +1623,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
