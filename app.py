@@ -668,7 +668,7 @@ if st.session_state.get('show_admin_page', False):
                 # 세션에 없으면 서버에서 가져오거나 기본값 적용
                 if 'admin_config' not in st.session_state:
                     try:
-                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3) # (참고: API에 이 엔드포인트가 열려있어야 함)
+                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3)
                         if res.status_code == 200:
                             st.session_state.admin_config = res.json()
                         else:
@@ -717,19 +717,42 @@ if st.session_state.get('show_admin_page', False):
                     
                     if category == "가상자산":
                         df = pd.DataFrame(current_list, columns=["ticker", "name", "qty", "avg_price"])
-                        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, 
-                                                   column_config={
-                                                       "ticker": "종목코드(영문)", "name": "한글명", 
-                                                       "qty": "보유수량", "avg_price": "매수평균가"
-                                                   })
+                        # 💡 가상자산 소수점 8자리 지원을 위한 NumberColumn 적용
+                        edited_df = st.data_editor(
+                            df, 
+                            num_rows="dynamic", 
+                            use_container_width=True, 
+                            column_config={
+                                "ticker": "종목코드(영문)", 
+                                "name": "한글명", 
+                                "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
+                                "avg_price": st.column_config.NumberColumn("매수평균가", format="%.4f", step=0.01)
+                            }
+                        )
                     else:
                         df = pd.DataFrame(current_list, columns=["종목명", "코드", "수량", "매입가"])
                         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
+                    # 💡 버튼 색상을 밝은 파란색으로 변경하는 커스텀 CSS 적용
+                    st.markdown("""
+                        <style>
+                        div[data-testid="stFormSubmitButton"] button {
+                            background-color: #64B5F6 !important;
+                            color: white !important;
+                            border: none !important;
+                            font-weight: bold !important;
+                        }
+                        div[data-testid="stFormSubmitButton"] button:hover {
+                            background-color: #42A5F5 !important;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+                        }
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
                     # 4. 저장 로직
-                    submit = st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", type="primary", use_container_width=True)
+                    submit = st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True)
                     
                     if submit:
                         try:
@@ -1723,6 +1746,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
