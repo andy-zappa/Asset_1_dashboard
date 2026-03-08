@@ -618,16 +618,14 @@ with st.sidebar:
 # 🔀 라우팅 제어 로직 (대시보드 화면)
 # =========================================================
 
-# 💡 초기 비밀번호 설정 (세션에 없으면 기본값 1234)
+# 💡 초기 비밀번호 설정
 if 'admin_password' not in st.session_state:
     st.session_state['admin_password'] = "1234"
 
-# 💡 [추가] 자물쇠 버튼(admin)이 눌렸을 때 패스워드 창을 먼저 띄웁니다!
 if st.session_state.get('show_admin_page', False):
     import time
     import numpy as np
     
-    # 원래 화면으로 되돌아가는 버튼
     if st.button("⬅️ 대시보드로 복귀"):
         st.session_state['show_admin_page'] = False
         st.rerun()
@@ -636,7 +634,6 @@ if st.session_state.get('show_admin_page', False):
     st.write("관리자 인증이 필요한 페이지입니다.")
     st.markdown("---")
     
-    # 탭을 나누어 [로그인]과 [설정] 구성
     tab_login, tab_setting = st.tabs(["🔑 인증하기", "⚙️ 패스워드 변경"])
 
     with tab_login:
@@ -647,163 +644,134 @@ if st.session_state.get('show_admin_page', False):
                 st.success("✅ 인증 성공! 관리자 모드가 활성화되었습니다.")
                 st.divider()
                 
-                # ==========================================
-                # 🔥 [핵심] 최고급 Admin UI: 계좌 선택 & 엑셀형 편집기
-                # ==========================================
                 st.markdown("<h3 style='margin-bottom:15px;'>📝 자산 정보 동기화 (오라클 연동)</h3>", unsafe_allow_html=True)
-                st.info("💡 엑셀처럼 행을 추가/삭제할 수 있습니다. [저장]을 누르면 즉시 서버에 반영됩니다.")
+                st.info("💡 계좌를 선택하면 현재 서버에 저장된 값이 자동으로 채워집니다. 수정 후 저장하세요.")
 
                 ORACLE_IP = "158.179.172.40"
                 CONFIG_URL = f"http://{ORACLE_IP}:8000/update_config"
 
-                # 1. 기본값 세팅
-                default_config = {
-                    "DC": [], "IRP": [], "PENSION": [], "ISA": [],
-                    "DOM1": [], "DOM2": [], "USA1": [], "USA2": [],
-                    "CRYPTO": [{"ticker": "BTC", "name": "비트코인"}, {"ticker": "ETH", "name": "이더리움"}, {"ticker": "TRX", "name": "트론"}],
-                    "DC_CASH": 91187834, "IRP_CASH": 1141610, "PENSION_CASH": 1445678, "ISA_CASH": 218329,
-                    "DOM1_CASH": 132563, "DOM2_CASH": 18730, "USA1_CASH": 249.42, "USA2_CASH": 0, "CRYPTO_CASH": 49875,
-                    "DOM1_PRIN": 110963075, "DOM2_PRIN": 5208948, "USA1_PRIN": 257915999, "USA2_PRIN": 7457930
-                }
-                
-                # 세션에 없으면 서버에서 가져오거나 기본값 적용
-                if 'admin_config' not in st.session_state:
-                    try:
-                        res = requests.get(f"http://{ORACLE_IP}:8000/master_config.json", timeout=3)
-                        if res.status_code == 200:
-                            st.session_state.admin_config = res.json()
-                        else:
-                            st.session_state.admin_config = default_config
-                    except:
-                        st.session_state.admin_config = default_config
-
-                cfg = st.session_state.admin_config
-
-                # 2. 계좌 선택 드롭다운
+                # 1. 계좌 선택 및 데이터 매핑
                 acc_options = {
                     "절세계좌": {"DC": "퇴직연금(DC)", "IRP": "퇴직연금(IRP)", "PENSION": "연금저축(CMA)", "ISA": "ISA(중개형)"},
                     "일반계좌": {"DOM1": "키움증권(국내Ⅰ)", "DOM2": "삼성증권(국내Ⅱ)", "USA1": "키움증권(해외Ⅰ)", "USA2": "키움증권(해외Ⅱ)"},
                     "가상자산": {"CRYPTO": "업비트(Upbit)"}
                 }
                 
-                c1, c2 = st.columns([1, 2])
-                with c1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
-                with c2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
+                c_sel1, c_sel2 = st.columns([1, 2])
+                with c_sel1: category = st.selectbox("1️⃣ 자산 그룹 선택", ["절세계좌", "일반계좌", "가상자산"])
+                with c_sel2: selected_acc = st.selectbox("2️⃣ 상세 계좌 선택", options=list(acc_options[category].keys()), format_func=lambda x: acc_options[category][x])
+
+                # 💡 [핵심] 선택된 계좌의 '현재 실시간 데이터'를 추출하여 기본값으로 설정
+                current_live_val = 0
+                current_live_prin = 0
+                current_live_items = []
+                
+                # 데이터 풀에서 해당 계좌 정보 찾기
+                target_src = data if category == "절세계좌" else g_data
+                if category == "가상자산":
+                    if isinstance(crypto_data, dict):
+                        current_live_val = safe_float(crypto_data.get('total_krw', 0))
+                        for coin in crypto_data.get('coins', []):
+                            current_live_items.append({"ticker": coin.get('ticker'), "name": coin.get('name'), "qty": coin.get('qty'), "avg_price": coin.get('avg_price')})
+                else:
+                    acc_info = target_src.get(selected_acc, {})
+                    if isinstance(acc_info, dict):
+                        # 현금성 자산 추출
+                        details = acc_info.get('상세', [])
+                        cash_item = next((i for i in details if '예수금' in str(i.get('종목명','')) or '현금' in str(i.get('종목명',''))), {})
+                        current_live_val = safe_float(cash_item.get('총자산', cash_item.get('총 자산', 0)))
+                        
+                        # 원금 추출
+                        if category == "일반계좌":
+                            current_live_prin = principals.get(selected_acc, 0)
+                        else:
+                            current_live_prin = safe_float(acc_info.get('원금', 0))
+                            
+                        # 종목 리스트 추출
+                        for i in details:
+                            nm = str(i.get('종목명',''))
+                            if nm not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)'] and '현금' not in nm:
+                                current_live_items.append({"종목명": nm, "코드": i.get('코드',''), "수량": i.get('수량',0), "매입가": i.get('매입가',0)})
 
                 st.markdown("---")
 
-                # 3. 편집 영역 (현금성 자산 & 엑셀 테이블)
-                with st.form(f"form_{selected_acc}"):
+                # 2. 편집 영역
+                with st.form(f"form_{selected_acc}_v2"):
                     st.subheader(f"📊 {acc_options[category][selected_acc]} 관리")
                     
-                    # (A) 현금 & 원금 입력부
-                    cash_key = f"{selected_acc}_CASH"
-                    prin_key = f"{selected_acc}_PRIN"
+                    is_usa = "USA" in selected_acc
+                    unit = "USD" if is_usa else "KRW"
                     
-                    col_c1, col_c2 = st.columns(2)
-                    with col_c1: 
-                        new_cash = st.number_input("💵 현금성 자산 (예수금)", value=float(cfg.get(cash_key, 0)), step=1000.0)
-                    with col_c2:
-                        if category == "일반계좌":
-                            new_prin = st.number_input("🏦 계좌 투자원금", value=float(cfg.get(prin_key, 0)), step=10000.0)
+                    col_f1, col_f2 = st.columns(2)
+                    with col_f1:
+                        st.markdown(f"<div style='text-align:right; font-size:11px; color:gray; margin-bottom:-20px;'>Unit: {unit}</div>", unsafe_allow_html=True)
+                        cash_input = st.text_input(f"💵 현금성 자산 (예수금)", value=f"{current_live_val:,.2f}" if is_usa else f"{current_live_val:,.0f}")
+                    with col_f2:
+                        if category != "가상자산":
+                            st.markdown(f"<div style='text-align:right; font-size:11px; color:gray; margin-bottom:-20px;'>Unit: KRW</div>", unsafe_allow_html=True)
+                            prin_input = st.text_input("🏦 계좌 총 투자원금", value=f"{current_live_prin:,.0f}")
                         else:
-                            new_prin = None
-                            st.write("") # 빈 공간
-                    
+                            prin_input = "0"
+                            st.write("")
+
                     st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    # (B) 종목 리스트 엑셀 편집기
-                    st.write("📃 보유 종목 리스트 (행 추가/삭제 가능)")
-                    current_list = cfg.get(selected_acc, [])
+                    st.write("📃 보유 종목 리스트 (실시간 데이터 자동 로드됨)")
                     
                     if category == "가상자산":
-                        df = pd.DataFrame(current_list, columns=["ticker", "name", "qty", "avg_price"])
-                        # 💡 표에서 콤마가 뜨도록 데이터를 '숫자형'으로 강제 변환
-                        df["qty"] = pd.to_numeric(df["qty"], errors='coerce')
-                        df["avg_price"] = pd.to_numeric(df["avg_price"], errors='coerce')
-                        
+                        df = pd.DataFrame(current_live_items if current_live_items else [{"ticker": "", "name": "", "qty": 0.0, "avg_price": 0.0}])
                         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, 
                                                    column_config={
-                                                       "ticker": "종목코드(영문)", "name": "한글명", 
-                                                       "qty": st.column_config.NumberColumn("보유수량", format="%,.8f", step=0.00000001), 
-                                                       "avg_price": st.column_config.NumberColumn("매수평균가", format="%,.2f", step=0.01)
+                                                       "ticker": "종목코드", "name": "한글명", 
+                                                       "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
+                                                       "avg_price": st.column_config.NumberColumn(f"매수평균가 ({unit})", format="%,.1f" if not is_usa else "%,.4f")
                                                    })
                     else:
-                        df = pd.DataFrame(current_list, columns=["종목명", "코드", "수량", "매입가"])
-                        # 💡 표에서 콤마가 뜨도록 데이터를 '숫자형'으로 강제 변환
-                        df["수량"] = pd.to_numeric(df["수량"], errors='coerce')
-                        df["매입가"] = pd.to_numeric(df["매입가"], errors='coerce')
-                        
-                        # 💡 한국 계좌(KRW)인지, 미국 계좌(USD)인지 판별하여 콤마+소수점 스마트 처리
-                        is_usa = "USA" in selected_acc
-                        qty_format = "%,.4f" if is_usa else "%,.0f"
-                        price_format = "%,.4f" if is_usa else "%,.0f"
+                        df = pd.DataFrame(current_live_items if current_live_items else [{"종목명": "", "코드": "", "수량": 0.0, "매입가": 0.0}])
+                        qty_fmt = "%,.4f" if is_usa else "%,.0f"
+                        # 💡 매입가 1000원 미만 소수점 1자리 표기 로직 반영 (format 옵션)
+                        price_fmt = "%,.4f" if is_usa else "%,.1f" 
                         
                         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True,
                                                    column_config={
-                                                       "종목명": "종목명", "코드": "코드",
-                                                       "수량": st.column_config.NumberColumn("수량", format=qty_format, step=0.0001),
-                                                       "매입가": st.column_config.NumberColumn("매입가", format=price_format, step=0.0001)
+                                                       "수량": st.column_config.NumberColumn("수량", format=qty_fmt, step=0.0001),
+                                                       "매입가": st.column_config.NumberColumn(f"매입가 ({unit})", format=price_fmt, step=0.0001)
                                                    })
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # 💡 버튼 색상을 밝은 파란색으로 변경하는 커스텀 CSS 적용
-                    st.markdown("""
-                        <style>
-                        div[data-testid="stFormSubmitButton"] button {
-                            background-color: #64B5F6 !important;
-                            color: white !important;
-                            border: none !important;
-                            font-weight: bold !important;
-                        }
-                        div[data-testid="stFormSubmitButton"] button:hover {
-                            background-color: #42A5F5 !important;
-                            box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
+                    # 💡 버튼 색상: 밝은 파란색 적용
+                    st.markdown("<style>div[data-testid='stFormSubmitButton'] button { background-color: #64B5F6 !important; color: white !important; font-weight: bold !important; border: none !important; }</style>", unsafe_allow_html=True)
                     
-                    # 4. 저장 로직
-                    submit = st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True)
-                    
-                    if submit:
+                    if st.form_submit_button("🚀 설정 저장 및 오라클 서버 전송", use_container_width=True):
                         try:
-                            # 데이터 갱신
-                            cfg[cash_key] = new_cash
-                            if new_prin is not None: cfg[prin_key] = new_prin
+                            # 최신 master_config 구조 유지하며 업데이트
+                            new_cfg = st.session_state.get('admin_config', {}).copy()
+                            new_cfg[f"{selected_acc}_CASH"] = float(cash_input.replace(",", "").strip())
+                            if category != "가상자산": new_cfg[f"{selected_acc}_PRIN"] = float(prin_input.replace(",", "").strip())
                             
-                            # 빈 행 제거 및 엑셀 에러 방지(NaN -> 0)
-                            edited_list = edited_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
-                            cfg[selected_acc] = edited_list
-                            st.session_state.admin_config = cfg
+                            cleaned_list = edited_df.dropna(how='all').replace({np.nan: 0}).to_dict('records')
+                            new_cfg[selected_acc] = cleaned_list
                             
-                            # 서버로 쏘기
-                            res = requests.post(CONFIG_URL, json=cfg, timeout=10)
+                            res = requests.post(CONFIG_URL, json=new_cfg, timeout=10)
                             if res.status_code == 200:
-                                st.success(f"✅ [{acc_options[category][selected_acc]}] 서버 반영 완료! (로봇이 10초 내 갱신합니다)")
-                            else:
-                                st.error(f"❌ 서버 전송 실패: {res.status_code}")
-                        except Exception as e:
-                            st.error(f"🚨 저장 오류: {str(e)}")
+                                st.session_state.admin_config = new_cfg
+                                st.success(f"✅ [{acc_options[category][selected_acc]}] 서버 전송 완료! 10초 뒤 반영됩니다.")
+                            else: st.error(f"❌ 서버 전송 실패: {res.status_code}")
+                        except Exception as e: st.error(f"🚨 오류: {str(e)}")
 
-            else:
-                st.error("❌ 패스워드가 일치하지 않습니다.")
+            else: st.error("❌ 패스워드가 일치하지 않습니다.")
 
     with tab_setting:
         st.subheader("비밀번호 수정")
-        current_p = st.text_input("현재 비밀번호 확인", type="password", key="cur_p")
-        new_p = st.text_input("새로운 비밀번호 입력", type="password", key="new_p")
-        
-        if st.button("패스워드 변경 저장"):
-            if current_p == st.session_state['admin_password']:
+        curr_p = st.text_input("현재 비밀번호", type="password")
+        new_p = st.text_input("새 비밀번호", type="password")
+        if st.button("변경 저장"):
+            if curr_p == st.session_state['admin_password']:
                 st.session_state['admin_password'] = new_p
-                st.success("✨ 비밀번호가 성공적으로 변경되었습니다!")
-                time.sleep(1)
+                st.success("✨ 변경 완료!")
                 st.session_state['show_admin_page'] = False
                 st.rerun()
-            else:
-                st.error("❌ 현재 비밀번호가 일치하지 않습니다.")
+            else: st.error("❌ 비밀번호 불일치")
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 elif st.session_state.current_view == '대시보드':
@@ -1759,6 +1727,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
