@@ -621,7 +621,19 @@ with st.sidebar:
     if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
-    
+        
+# =========================================================
+# 🚦 [화면 관리자] Admin 및 페이지 전환 로직
+# =========================================================
+# 💡 Admin 모드일 때 보여줄 화면
+    if st.session_state.get('show_admin_page', False):
+    st.markdown("### 🔒 Zappa Admin Control Panel")
+    if st.button("⬅️ Back to Dashboard"):
+        st.session_state['show_admin_page'] = False
+        st.rerun()
+    st.info("관리자 설정 화면입니다. (데이터 수정 및 관리)")
+    st.stop() # Admin 화면일 때는 아래 대시보드 코드를 실행하지 않음
+
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
@@ -1139,24 +1151,42 @@ elif st.session_state.current_view == '절세계좌':
         tax_zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_prof_principal)}'><strong>{fmt(t_prof_principal, True)}</strong></span> (<span class='{col(t_rate_principal)}'><strong>{fmt_p(t_rate_principal)}</strong></span>) 이며, <strong>퇴직연금(IRP)계좌</strong>가 계좌별 수익률 1위를 기록 중입니다. 개별 종목에서는 <strong>{short_name(tax_best[0]['종목명']) if tax_best else '우량주'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(tax_worst[0]['종목명']) if tax_worst else '일부 종목'}</strong> 등은 단기 조정을 겪고 있습니다. 총 <strong>{len(tax_items)}개</strong> 종목 중 전일비 상승종목은 <strong>{tax_rise_cnt}개</strong>, 하락종목은 <strong>{tax_fall_cnt}개</strong>, 보합 <strong>{tax_flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략</span><div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익 실현하여 현재 <strong>{(p_cash_tot/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금 비중을 선제적으로 확대할 필요가 있습니다.</div></div></div>"
 
         html_parts.append("<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'><div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 손익률 우수종목 (TOP 5)</div><table class='main-table' style='margin-bottom: 20px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
+# 💡 [2번 수정부] 표 깨짐 방지 및 통일성 강화 로직
         for idx, it in enumerate(tax_best):
-            c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
-            d_class = col(d_rate); diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
-            acc_tag = f"<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({it.get('계좌', '')})</span>"
-            orig_nm = it.get('종목명', ''); disp_nm = short_name(orig_nm); logo_html = get_logo_html(orig_nm)
-            nm_html = f"<td style='line-height:1.3; padding-top:6px; padding-bottom:6px; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td>"
-            html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
+            orig_nm = str(it.get('종목명', ''))
+            logo_html = get_logo_html(orig_nm)
+            disp_nm = short_name(orig_nm)
+            acc_tag = f"<br><span style='font-size:11px; color:#888;'>({it.get('계좌', '')})</span>"
+            
+            c_p = safe_float(it.get('현재가', 0))
+            d_rate = safe_float(it.get('전일비', 0))
+            # 안전자산('-')일 경우 대비 계산 방어막
+            diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
+            
+            d_class = col(d_rate)
+            diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            
+            # 한 줄로 합쳐서 HTML 생성
+            row_html = f"<tr><td>{idx+1}</td><td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>"
+            html_parts.append(row_html)
+
         html_parts.append("</table><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 손익률 부진종목</div><table class='main-table' style='margin-bottom: 0px;'><tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>")
-        for idx, it in enumerate(tax_worst):
-            c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
-            d_class = col(d_rate); diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
-            acc_tag = f"<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({it.get('계좌', '')})</span>"
-            orig_nm = it.get('종목명', ''); disp_nm = short_name(orig_nm); logo_html = get_logo_html(orig_nm)
-            nm_html = f"<td style='line-height:1.3; padding-top:6px; padding-bottom:6px; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td>"
-            html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
-        html_parts.append(f"</table></div><div style='flex: 1.1; padding-left: 5px;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'><div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div><div style='font-size: 13.5px; color: #888;'>[ -0.2%p < 보합 < +0.2%p ]</div></div>{tax_zappa_html}</div></div>")
         
-        st.markdown("".join(html_parts), unsafe_allow_html=True)
+        for idx, it in enumerate(tax_worst):
+            orig_nm = str(it.get('종목명', ''))
+            logo_html = get_logo_html(orig_nm)
+            disp_nm = short_name(orig_nm)
+            acc_tag = f"<br><span style='font-size:11px; color:#888;'>({it.get('계좌', '')})</span>"
+            
+            c_p = safe_float(it.get('현재가', 0))
+            d_rate = safe_float(it.get('전일비', 0))
+            diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
+            
+            d_class = col(d_rate)
+            diff_html = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
+            
+            row_html = f"<tr><td>{idx+1}</td><td style='line-height:1.3; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td><td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>"
+            html_parts.append(row_html)
 
         # ---------------------------------------------------------
         # 📊 기존 테이블 (투자원금 대비 및 매입금액 대비 요약)
@@ -1576,6 +1606,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
