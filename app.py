@@ -410,7 +410,7 @@ import os
 import streamlit as st
 
 with st.sidebar:
-    # 0. 💡 [로컬 이미지 연동] GitHub에 올리신 'robot.png'를 엑스박스 없이 불러옵니다.
+    # 0. 💡 [로컬 이미지 연동] GitHub에 올리신 'robot.png' 처리
     def get_image_base64(image_path):
         if os.path.exists(image_path):
             with open(image_path, "rb") as img_file:
@@ -421,7 +421,6 @@ with st.sidebar:
     if robot_b64:
         robot_img_src = f"data:image/png;base64,{robot_b64}"
     else:
-        # 파일을 아직 안 올리셨을 때 엑스박스가 뜨지 않도록 투명 처리
         robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
     # 1. 💡 상태창 및 구분선 (하단 박스와 초밀착 세팅)
@@ -453,65 +452,13 @@ with st.sidebar:
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
-    # 2. 날짜 및 시간 계산
-    from datetime import datetime, timedelta, timezone
-    now_kst = datetime.now(timezone(timedelta(hours=9)))
-    wd_list = ['월', '화', '수', '목', '금', '토', '일']
-    date_part = now_kst.strftime("%Y/%m/%d")
-    day_str = wd_list[now_kst.weekday()]
-    time_part = now_kst.strftime("%H:%M:%S")
-
-    # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
-    st.markdown(f"""
-    <style>
-    /* 🚀 1. 백그라운드 진짜 버튼 숨기기 */
-    div.element-container:has(.hidden-update-marker) {{ display: none !important; }}
-    div.element-container:has(.hidden-update-marker) + div.element-container {{ display: none !important; }}
-
-    /* 🚀 2. 메뉴 카드 (.sidebar-card) 애니메이션 (-2px 바운스 통일) */
-    .sidebar-card {{
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important;
-        cursor: pointer !important; 
-    }}
-    .sidebar-card:hover {{ transform: translateY(-2px) !important; }}
-    .sidebar-card:not(#card-total):hover {{ background-color: #f0f2f6 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; }}
-
-    /* 🚀 3. 지구본 스핀 애니메이션 */
-    @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
-    .spin-globe {{ display: inline-block; animation: spin 5s linear infinite; margin-right: 3px; font-size: 14px; }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 4. 💡 숨겨진 업데이트 버튼 (백그라운드 전용)
+    # 2. 💡 백그라운드 업데이트 트리거 (방해 안되게 위로 뺌)
     st.markdown("<div class='hidden-update-marker'></div>", unsafe_allow_html=True)
     if st.button("TRIGGER_UPDATE_BACKEND"):
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 💡 [한 줄 통합] Updated + 날짜/시간 (0.5px 단위 정밀 교정)
-    # 숫자/기호: 12.5px / 요일,슬래시,괄호: 12.0px / 색상: 짙은 회색(#666666)
-    
-    # 0.5px 줄일 문자들을 개별 span으로 정밀 제어합니다.
-    slash = f"<span style='font-size: 12.0px;'>/</span>"
-    bracket_l = f"<span style='font-size: 12.0px;'>(</span>"
-    bracket_r = f"<span style='font-size: 12.0px;'>)</span>"
-    day_styled = f"<span style='font-size: 12.0px;'>{day_str}</span>"
-
-    now_str_merged = (
-        f"<span id='unified-update-btn' style='font-size: 12.5px; color: #666666; cursor: pointer; transition: color 0.2s ease;'>"
-        f"🔄 Updated : [ {date_part}{bracket_l}{day_styled}{bracket_r} {slash} {time_part} ]"
-        f"</span>"
-    )
-
-    # 💡 위 구분선과의 밀착을 위해 margin-top을 0px로 줄이고, 하단 박스와 밀착을 위해 -45px로 조절했습니다.
-    st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -80px; position: relative; z-index: 10;'>
-            {now_str_merged}
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 5.5 💡 클릭 스크립트 (통합 텍스트 클릭 시 업데이트 트리거)
     components.html("""
     <script>
     const parent = window.parent.document;
@@ -519,12 +466,8 @@ with st.sidebar:
         const unifiedBtn = parent.getElementById('unified-update-btn');
         if (unifiedBtn && !unifiedBtn.hasAttribute('data-binded')) {
             unifiedBtn.setAttribute('data-binded', 'true');
-            
-            // 호버 효과 (마우스 뗐을 때 #888888 대신 짙은 회색인 #666666으로 돌아가게 수정)
             unifiedBtn.addEventListener('mouseenter', () => { unifiedBtn.style.color = '#111111'; });
             unifiedBtn.addEventListener('mouseleave', () => { unifiedBtn.style.color = '#666666'; });
-            
-            // 클릭 시 진짜 버튼 호출
             unifiedBtn.addEventListener('click', () => {
                 const btns = Array.from(parent.querySelectorAll('button p'));
                 const target = btns.find(el => el.innerText.includes('TRIGGER_UPDATE_BACKEND'));
@@ -535,20 +478,59 @@ with st.sidebar:
     }, 500);
     </script>
     """, height=0)
-    
-    # 6. 메뉴 선택 
+
+    # 3. 💡 메뉴 선택 라디오 (이것도 투명 공간을 차지하므로 위로 뺌)
     menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
     def format_menu(option):
         return "AI 퀀트매매" if option == "퀀트매매" else option
-        
     st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
-    
-    # 가상자산 퍼센트 연산
+
+    # 4. 💡 가상자산 퍼센트 연산 준비
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
 
-    # 7. 🌎 총 자산 통합 카드
+    # 5. 💡 날짜 및 시간 계산
+    from datetime import datetime, timedelta, timezone
+    now_kst = datetime.now(timezone(timedelta(hours=9)))
+    wd_list = ['월', '화', '수', '목', '금', '토', '일']
+    date_part = now_kst.strftime("%Y/%m/%d")
+    day_str = wd_list[now_kst.weekday()]
+    time_part = now_kst.strftime("%H:%M:%S")
+
+    # 6. 💡 사이드바 공통 CSS (바운스 효과 등)
+    st.markdown("""
+    <style>
+    div.element-container:has(.hidden-update-marker) { display: none !important; }
+    div.element-container:has(.hidden-update-marker) + div.element-container { display: none !important; }
+    .sidebar-card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important; cursor: pointer !important; }
+    .sidebar-card:hover { transform: translateY(-2px) !important; }
+    .sidebar-card:not(#card-total):hover { background-color: #f0f2f6 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .spin-globe { display: inline-block; animation: spin 5s linear infinite; margin-right: 3px; font-size: 14px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 7. 💡 [한 줄 통합] 업데이트 텍스트 버튼 (🔥 검은 박스 바로 위로 배치 완료)
+    slash = f"<span style='font-size: 12.0px;'>/</span>"
+    bracket_l = f"<span style='font-size: 12.0px;'>(</span>"
+    bracket_r = f"<span style='font-size: 12.0px;'>)</span>"
+    day_styled = f"<span style='font-size: 12.0px;'>{day_str}</span>"
+
+    now_str_merged = (
+        f"<span id='unified-update-btn' style='font-size: 12.5px; color: #666666; font-weight: 500; cursor: pointer; transition: color 0.2s ease;'>"
+        f"🔄 Updated : [ {date_part}{bracket_l}{day_styled}{bracket_r} {slash} {time_part} ]"
+        f"</span>"
+    )
+
+    # 💡 방해물이 없으므로 margin-bottom을 -15px 정도로만 줘도 검은 박스와 아주 예쁘게 밀착됩니다.
+    st.markdown(f"""
+        <div style='text-align: right; padding-right: 2px; margin-top: 5px; margin-bottom: -15px; position: relative; z-index: 10;'>
+            {now_str_merged}
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 8. 🌎 총 자산 통합 카드
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
         <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
@@ -568,7 +550,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 8. ⏳ 절세계좌 카드
+    # 9. ⏳ 절세계좌 카드
     st.markdown(f"""
     <div id='card-pension' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>⏳ 절세계좌</div>
@@ -580,7 +562,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 9. 🌱 일반계좌 카드
+    # 10. 🌱 일반계좌 카드
     st.markdown(f"""
     <div id='card-general' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🌱 일반계좌</div>
@@ -592,7 +574,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 10. 🪙 가상자산 카드
+    # 11. 🪙 가상자산 카드
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
         <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🪙 가상자산</div>
@@ -604,11 +586,11 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)    
     
-# 💡 [사이드바] 버튼 클릭 상태를 저장할 변수 초기화 (변수명 통일!)
+    # 💡 Admin 세션 초기화
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-# 11. 🤖 AI 퀀트매매 카드 (우측 정렬 및 오류 방지 완전판)
+    # 12. 🤖 AI 퀀트매매 카드 및 Admin 버튼
     quant_card_html = f"""
     <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding-left: 27px; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
         <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
@@ -620,7 +602,6 @@ with st.sidebar:
     """
     st.markdown(quant_card_html, unsafe_allow_html=True)
     
-    # 💡 Admin 버튼 전용 스타일
     st.markdown("""
         <style>
         div.element-container:has(button[key="admin_lock_btn"]) { margin-top: -12px !important; }
@@ -629,7 +610,6 @@ with st.sidebar:
         </style>
     """, unsafe_allow_html=True)
 
-    # 💡 관리자 버튼 실행
     if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
@@ -1639,6 +1619,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
