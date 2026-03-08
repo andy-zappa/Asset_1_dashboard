@@ -702,11 +702,9 @@ if st.session_state.get('show_admin_page', False):
                     
                     col_c1, col_c2 = st.columns(2)
                     with col_c1: 
-                        # 💡 format을 지워서 콤마가 자동으로 표시되게끔 변경
                         new_cash = st.number_input("💵 현금성 자산 (예수금)", value=float(cfg.get(cash_key, 0)), step=1000.0)
                     with col_c2:
                         if category == "일반계좌":
-                            # 💡 원금도 콤마 자동표시
                             new_prin = st.number_input("🏦 계좌 투자원금", value=float(cfg.get(prin_key, 0)), step=10000.0)
                         else:
                             new_prin = None
@@ -727,8 +725,8 @@ if st.session_state.get('show_admin_page', False):
                         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, 
                                                    column_config={
                                                        "ticker": "종목코드(영문)", "name": "한글명", 
-                                                       "qty": st.column_config.NumberColumn("보유수량", format="%.8f", step=0.00000001), 
-                                                       "avg_price": st.column_config.NumberColumn("매수평균가", step=0.01)
+                                                       "qty": st.column_config.NumberColumn("보유수량", format="%,.8f", step=0.00000001), 
+                                                       "avg_price": st.column_config.NumberColumn("매수평균가", format="%,.2f", step=0.01)
                                                    })
                     else:
                         df = pd.DataFrame(current_list, columns=["종목명", "코드", "수량", "매입가"])
@@ -736,11 +734,16 @@ if st.session_state.get('show_admin_page', False):
                         df["수량"] = pd.to_numeric(df["수량"], errors='coerce')
                         df["매입가"] = pd.to_numeric(df["매입가"], errors='coerce')
                         
+                        # 💡 한국 계좌(KRW)인지, 미국 계좌(USD)인지 판별하여 콤마+소수점 스마트 처리
+                        is_usa = "USA" in selected_acc
+                        qty_format = "%,.4f" if is_usa else "%,.0f"
+                        price_format = "%,.4f" if is_usa else "%,.0f"
+                        
                         edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True,
                                                    column_config={
                                                        "종목명": "종목명", "코드": "코드",
-                                                       "수량": st.column_config.NumberColumn("수량", step=0.0001),
-                                                       "매입가": st.column_config.NumberColumn("매입가", step=0.0001)
+                                                       "수량": st.column_config.NumberColumn("수량", format=qty_format, step=0.0001),
+                                                       "매입가": st.column_config.NumberColumn("매입가", format=price_format, step=0.0001)
                                                    })
                     
                     st.markdown("<br>", unsafe_allow_html=True)
@@ -1756,6 +1759,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
