@@ -525,7 +525,7 @@ with st.sidebar:
 
     # 💡 방해물이 없으므로 margin-bottom을 -15px 정도로만 줘도 검은 박스와 아주 예쁘게 밀착됩니다.
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 5px; margin-bottom: 2px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 5px; margin-bottom: 0px; position: relative; z-index: 10;'>
             {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
@@ -1619,6 +1619,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
