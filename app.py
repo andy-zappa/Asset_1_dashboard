@@ -506,7 +506,7 @@ with st.sidebar:
 
     # 💡 위 구분선과의 밀착을 위해 margin-top을 0px로 줄이고, 하단 박스와 밀착을 위해 -45px로 조절했습니다.
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -45px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -60px; position: relative; z-index: 10;'>
             {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
@@ -1639,6 +1639,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
