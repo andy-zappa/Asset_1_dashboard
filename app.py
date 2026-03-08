@@ -424,30 +424,32 @@ with st.sidebar:
         # 파일을 아직 안 올리셨을 때 엑스박스가 뜨지 않도록 투명 처리
         robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
-    # 1. 💡 상태창 (구분선 '|' 및 좌우 1칸 공백 정밀 조정)
+    # 1. 💡 상태창 및 구분선 (하단 박스와 초밀착 세팅)
     if is_oracle_online:
         status_html = """
-        <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
+        <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: 0px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 8px;'>|</div>
+            <div style='color:#666666; font-size:12.5px; margin: 0 6px; font-weight:normal;'>|</div>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
         </div>
+        <hr style='margin: 8px 0; border: 0; border-top: 1px solid #444444; opacity: 0.5;'>
         """
     else:
         status_html = """
-        <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: -5px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
+        <div class='status-box-dark' style='display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: 0px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;'>
             <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
                 <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
             </div>
-            <div style='color:#666666; font-size:14px; margin: 0 8px;'>|</div>
+            <div style='color:#666666; font-size:12.5px; margin: 0 6px; font-weight:normal;'>|</div>
             <div style='display:flex; align-items:center;'>
                 <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:700; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
             </div>
         </div>
+        <hr style='margin: 8px 0; border: 0; border-top: 1px solid #444444; opacity: 0.5;'>
         """
     st.markdown(status_html, unsafe_allow_html=True)
 
@@ -458,7 +460,6 @@ with st.sidebar:
     date_part = now_kst.strftime("%Y/%m/%d")
     day_str = wd_list[now_kst.weekday()]
     time_part = now_kst.strftime("%H:%M:%S")
-    now_str = f"[ {date_part}(<span style='font-size: 14.0px;'>{day_str}</span>) / {time_part} ]"
 
     # 3. 💡 [강력 CSS] 무적의 텍스트 교정 및 바운스 통일
     st.markdown(f"""
@@ -503,8 +504,9 @@ with st.sidebar:
         f"</span>"
     )
 
+    # 💡 위 구분선과의 밀착을 위해 margin-top을 0px로 줄이고, 하단 박스와 밀착을 위해 -45px로 조절했습니다.
     st.markdown(f"""
-        <div style='text-align: right; padding-right: 2px; margin-top: 15px; margin-bottom: -38px; position: relative; z-index: 10;'>
+        <div style='text-align: right; padding-right: 2px; margin-top: 0px; margin-bottom: -45px; position: relative; z-index: 10;'>
             {now_str_merged}
         </div>
     """, unsafe_allow_html=True)
@@ -518,9 +520,9 @@ with st.sidebar:
         if (unifiedBtn && !unifiedBtn.hasAttribute('data-binded')) {
             unifiedBtn.setAttribute('data-binded', 'true');
             
-            // 호버 효과
+            // 호버 효과 (마우스 뗐을 때 #888888 대신 짙은 회색인 #666666으로 돌아가게 수정)
             unifiedBtn.addEventListener('mouseenter', () => { unifiedBtn.style.color = '#111111'; });
-            unifiedBtn.addEventListener('mouseleave', () => { unifiedBtn.style.color = '#888888'; });
+            unifiedBtn.addEventListener('mouseleave', () => { unifiedBtn.style.color = '#666666'; });
             
             // 클릭 시 진짜 버튼 호출
             unifiedBtn.addEventListener('click', () => {
@@ -1637,6 +1639,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
