@@ -504,12 +504,12 @@ with st.sidebar:
         get_crypto_data.clear()
         st.rerun()
 
-    # 5. 날짜 영역 (날짜/시간 12.5px & 요일 12px 정밀 세팅)
-    # 각 요소를 span으로 감싸서 Andy님이 원하시는 크기를 강제 고정합니다.
+    # 5. 날짜 영역 (한글 요일 12px / 그 외 모든 기호 및 숫자 12.5px)
+    # 괄호, 슬래시, 대괄호까지 모두 12.5px로 감싸서 한글만 튀지 않게 조절합니다.
     now_str_merged = (
-        f"[ <span style='font-size: 12.5px;'>{date_part}</span>"
-        f"(<span style='font-size: 12.0px;'>{day_str}</span>) / "
-        f"<span style='font-size: 12.5px;'>{time_part}</span> ]"
+        f"<span style='font-size: 12.5px;'>"
+        f"[ {date_part}(<span style='font-size: 12.0px;'>{day_str}</span>) / {time_part} ]"
+        f"</span>"
     )
 
     st.markdown(f"""
@@ -1623,6 +1623,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
