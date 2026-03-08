@@ -631,7 +631,34 @@ if st.session_state.get('show_admin_page', False):
     if st.button("⬅️ Back to Dashboard"):
         st.session_state['show_admin_page'] = False
         st.rerun()
-    st.info("관리자 설정 화면입니다. (데이터 수정 및 관리)")
+        
+    st.markdown("---")
+    admin_pw = st.text_input("🔑 관리자 비밀번호를 입력하세요", type="password")
+    
+    # 💡 기본 비밀번호를 zappa123 으로 설정했습니다.
+    if admin_pw == "zappa123":
+        st.success("✅ 인증 완료! master_config.json 데이터를 수정할 수 있습니다.")
+        config_path = "master_config.json"
+        
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = f.read()
+        except:
+            config_data = "{}"
+            
+        new_config = st.text_area("📝 master_config.json 편집", value=config_data, height=500)
+        
+        if st.button("💾 변경사항 저장"):
+            try:
+                json.loads(new_config) # JSON 문법 검사
+                with open(config_path, "w", encoding="utf-8") as f:
+                    f.write(new_config)
+                st.success("✅ 정상적으로 저장되었습니다! 10초 내로 오라클 서버 로봇이 새 데이터를 반영합니다.")
+            except Exception as e:
+                st.error(f"❌ JSON 형식이 올바르지 않습니다. 콤마(,)나 따옴표(\")를 확인해주세요.\n에러내용: {e}")
+    elif admin_pw != "":
+        st.error("❌ 비밀번호가 틀렸습니다.")
+        
     st.stop() # Admin 화면일 때는 아래 대시보드 코드를 실행하지 않음
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
@@ -1605,6 +1632,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
