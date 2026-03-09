@@ -1732,7 +1732,7 @@ elif st.session_state.current_view == '일반계좌':
                 curr_asset = safe_float(a.get('총자산_KRW', 0)); a_prof = safe_float(a.get('총수익_KRW', 0))
                 rate_val = safe_float(g_data.get('환율', 1443.1))
                 
-                # 💡 [핵심 패치 3] 해외(USA)는 드롭다운, 국내(DOM)는 텍스트로 단위 표시 분리 완벽 적용!
+                # 💡 [패치 3] 해외(드롭다운)와 국내(텍스트 단위) 분리 로직 완전 이식
                 if is_usa:
                     st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(s_rate)})</span></div></div>", unsafe_allow_html=True)
                     u_c1, u_c2 = st.columns([8.8, 1.2])
@@ -1748,6 +1748,8 @@ elif st.session_state.current_view == '일반계좌':
                     """, unsafe_allow_html=True)
                 
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
+                
+                # 💡 [NameError 해결] h3 리스트 초기화 보장
                 h3 = [f"<table class='main-table'><tr><th style='text-align:left; padding-left:15px;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>" + ("<th>등락률</th>" if st.session_state.gen_show_change_rate else "") + "</tr>"]
                 
                 items = [i for i in details if isinstance(i, dict) and i.get('종목명') not in ["[ 합  계 ]", "예수금"]] if isinstance(details, list) else []
@@ -1799,4 +1801,3 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
