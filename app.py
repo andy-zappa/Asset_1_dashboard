@@ -1504,7 +1504,7 @@ elif st.session_state.current_view == '절세계좌':
                     st.markdown("".join(h3), unsafe_allow_html=True)
 
 # =========================================================
-# [ Part 4 ] 일반계좌 대시보드 상세페이지
+# 🌱 일반계좌 대시보드 상세페이지
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -1799,4 +1799,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)        
+
 
