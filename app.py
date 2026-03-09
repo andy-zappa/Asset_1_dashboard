@@ -1731,8 +1731,7 @@ elif st.session_state.current_view == '일반계좌':
                 curr_asset = safe_float(a.get('총자산_KRW', 0)); a_prof = safe_float(a.get('총수익_KRW', 0))
                 
                 # 💡 [이슈 3 적용] 표 제목에 자체 계산 수익률 대신 합계 행의 수익률(s_rate) 강제 반영
-                # 💡 [단위 표시 버그 수정] 총 자산 옆에 u_html(단위 표시)을 추가했습니다.
-                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(s_rate)})</span></div>{u_html}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(s_rate)})</span></div></div>", unsafe_allow_html=True)
                 
                 rate_val = safe_float(g_data.get('환율', 1443.1))
                 
@@ -1800,5 +1799,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)        
+
 
 
