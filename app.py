@@ -1531,6 +1531,9 @@ elif st.session_state.current_view == '절세계좌':
 # =========================================================
 # 🌱 일반계좌 대시보드 상세페이지
 # =========================================================
+# =========================================================
+# [ Part 4 ] 일반계좌 대시보드
+# =========================================================
 elif st.session_state.current_view == '일반계좌':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
 
@@ -1621,7 +1624,6 @@ elif st.session_state.current_view == '일반계좌':
             a = g_data[k]
             acc_num_map = {'DOM1': '[ 6312-5329 ]', 'DOM2': '[ 7162669785-01 ]', 'USA1': '[ 6312-5329 ]', 'USA2': '[ 6443-5993 ]'}
             details = a.get('상세', [])
-            
             item_count = len([i for i in details if isinstance(i, dict) and str(i.get('종목명', '')) not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)']]) if isinstance(details, list) else 0
             
             html_parts.append(f"<a href='#gen_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{acc_num_map[k]}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{nm_table[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(safe_float(a.get('총자산_KRW', 0)))}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a.get('총수익_KRW', 0))}' style='font-size: 16px; font-weight: normal;'>{fmt(safe_float(a.get('총수익_KRW', 0)), True)}</div><div class='{col(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(principals[k])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
@@ -1749,7 +1751,7 @@ elif st.session_state.current_view == '일반계좌':
                 curr_asset = safe_float(a.get('총자산_KRW', 0)); a_prof = safe_float(a.get('총수익_KRW', 0))
                 rate_val = safe_float(g_data.get('환율', 1443.1))
                 
-                # 💡 [핵심 패치 3] 해외(USA)는 드롭다운, 국내(DOM)는 텍스트로 단위 표시 분리 완벽 적용!
+                # 💡 [패치 3] 일반계좌 단위 분리 (해외는 드롭다운 박스 / 국내는 텍스트 고정)
                 if is_usa:
                     st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:0px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(curr_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(a_prof)}'>{fmt(a_prof, True)} ({fmt_p(s_rate)})</span></div></div>", unsafe_allow_html=True)
                     u_c1, u_c2 = st.columns([8.8, 1.2])
