@@ -1492,8 +1492,6 @@ elif st.session_state.current_view == '절세계좌':
                     h3.append("</table>")
                     st.markdown("".join(h3), unsafe_allow_html=True)
         # ## 여기까지 [수술 2] 덮어쓰기 끝 ##    
-        
-      
 # =========================================================
 # [ Part 4 ] 일반계좌 대시보드
 # =========================================================
@@ -1588,7 +1586,7 @@ elif st.session_state.current_view == '일반계좌':
             acc_num_map = {'DOM1': '[ 6312-5329 ]', 'DOM2': '[ 7162669785-01 ]', 'USA1': '[ 6312-5329 ]', 'USA2': '[ 6443-5993 ]'}
             details = a.get('상세', [])
             
-            # 💡 [핵심 교정 부분] 예수금, 현금성자산, 합계를 제외한 순수 종목만 카운트
+            # 💡 예수금, 현금성자산, 합계를 제외한 순수 종목만 카운트
             item_count = len([i for i in details if isinstance(i, dict) and str(i.get('종목명', '')) not in ['[ 합  계 ]', '예수금', '현금성자산', '현금성자산(예수금)']]) if isinstance(details, list) else 0
             
             html_parts.append(f"<a href='#gen_detail_section' style='text-decoration:none; color:inherit; display:block; height:100%;'><div class='card-sub' style='height:100%; justify-content:space-between;'><div><div style='text-align: right; font-size: 13.5px; color: #666; font-weight: normal; margin-bottom: -2px; line-height: 1;'>{acc_num_map[k]}</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{nm_table[k]}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(safe_float(a.get('총자산_KRW', 0)))}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(a.get('총수익_KRW', 0))}' style='font-size: 16px; font-weight: normal;'>{fmt(safe_float(a.get('총수익_KRW', 0)), True)}</div><div class='{col(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(safe_float(a.get('총수익_KRW',0))/principals[k]*100 if principals[k] else 0)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>원금</span> : {fmt(principals[k])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>{item_count}</span> 종목</span></div></div></a>")
@@ -1736,7 +1734,9 @@ elif st.session_state.current_view == '일반계좌':
                     u_html = f"<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
                 
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
-                h3_table_html = f"<table class='main-table'><tr><th style='text-align:left; padding-left:15px;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>" + ("<th>등락률</th>" if st.session_state.gen_show_change_rate else "") + "</tr>"
+                
+                # 💡 [에러 해결!] 여기서 h3 리스트를 [초기화]해야 NameError가 발생하지 않습니다.
+                h3 = [f"<table class='main-table'><tr><th style='text-align:left; padding-left:15px;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>" + ("<th>등락률</th>" if st.session_state.gen_show_change_rate else "") + "</tr>"]
                 
                 items = [i for i in details if isinstance(i, dict) and i.get('종목명') not in ["[ 합  계 ]", "예수금"]] if isinstance(details, list) else []
                 cash_item = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "예수금"), {"종목명": "예수금", "총자산": 0, "평가손익": 0, "수익률(%)": 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0}) if isinstance(details, list) else {}
@@ -1764,7 +1764,7 @@ elif st.session_state.current_view == '일반계좌':
                     row = f"<tr class='sum-row'>" if is_s else "<tr>"
                     orig_nm = '피그마' if i.get('종목명') == 'Figma' else str(i.get('종목명', ''))
                     
-                    if is_s: row += f"<td>{orig_nm}</td>"
+                    if is_s: row += f"<td style='text-align:left; padding-left:15px;'>{orig_nm}</td>"
                     elif '예수금' in orig_nm or '현금' in orig_nm: row += f"<td style='text-align:left; padding-left:15px;'><span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>{orig_nm}</td>"
                     else: row += f"<td style='text-align:left; padding-left:15px;'>{get_logo_html(orig_nm)}{orig_nm}</td>"
                     
@@ -1787,70 +1787,4 @@ elif st.session_state.current_view == '일반계좌':
                     row += "</tr>"
                     h3.append(row)
                 h3.append("</table>")
-                st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                st.markdown("".join(h3), unsafe_allow_html=True)        
