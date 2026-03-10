@@ -655,18 +655,17 @@ if st.session_state.get('show_admin_page', False):
             font-weight: bold !important;
             height: 3rem !important;
         }
-        /* 💡 Admin 비밀번호 Expander 커스텀 (하얀 바 제거 및 좌측 높이 맞춤) */
+        /* 💡 Admin 비밀번호 Expander 커스텀 (하얀 바 제거 및 좌측 높이 완벽 맞춤) */
         div[data-testid="stExpander"] {
             border: none !important;
             box-shadow: none !important;
             background: transparent !important;
-            margin-top: -8px !important;
         }
         div[data-testid="stExpander"] > details { border: none !important; }
         div[data-testid="stExpander"] summary {
             padding: 0 !important;
             background: transparent !important;
-            margin-bottom: 12px !important;
+            margin-bottom: 8px !important; /* 좌측 로그인 텍스트의 margin-bottom과 일치 */
         }
         div[data-testid="stExpander"] summary p {
             font-size: 16px !important;
@@ -693,7 +692,7 @@ if st.session_state.get('show_admin_page', False):
 
     current_pw = cfg.get("ADMIN_PW", "1234")
 
-    # 💡 [디자인 패치] 비밀번호창 세련된 나란히 배치 & 높이 맞춤
+    # 💡 [UI 패치] 비밀번호창 세련된 나란히 배치 & 동일한 회색 바 적용하여 수평 맞춤
     col_pw1, col_pw2 = st.columns(2)
     with col_pw1:
         st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:100%;'>", unsafe_allow_html=True)
@@ -702,7 +701,8 @@ if st.session_state.get('show_admin_page', False):
         st.markdown("</div>", unsafe_allow_html=True)
        
     with col_pw2:
-        st.markdown("<div style='padding:15px 15px 5px 15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:100%;'>", unsafe_allow_html=True)
+        # 좌측과 완벽히 동일한 외부 div 껍데기를 씌워 높이를 강제로 맞춤
+        st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:100%;'>", unsafe_allow_html=True)
         with st.expander("🔐 관리자 비밀번호 변경", expanded=False):
             old_pw = st.text_input("현재 비밀번호 확인", type="password", placeholder="현재 비밀번호")
             new_pw = st.text_input("새 비밀번호 입력", type="password", placeholder="새 비밀번호")
@@ -749,12 +749,10 @@ if st.session_state.get('show_admin_page', False):
         st.markdown("#### 1️⃣ 자산정보 요약")
         cc1, cc2 = st.columns(2)
         with cc1:
-            # 💡 [요청 1] 폰트 크기를 관리자 로그인(16px)과 동일하게 맞춤
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;'><span style='font-size:16px; font-weight:bold; color:#111;'>💵 현금성자산(예수금)</span><span style='color:#888; font-size:13.5px;'>단위 : {cash_unit}</span></div>", unsafe_allow_html=True)
             new_cash_str = st.text_input("현금", value=formatted_cash, key=f"cash_{sel_key}", label_visibility="collapsed")
             new_cash = safe_float(new_cash_str)
         with cc2:
-            # 💡 [요청 1, 3] 투입원금 -> 투자원금 변경 및 폰트 크기(16px) 맞춤
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;'><span style='font-size:16px; font-weight:bold; color:#111;'>💰 투자원금</span><span style='color:#888; font-size:13.5px;'>단위 : {prin_unit}</span></div>", unsafe_allow_html=True)
             new_prin_str = st.text_input("원금", value=formatted_prin, key=f"prin_{sel_key}", label_visibility="collapsed")
             new_prin = safe_float(new_prin_str)
@@ -765,11 +763,15 @@ if st.session_state.get('show_admin_page', False):
         curr_items = cfg.get(sel_key, [])
         df_items = pd.DataFrame(curr_items)
        
-        # 💡 [요청 5] '매입금액' -> '매입단가' 통일
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
         if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
 
-        # 💡 [요청 4, 5] 매입단가 클릭 시 format에 KRW/USD 접미사 추가로 단위 띄우기
+        # 💡 [버그 픽스] 숫자 입력 시 튕기거나 에러(#,##0) 뜨는 현상 방지를 위해 강제 숫자로 클렌징
+        for c in ["보유수량", "매입단가"]:
+            if c in df_items.columns:
+                df_items[c] = pd.to_numeric(df_items[c], errors='coerce').fillna(0.0)
+
+        # 💡 [기능 패치] 컬럼 헤더에 동적으로 단위(USD/KRW) 가이드 표시 및 안전한 포맷 지정
         if sel_key == "CRYPTO":
             if df_items.empty: df_items = pd.DataFrame(columns=["종목명", "종목코드", "보유수량", "매입단가"])
             else:
@@ -781,7 +783,7 @@ if st.session_state.get('show_admin_page', False):
                 "종목명": st.column_config.TextColumn("종목명"),
                 "종목코드": st.column_config.TextColumn("종목코드"),
                 "보유수량": st.column_config.NumberColumn("보유수량", format="%.8f"),
-                "매입단가": st.column_config.NumberColumn("매입단가", format="#,##0.00 KRW")
+                "매입단가": st.column_config.NumberColumn("매입단가 (단위 : KRW)", format="%.2f")
             }
         else:
             if df_items.empty: df_items = pd.DataFrame(columns=["종목명", "종목코드", "보유수량", "매입단가"])
@@ -790,13 +792,15 @@ if st.session_state.get('show_admin_page', False):
                     if col not in df_items.columns: df_items[col] = None
                 df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
            
-            price_format = "#,##0.0000 USD" if is_usa else "#,##0 KRW"
-           
+            # 미국 주식은 소수점 허용, 국내 주식은 정수 처리 (에러 방지용 포맷 적용)
+            price_format = "%.4f" if is_usa else "%.0f"
+            qty_format = "%.6f" if is_usa else "%.0f"
+            
             col_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "종목코드": st.column_config.TextColumn("종목코드"),
-                "보유수량": st.column_config.NumberColumn("보유수량", format="#,##0"),
-                "매입단가": st.column_config.NumberColumn("매입단가", format=price_format)
+                "보유수량": st.column_config.NumberColumn("보유수량", format=qty_format), 
+                "매입단가": st.column_config.NumberColumn(f"매입단가 (단위 : {cash_unit})", format=price_format)
             }
 
         edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
@@ -809,7 +813,7 @@ if st.session_state.get('show_admin_page', False):
             df_safe = pd.DataFrame(raw_safe)
             if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
             if "매입일자" in df_safe.columns: df_safe["매입일자"] = pd.to_datetime(df_safe["매입일자"], errors='coerce')
-            safe_cfg = {"종목명": st.column_config.TextColumn("종목명"), "투자원금": st.column_config.NumberColumn("투자원금", format="#,##0", step=1000000), "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.1), "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")}
+            safe_cfg = {"종목명": st.column_config.TextColumn("종목명"), "투자원금": st.column_config.NumberColumn("투자원금", format="%d", step=1000000), "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.1), "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")}
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1881,3 +1885,4 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
