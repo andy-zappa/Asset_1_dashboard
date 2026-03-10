@@ -846,6 +846,35 @@ if st.session_state.get('show_admin_page', False):
 
         st.markdown("<br>", unsafe_allow_html=True)
         # 💡 [수정] 버튼 클릭 시 즉시 저장이 아닌 확인창(Dialog) 호출
+        # 💡 [새 기능] 배포 전 최종 확인 팝업창 정의
+        @st.dialog("🚀 실시간 데이터 배포 최종 확인")
+        def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
+            st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
+            st.markdown(f"""
+            - **입력된 현금**: {int(cash_val):,}
+            - **입력된 원금**: {int(prin_val):,}
+            - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
+            """)
+            st.write("")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("✅ 배포 진행 (Confirm)", type="primary", use_container_width=True):
+                    try:
+                        # 🎯 오라클 서버 API를 통해 설정을 업데이트합니다.
+                        res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
+                        if res.status_code == 200:
+                            st.success("✅ 오라클 서버에 성공적으로 배포되었습니다!")
+                            time.sleep(1.5)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ 서버 배포 실패: {res.text}")
+                    except Exception as e: st.error(f"❌ 연결 오류: {e}")
+            with c2:
+                if st.button("❌ 취소 (Cancel)", use_container_width=True):
+                    st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        # 💡 [수정] 버튼 클릭 시 즉시 저장이 아닌 확인창(Dialog) 호출
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             save_df = edited_df.copy()
             if sel_key == "CRYPTO": 
@@ -1912,6 +1941,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
