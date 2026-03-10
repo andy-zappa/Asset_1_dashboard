@@ -701,7 +701,7 @@ if st.session_state.get('show_admin_page', False):
 
     st.markdown("---")
    
-   try:
+    try:
         res = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
         cfg = res.json() if res.status_code == 200 else {}
     except: 
@@ -1946,6 +1946,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
