@@ -655,7 +655,6 @@ if st.session_state.get('show_admin_page', False):
             font-weight: bold !important;
             height: 3rem !important;
         }
-        /* 💡 Admin 비밀번호 Expander 커스텀 (하얀 바 제거 및 좌측 높이 완벽 맞춤) */
         div[data-testid="stExpander"] {
             border: none !important;
             box-shadow: none !important;
@@ -666,7 +665,7 @@ if st.session_state.get('show_admin_page', False):
         div[data-testid="stExpander"] summary {
             padding: 0 !important;
             background: transparent !important;
-            margin-bottom: 8px !important; /* 좌측 로그인 텍스트의 margin-bottom과 완벽 일치 */
+            margin-bottom: 8px !important;
         }
         div[data-testid="stExpander"] summary p {
             font-size: 16px !important;
@@ -683,7 +682,6 @@ if st.session_state.get('show_admin_page', False):
 
     st.markdown("---")
    
-    # 데이터 불러오기
     CONFIG_FILE = "master_config.json"
     try:
         if os.path.exists(CONFIG_FILE):
@@ -693,7 +691,6 @@ if st.session_state.get('show_admin_page', False):
 
     current_pw = cfg.get("ADMIN_PW", "1234")
 
-    # 💡 [디자인 패치] 비밀번호창 세련된 나란히 배치 & 동일한 회색 바 적용하여 수평 완벽 일치
     col_pw1, col_pw2 = st.columns(2)
     with col_pw1:
         st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:100%;'>", unsafe_allow_html=True)
@@ -758,30 +755,25 @@ if st.session_state.get('show_admin_page', False):
             new_prin = safe_float(new_prin_str)
 
         st.markdown("<br>", unsafe_allow_html=True)
-
         st.markdown("#### 2️⃣ 보유종목 리스트")
+        
         curr_items = cfg.get(sel_key, [])
         df_items = pd.DataFrame(curr_items)
        
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
-        if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
+        df_items.rename(columns=rename_map, inplace=True)
 
-        # 💡 [버그 픽스] 포맷 에러 방지를 위한 철저한 데이터 타입 강제 클렌징
-        if not df_items.empty:
-            for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
-                if col not in df_items.columns: df_items[col] = None
-            
-            if sel_key == "CRYPTO":
-                df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
-                df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
-            else:
-                # 💡 [요청 1] 미국/국내 무관하게 '보유수량'은 무조건 소수점 없는 자연수(Integer)로 변환
-                df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0).astype(int)
-                df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
+        # 💡 [버그 픽스] 빈 계좌일 때 KeyError 방지를 위해 필수 컬럼을 무조건 생성
+        for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
+            if col not in df_items.columns:
+                df_items[col] = None
+        
+        # 이제 안전하게 슬라이싱 가능
+        df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
 
-        # 💡 [기능 패치] 강제 텍스트 포맷을 제거하고 `step`을 사용하여 콤마 입력을 유도
         if sel_key == "CRYPTO":
-            df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
+            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
+            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
             col_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "종목코드": st.column_config.TextColumn("종목코드"),
@@ -789,15 +781,15 @@ if st.session_state.get('show_admin_page', False):
                 "매입단가": st.column_config.NumberColumn("매입단가 (단위 : KRW)", step=0.01)
             }
         else:
-            df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
-            # 미국 계좌는 소수점 4자리까지, 나머지는 정수(1)
+            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0).astype(int)
+            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
             price_step = 0.0001 if is_usa else 1.0
             
             col_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "종목코드": st.column_config.TextColumn("종목코드"),
-                "보유수량": st.column_config.NumberColumn("보유수량", step=1), # step=1로 자연수 콤마 입력 유도
-                "매입단가": st.column_config.NumberColumn(f"매입단가 (단위 : {cash_unit})", step=price_step) # 동적 단위 헤더 표시
+                "보유수량": st.column_config.NumberColumn("보유수량", step=1), 
+                "매입단가": st.column_config.NumberColumn(f"매입단가 (단위 : {cash_unit})", step=price_step) 
             }
 
         edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
@@ -847,7 +839,6 @@ if st.session_state.get('show_admin_page', False):
         st.error("❌ 비밀번호가 틀렸습니다.")
        
     st.stop()
-
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
@@ -1888,6 +1879,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
