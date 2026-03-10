@@ -819,29 +819,56 @@ if st.session_state.get('show_admin_page', False):
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
-            try:
-                save_df = edited_df.copy()
-                if sel_key == "CRYPTO": save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
-                else: save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
+        # 💡 [새 기능] 배포 전 최종 확인 팝업창 정의
+        @st.dialog("🚀 실시간 데이터 배포 최종 확인")
+        def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
+            st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
+            st.markdown(f"""
+            - **입력된 현금**: {int(cash_val):,}
+            - **입력된 원금**: {int(prin_val):,}
+            - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
+            """)
+            st.write("")
+            c1, c2 = st.columns(2)
+            with c1:
+                # 💡 디폴트 진행 버튼 (파란색)
+                if st.button("✅ 배포 진행 (Confirm)", type="primary", use_container_width=True):
+                    try:
+                        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                            json.dump(config_to_save, f, ensure_ascii=False, indent=4)
+                        st.success("✅ 성공적으로 저장 및 배포되었습니다!")
+                        time.sleep(1.5)
+                        st.rerun()
+                    except Exception as e: st.error(f"❌ 오류 발생: {e}")
+            with c2:
+                if st.button("❌ 취소 (Cancel)", use_container_width=True):
+                    st.rerun()
 
-                cfg[sel_key] = save_df.to_dict('records')
-                cfg[f"{sel_key}_CASH"] = new_cash
-                cfg[f"{sel_key}_PRINCIPAL"] = new_prin
-               
-                if category == "📂절세계좌":
-                    safe_records = edited_safe.to_dict('records')
-                    for r in safe_records:
-                        if pd.notnull(r.get('매입일자')): r['매입일자'] = r['매입일자'].strftime('%Y-%m-%d') if hasattr(r['매입일자'], 'strftime') else str(r['매입일자'])[:10]
-                    cfg[f"{sel_key}_SAFE"] = safe_records
-               
-                with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(cfg, f, ensure_ascii=False, indent=4)
-                st.success("✅ 성공적으로 저장 및 배포되었습니다!")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e: st.error(f"❌ 오류: {e}")
+        st.markdown("<br>", unsafe_allow_html=True)
+        # 💡 [수정] 버튼 클릭 시 즉시 저장이 아닌 확인창(Dialog) 호출
+        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
+            save_df = edited_df.copy()
+            if sel_key == "CRYPTO": 
+                save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
+            else: 
+                save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
+
+            cfg[sel_key] = save_df.to_dict('records')
+            cfg[f"{sel_key}_CASH"] = new_cash
+            cfg[f"{sel_key}_PRINCIPAL"] = new_prin
            
-    elif admin_pw != "": st.error("❌ 비밀번호가 틀렸습니다.")
+            if category == "📂절세계좌":
+                safe_records = edited_safe.to_dict('records')
+                for r in safe_records:
+                    if pd.notnull(r.get('매입일자')): 
+                        r['매입일자'] = r['매입일자'].strftime('%Y-%m-%d') if hasattr(r['매입일자'], 'strftime') else str(r['매입일자'])[:10]
+                cfg[f"{sel_key}_SAFE"] = safe_records
+
+            # 💡 확인 팝업창 띄우기
+            confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
+           
+    elif admin_pw != "": 
+        st.error("❌ 비밀번호가 틀렸습니다.")
     st.stop()
 
 
@@ -1885,7 +1912,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
 
 
 
