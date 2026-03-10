@@ -669,7 +669,7 @@ if st.session_state.get('show_admin_page', False):
             margin-bottom: 5px !important; 
         }
         div[data-testid="stExpander"] summary p {
-            font-size: 16px !important; /* 요청하신 16px 적용 */
+            font-size: 18px !important; /* 요청하신 18px 적용 */
             font-weight: 700 !important;
             color: #222 !important;
         }
@@ -686,7 +686,7 @@ if st.session_state.get('show_admin_page', False):
             margin-top: 10px !important;
         }
         .login-label {
-            font-size: 16px !important; /* 요청하신 16px 적용 */
+            font-size: 18px !important; /* 요청하신 18px 적용 */
             font-weight: 700 !important;
             color: #222 !important;
             margin-bottom: 8px !important;
@@ -1885,6 +1885,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
