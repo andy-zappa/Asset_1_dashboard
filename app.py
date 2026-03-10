@@ -642,11 +642,12 @@ with st.sidebar:
         st.rerun()
         
 # =========================================================
-# 🔒 [Zappa Admin] 통합 자산 관리 패널 (디자인 & 콤마 완결판)
+# 🔒 [Zappa Admin] 통합 자산 관리 패널 (박스 제거 & 디자인 완결판)
 # =========================================================
 if st.session_state.get('show_admin_page', False):
     st.markdown("""
         <style>
+        /* 기본 버튼 스타일 */
         div.stButton > button[kind="primary"] {
             background-color: #0088ff !important;
             color: white !important;
@@ -654,12 +655,12 @@ if st.session_state.get('show_admin_page', False):
             font-weight: bold !important;
             height: 2.8rem !important;
         }
-        /* 💡 Admin 비밀번호 Expander (주변과 높이 맞춤) */
+        /* 💡 Admin 비밀번호 Expander 커스텀 (좌측과 수평 라인 완벽 일치) */
         div[data-testid="stExpander"] {
             border: none !important;
             box-shadow: none !important;
             background: transparent !important;
-            margin-top: -10px !important; 
+            margin-top: -11px !important; /* 좌측 로그인 텍스트 높이와 정확히 맞춤 */
         }
         div[data-testid="stExpander"] > details { border: none !important; padding: 0 !important; }
         div[data-testid="stExpander"] summary {
@@ -668,20 +669,27 @@ if st.session_state.get('show_admin_page', False):
             margin-bottom: 5px !important; 
         }
         div[data-testid="stExpander"] summary p {
-            font-size: 15px !important;
+            font-size: 16px !important; /* 요청하신 16px 적용 */
             font-weight: 700 !important;
-            color: #333 !important;
+            color: #222 !important;
         }
-        /* 상단 바 내부 여백 조정 */
-        .admin-top-box {
-            padding: 15px 18px; 
-            background: #f8f9fa; 
-            border-radius: 10px; 
-            border: 1px solid #eee; 
-            height: 95px; /* 높이를 더 줄여 콤팩트하게 */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end; /* 글자를 아래쪽으로 배치 */
+        /* 입력창 높이 조정 */
+        div[data-testid="stTextInput"] > div > div > input {
+            height: 42px !important;
+        }
+        /* 타이틀 스타일 정의 */
+        .admin-section-title {
+            font-size: 18px !important; /* 요청하신 18px 적용 */
+            font-weight: 700 !important;
+            color: #111 !important;
+            margin-bottom: 12px !important;
+            margin-top: 10px !important;
+        }
+        .login-label {
+            font-size: 16px !important; /* 요청하신 16px 적용 */
+            font-weight: 700 !important;
+            color: #222 !important;
+            margin-bottom: 8px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -702,25 +710,23 @@ if st.session_state.get('show_admin_page', False):
 
     current_pw = cfg.get("ADMIN_PW", "1234")
 
-    # 💡 [UI 패치] 상단 바 슬림화 및 수평 정렬
+    # 💡 [디자인 패치] 회색 박스 제거 및 16px 폰트 적용 (수평 정렬 완료)
     col_pw1, col_pw2 = st.columns(2)
     with col_pw1:
-        st.markdown("<div class='admin-top-box'>", unsafe_allow_html=True)
-        st.markdown("<div style='font-size:15px; font-weight:700; color:#444; margin-bottom:8px;'>🔑 관리자 로그인</div>", unsafe_allow_html=True)
-        admin_pw = st.text_input("PW", type="password", label_visibility="collapsed", placeholder="비밀번호 입력", key="login_pw_input")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='login-label'>🔑 관리자 로그인</div>", unsafe_allow_html=True)
+        admin_pw = st.text_input("현재 비밀번호 입력", type="password", label_visibility="collapsed", placeholder="비밀번호를 입력하세요", key="login_pw_input")
        
     with col_pw2:
-        st.markdown("<div class='admin-top-box'>", unsafe_allow_html=True)
+        # 박스 없이 expander만 노출하여 수평 정렬
         with st.expander("🔐 관리자 비밀번호 변경", expanded=False):
             old_pw = st.text_input("현재 PW", type="password", placeholder="기존 비밀번호", key="pw_change_old")
             new_pw = st.text_input("새 PW", type="password", placeholder="새 비밀번호", key="pw_change_new")
-            if st.button("변경 실행", use_container_width=True):
+            if st.button("비밀번호 변경 실행", use_container_width=True):
                 if old_pw == current_pw and new_pw:
                     cfg["ADMIN_PW"] = new_pw
-                    with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(cfg, f, ensure_ascii=False, indent=4)
-                    st.success("✅ 변경 완료!")
-        st.markdown("</div>", unsafe_allow_html=True)
+                    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                        json.dump(cfg, f, ensure_ascii=False, indent=4)
+                    st.success("✅ 비밀번호가 변경되었습니다!")
    
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -742,9 +748,10 @@ if st.session_state.get('show_admin_page', False):
         cash_unit = "USD" if is_usa else "KRW"
        
         st.markdown("---")
-        st.markdown("#### 1️⃣ 자산정보 요약")
+        # 💡 [글자 크기 패치] 섹션 타이틀을 18px로 조정
+        st.markdown("<div class='admin-section-title'>1️⃣ 자산정보 요약</div>", unsafe_allow_html=True)
 
-        # 💡 [궁극의 패치] 일반 입력창 대신 '미니 표'를 사용하여 강제 콤마 적용!
+        # 💡 콤마 기능이 완벽한 미니 표 방식 유지
         sum_data = {
             "현금성자산(예수금)": [safe_float(cfg.get(f"{sel_key}_CASH", 0))],
             "투자원금": [safe_float(cfg.get(f"{sel_key}_PRINCIPAL", 0))]
@@ -756,24 +763,22 @@ if st.session_state.get('show_admin_page', False):
             "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f")
         }
         
-        # 1행짜리 요약 정보 표 (콤마가 완벽하게 작동함)
         edited_sum = st.data_editor(df_sum, use_container_width=True, column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
         new_cash = edited_sum.iloc[0]["현금성자산(예수금)"]
         new_prin = edited_sum.iloc[0]["투자원금"]
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 2️⃣ 보유종목 리스트")
+        st.markdown("<div class='admin-section-title'>2️⃣ 보유종목 리스트</div>", unsafe_allow_html=True)
         
         curr_items = cfg.get(sel_key, [])
         df_items = pd.DataFrame(curr_items)
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
-        df_items.rename(columns=rename_map, inplace=True)
+        if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
 
         for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
             if col not in df_items.columns: df_items[col] = None
         df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
 
-        # 💡 모든 수량 자연수(%,.0f), 모든 금액 콤마 적용
         if sel_key == "CRYPTO":
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
@@ -783,6 +788,7 @@ if st.session_state.get('show_admin_page', False):
                 "매입단가": st.column_config.NumberColumn("매입단가 (KRW)", format="%,.2f")
             }
         else:
+            # 모든 수량 자연수(Integer) 및 콤마 적용
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0).astype(int)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
             p_format = "%,.4f" if is_usa else "%,.0f"
@@ -797,7 +803,7 @@ if st.session_state.get('show_admin_page', False):
 
         if category == "📂절세계좌":
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("#### 3️⃣ 안전자산 현황")
+            st.markdown("<div class='admin-section-title'>3️⃣ 안전자산 현황</div>", unsafe_allow_html=True)
             safe_key = f"{sel_key}_SAFE"
             raw_safe = cfg.get(safe_key, [])
             df_safe = pd.DataFrame(raw_safe)
@@ -808,7 +814,7 @@ if st.session_state.get('show_admin_page', False):
                 "종목명": st.column_config.TextColumn("종목명"), 
                 "투자원금": st.column_config.NumberColumn("투자원금 (KRW)", format="%,.0f"), 
                 "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f"), 
-                "매입일자": st.column_config.DateColumn("매입일자 (달력선택)", format="YYYY-MM-DD")
+                "매입일자": st.column_config.DateColumn("매입일자", format="YYYY-MM-DD")
             }
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
 
@@ -1879,6 +1885,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
