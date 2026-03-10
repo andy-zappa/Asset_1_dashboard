@@ -1404,7 +1404,7 @@ elif st.session_state.current_view == '절세계좌':
                 d_class = col(d_rate)
                 diff_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px;'>{fmt_p(d_rate)}</div></td>"
                 
-                # 💡 [핵심 패치 1] 줄바꿈 기호(\n)나 백틱(`)을 제거하여 회색 코드 박스 에러 원천 차단
+                # 💡 [핵심 패치 1] 텍스트 정화 작업 (회색 박스 방지)
                 orig_nm = str(it.get('종목명', '')).replace('\n', ' ').replace('\r', '').replace('`', '').strip()
                 clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', orig_nm)
                 fc = clean_nm[:1] if clean_nm else "E"
@@ -1548,6 +1548,8 @@ elif st.session_state.current_view == '절세계좌':
                     
                     code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
+                    
+                    # 💡 [핵심 패치 2] 헤더 '종목명' 가운데 정렬
                     h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                     
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') != "[ 합  계 ]"]
@@ -1561,22 +1563,17 @@ elif st.session_state.current_view == '절세계좌':
                         is_s = (i.get('종목명') == "[ 합  계 ]")
                         row_cls = "class='sum-row'" if is_s else ""
                         
-                        # 💡 [핵심 패치 2] 줄바꿈 기호(\n)나 백틱(`)을 제거하여 회색 코드 박스 에러 원천 차단
+                        # 💡 [핵심 패치 3] 데이터 정화 작업 (회색 박스 방지)
                         orig_nm = str(i.get('종목명', '')).replace('\n', ' ').replace('\r', '').replace('`', '').strip()
                         
-                        # 💡 [가운데 정렬 패치] 합계와 일반 종목명은 text-align:center, 예수금은 left 유지
+                        # 💡 [핵심 패치 4] 1열 정렬 보정 (합계는 가운데, 종목/예수금은 좌측)
                         if is_s: 
+                            # [ 합  계 ] 행 -> 가운데 정렬 (여백 제거)
                             nm_td = f"<td style='text-align:center; padding-left:0px;'>{orig_nm}</td>"
-                        elif '예수금' in orig_nm or '현금' in orig_nm: 
-                            nm_td = f"<td style='text-align:left; padding-left:15px;'><span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>{orig_nm}</td>"
                         else:
-                            clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', orig_nm)
-                            fc = clean_nm[:1] if clean_nm else "E"
-                            colors = ["#e6f2ff", "#e6ffe6", "#ffe6e6", "#fff0e6", "#f0e6ff", "#ffe6f9", "#e6ffff", "#f5ffe6"]
-                            text_colors = ["#0066cc", "#006600", "#cc0000", "#cc5200", "#5200cc", "#cc00a3", "#00cccc", "#669900"]
-                            idx_c = sum(ord(c) for c in fc) % len(colors)
-                            direct_logo = f"<span style='display:inline-block; width:18px; height:18px; border-radius:50%; background-color:{colors[idx_c]}; color:{text_colors[idx_c]}; text-align:center; line-height:18px; font-size:10px; font-weight:900; margin-right:8px; vertical-align:middle; box-shadow: 0 1px 2px rgba(0,0,0,0.1);'>{fc}</span>"
-                            nm_td = f"<td style='text-align:center; padding-left:0px;'>{direct_logo}{orig_nm}</td>"
+                            # 그 외 일반 종목 및 예수금 -> 모두 좌측 정렬 (여백 15px 유지)
+                            nm_icon = "<span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>" if ('예수금' in orig_nm or '현금' in orig_nm) else get_logo_html(orig_nm)
+                            nm_td = f"<td style='text-align:left; padding-left:15px;'>{nm_icon}{orig_nm}</td>"
                         
                         td_code = f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>" if st.session_state.show_code else ""
                         
@@ -1824,7 +1821,7 @@ elif st.session_state.current_view == '일반계좌':
                 
                 code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                 
-                # 💡 [테이블 헤더 패치] '종목명' 헤더 부분 가운데 정렬
+                # 💡 [핵심 패치 1] 헤더 '종목명' 가운데 정렬 적용
                 h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>" + ("<th>등락률</th>" if st.session_state.gen_show_change_rate else "") + "</tr>"]
                 
                 items = [i for i in details if isinstance(i, dict) and i.get('종목명') not in ["[ 합  계 ]", "예수금"]] if isinstance(details, list) else []
@@ -1851,17 +1848,18 @@ elif st.session_state.current_view == '일반계좌':
                     is_s = (i.get('종목명') == "[ 합  계 ]")
                     row = f"<tr class='sum-row'>" if is_s else "<tr>"
                     
-                    # 💡 [코드 박스 에러 패치] 줄바꿈(\n) 및 백틱(`) 정화 작업 추가
+                    # [코드 박스 에러 패치] 텍스트 정화 작업 포함
                     raw_nm = '피그마' if i.get('종목명') == 'Figma' else str(i.get('종목명', ''))
                     orig_nm = raw_nm.replace('\n', ' ').replace('\r', '').replace('`', '').strip()
                     
-                    # 💡 [가운데 정렬 패치] 합계와 일반 종목은 center, 예수금은 left 유지
+                    # 💡 [핵심 패치 2] 데이터 행 정렬 보정
                     if is_s: 
+                        # [ 합  계 ] 행 -> 가운데 정렬 (여백 0)
                         row += f"<td style='text-align:center; padding-left:0px;'>{orig_nm}</td>"
-                    elif '예수금' in orig_nm or '현금' in orig_nm: 
-                        row += f"<td style='text-align:left; padding-left:15px;'><span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>{orig_nm}</td>"
-                    else: 
-                        row += f"<td style='text-align:center; padding-left:0px;'>{get_logo_html(orig_nm)}{orig_nm}</td>"
+                    else:
+                        # 그 외 일반 종목 및 예수금 -> 모두 좌측 정렬 (여백 15px 유지)
+                        nm_icon = "<span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>" if ('예수금' in orig_nm or '현금' in orig_nm) else get_logo_html(orig_nm)
+                        row += f"<td style='text-align:left; padding-left:15px;'>{nm_icon}{orig_nm}</td>"
                     
                     if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>"
                     
@@ -1883,4 +1881,3 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-                
