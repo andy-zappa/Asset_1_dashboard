@@ -874,7 +874,7 @@ if st.session_state.get('show_admin_page', False):
                     st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
-        # 💡 [수정] 버튼 클릭 시 즉시 저장이 아닌 확인창(Dialog) 호출
+        # 💡 [수정] 빈칸(NaN) 에러를 방지하는 배포 로직
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             save_df = edited_df.copy()
             if sel_key == "CRYPTO": 
@@ -882,24 +882,30 @@ if st.session_state.get('show_admin_page', False):
             else: 
                 save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
 
+            # 💡 [핵심] 표 안의 빈칸(NaN)을 빈 문자열("")로 청소해서 JSON 에러 방지
+            save_df = save_df.fillna("")
             cfg[sel_key] = save_df.to_dict('records')
-            cfg[f"{sel_key}_CASH"] = new_cash
-            cfg[f"{sel_key}_PRINCIPAL"] = new_prin
+            cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
+            cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
            
             if category == "📂절세계좌":
-                safe_records = edited_safe.to_dict('records')
+                # 💡 안전자산(삼성화재 등)의 빈칸도 똑같이 청소
+                safe_df = edited_safe.copy().fillna("")
+                safe_records = safe_df.to_dict('records')
                 for r in safe_records:
-                    if pd.notnull(r.get('매입일자')): 
-                        r['매입일자'] = r['매입일자'].strftime('%Y-%m-%d') if hasattr(r['매입일자'], 'strftime') else str(r['매입일자'])[:10]
+                    date_val = r.get('매입일자')
+                    if date_val and str(date_val).strip() != "": 
+                        r['매입일자'] = date_val.strftime('%Y-%m-%d') if hasattr(date_val, 'strftime') else str(date_val)[:10]
+                    else:
+                        r['매입일자'] = ""
                 cfg[f"{sel_key}_SAFE"] = safe_records
 
-            # 💡 확인 팝업창 띄우기
+            # 확인 팝업창 띄우기
             confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
            
     elif admin_pw != "": 
         st.error("❌ 비밀번호가 틀렸습니다.")
     st.stop()
-
 
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
@@ -1941,6 +1947,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
