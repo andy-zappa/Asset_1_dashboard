@@ -641,7 +641,6 @@ with st.sidebar:
         st.session_state['show_admin_page'] = True
         st.rerun()
         
-
 # =========================================================
 # 🔒 [Zappa Admin] 통합 자산 관리 패널 (Andy님 맞춤 디자인 완결판)
 # =========================================================
@@ -655,27 +654,28 @@ if st.session_state.get('show_admin_page', False):
             font-weight: bold !important;
             height: 3rem !important;
         }
-        /* 💡 Admin 비밀번호 Expander 커스텀 (좌측과 수평 라인 완벽 일치) */
+        /* 💡 Admin 비밀번호 Expander 커스텀 (균형 조절) */
         div[data-testid="stExpander"] {
             border: none !important;
             box-shadow: none !important;
             background: transparent !important;
-            margin-top: -5px !important; /* 수평 정밀 조정 */
+            margin-top: -2px !important; 
         }
         div[data-testid="stExpander"] > details { border: none !important; padding: 0 !important; }
         div[data-testid="stExpander"] summary {
             padding: 0 !important;
             background: transparent !important;
-            margin-bottom: 7px !important; 
+            margin-bottom: 10px !important; 
         }
         div[data-testid="stExpander"] summary p {
             font-size: 16px !important;
             font-weight: 700 !important;
             color: #222 !important;
         }
-        /* 텍스트 입력창 높이 통일 */
+        /* 입력창 높이 및 콤마 정렬 보조 */
         div[data-testid="stTextInput"] > div > div > input {
             height: 42px !important;
+            font-size: 15px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -696,16 +696,16 @@ if st.session_state.get('show_admin_page', False):
 
     current_pw = cfg.get("ADMIN_PW", "1234")
 
-    # 💡 [디자인 패치] 수평 정렬을 위해 고정 높이(120px)와 회색 바 적용
+    # 💡 [UI 패치] 상단 바 크기 축소 및 글자 간격(Padding-top) 하향 조정
     col_pw1, col_pw2 = st.columns(2)
     with col_pw1:
-        st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:120px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='padding:22px 18px 15px 18px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:110px;'>", unsafe_allow_html=True)
         st.markdown("<div style='font-size:16px; font-weight:700; color:#222; margin-bottom:12px;'>🔑 관리자 로그인</div>", unsafe_allow_html=True)
         admin_pw = st.text_input("현재 비밀번호 입력", type="password", label_visibility="collapsed", placeholder="비밀번호 입력", key="login_pw_input")
         st.markdown("</div>", unsafe_allow_html=True)
        
     with col_pw2:
-        st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:120px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='padding:22px 18px 10px 18px; background:#f8f9fa; border-radius:10px; border:1px solid #eee; height:110px;'>", unsafe_allow_html=True)
         with st.expander("🔐 관리자 비밀번호 변경", expanded=False):
             old_pw = st.text_input("현재 비밀번호 확인", type="password", placeholder="현재 비밀번호", key="pw_change_old")
             new_pw = st.text_input("새 비밀번호 입력", type="password", placeholder="새 비밀번호", key="pw_change_new")
@@ -737,23 +737,24 @@ if st.session_state.get('show_admin_page', False):
         is_usa = "USA" in sel_key
         cash_unit = "USD" if is_usa else "KRW"
        
-        # 💡 [콤마 패치] Summary 영역 숫자에 3자리 콤마 적용
+        # 💡 [콤마 패치] 설정값 불러올 때 콤마 적용
         raw_cash = cfg.get(f"{sel_key}_CASH", 0)
         raw_prin = cfg.get(f"{sel_key}_PRINCIPAL", 0)
-        formatted_cash = f"{float(raw_cash):,.2f}" if is_usa else f"{int(float(raw_cash)):,}"
-        formatted_prin = f"{int(float(raw_prin)):,}"
+        
+        # 불러올 때 콤마 포맷팅 (미국 단가 소수점 2자리, 나머지 정수)
+        v_cash = f"{float(raw_cash):,.2f}" if is_usa else f"{int(float(raw_cash)):,}"
+        v_prin = f"{int(float(raw_prin)):,}"
 
         st.markdown("---")
         st.markdown("#### 1️⃣ 자산정보 요약")
         cc1, cc2 = st.columns(2)
         with cc1:
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;'><span style='font-size:16px; font-weight:bold; color:#111;'>💵 현금성자산(예수금)</span><span style='color:#888; font-size:13.5px;'>단위 : {cash_unit}</span></div>", unsafe_allow_html=True)
-            new_cash_str = st.text_input("현금", value=formatted_cash, key=f"cash_{sel_key}", label_visibility="collapsed")
-            # 저장 시 콤마 제거 로직 확실히 포함
+            new_cash_str = st.text_input("현금", value=v_cash, key=f"cash_{sel_key}", label_visibility="collapsed")
             new_cash = safe_float(new_cash_str.replace(',', ''))
         with cc2:
             st.markdown(f"<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;'><span style='font-size:16px; font-weight:bold; color:#111;'>💰 투자원금</span><span style='color:#888; font-size:13.5px;'>단위 : KRW</span></div>", unsafe_allow_html=True)
-            new_prin_str = st.text_input("원금", value=formatted_prin, key=f"prin_{sel_key}", label_visibility="collapsed")
+            new_prin_str = st.text_input("원금", value=v_prin, key=f"prin_{sel_key}", label_visibility="collapsed")
             new_prin = safe_float(new_prin_str.replace(',', ''))
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -763,14 +764,12 @@ if st.session_state.get('show_admin_page', False):
         df_items = pd.DataFrame(curr_items)
        
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
-        if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
+        df_items.rename(columns=rename_map, inplace=True)
 
-        # 💡 [KeyError 방지] 빈 데이터프레임이라도 기둥(Column) 강제 생성
         for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
             if col not in df_items.columns: df_items[col] = None
         df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
 
-        # 💡 [핵심 패치] 모든 수량은 자연수(%,.0f), 미국 단가는 소수점 4자리(%,.4f) + 콤마 자동 적용
         if sel_key == "CRYPTO":
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
@@ -780,7 +779,6 @@ if st.session_state.get('show_admin_page', False):
                 "매입단가": st.column_config.NumberColumn("매입단가 (단위 : KRW)", format="%,.2f")
             }
         else:
-            # 💡 [요청] 미국 계좌 포함 수량은 무조건 자연수 정수형으로 변환
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0).astype(int)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
             
@@ -839,6 +837,8 @@ if st.session_state.get('show_admin_page', False):
         st.error("❌ 비밀번호가 틀렸습니다.")
        
     st.stop()
+
+
 # 💡 [수정] 평소 상태(자물쇠 안 눌림)일 땐 기존 대시보드를 띄웁니다.
 if st.session_state.current_view == '대시보드':
     st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
@@ -1879,6 +1879,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
