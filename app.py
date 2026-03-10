@@ -169,7 +169,7 @@ def toggle_usa_usd():
     if not st.session_state.usa_show_krw and not st.session_state.usa_show_usd: st.session_state.usa_show_krw = True
 
 def on_menu_change():
-    if st.session_state.menu_sel is not None:
+    if st.session_state.get('menu_sel') is not None:
         st.session_state.current_view = st.session_state.menu_sel
 
 # =========================================================
@@ -1941,6 +1941,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
