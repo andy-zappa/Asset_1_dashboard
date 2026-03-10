@@ -1560,9 +1560,10 @@ elif st.session_state.current_view == '절세계좌':
                         if not i: continue
                         is_s = (i.get('종목명') == "[ 합  계 ]")
                         row_cls = "class='sum-row'" if is_s else ""
-                        
-                        # 💡 [핵심 패치 3] 데이터 정화 작업 (회색 박스 방지)
-                        orig_nm = str(i.get('종목명', '')).replace('\n', ' ').replace('\r', '').replace('`', '').strip()
+                                             
+                        # 💡 [궁극의 텍스트 정화] 줄바꿈 기호뿐만 아니라 '연속된 띄어쓰기(스페이스 4번 이상)'를 무조건 한 칸으로 압축해버림!
+                        raw_nm = str(i.get('종목명', '')).replace('\\n', ' ')
+                        orig_nm = re.sub(r'\s+', ' ', raw_nm).replace('`', '').strip()
                         
                         # 💡 [핵심 패치 4] 1열 정렬 보정 (합계는 가운데, 종목/예수금은 좌측)
                         if is_s: 
@@ -1879,6 +1880,7 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
+
 
 
 
