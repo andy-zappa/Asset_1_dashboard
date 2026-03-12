@@ -1052,7 +1052,7 @@ if st.session_state.current_view == '대시보드':
 # 🍩 대시보드 전용: 파이차트 그리기 (여기로 옮겨왔습니다!)
 # ---------------------------------------------------------
         st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
-        
+       
         def get_detailed_grouped_df(keys, is_usa=False):
             records = []
             fx = safe_float(g_data.get('환율', 1443.1)) if is_usa else 1
@@ -1084,16 +1084,20 @@ if st.session_state.current_view == '대시보드':
             total_asset = df_pie['총자산'].sum()
             items_js = []
             list_html = ""
+           
             for i, row in enumerate(df_pie.to_dict('records')):
                 pct = (row['총자산'] / total_asset) * 100 if total_asset > 0 else 0
                 logo = get_logo_html(row['종목명'])
-                p_class = "#FF5252" if row['평가손익'] > 0 else ("#448AFF" if row['평가손익'] < 0 else "#9e9e9e")
+               
+                # 💡 사이드바 전광판의 오리지널 색상 코드(#D32F2F / #1976D2)로 완벽 동기화
+                p_class = "#D32F2F" if row['평가손익'] > 0 else ("#1976D2" if row['평가손익'] < 0 else "#9e9e9e")
                 sign = "+" if row['평가손익'] > 0 else ""
                 c_code = donut_colors[i % len(donut_colors)]
                 qty_str = f"{row['수량']:,.2f}".rstrip('0').rstrip('.') if row['수량'] % 1 != 0 else f"{int(row['수량']):,}"
-                
+               
                 items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code, "qty": qty_str})
-                
+               
+                # 💡 평가손익 폰트 굵기를 'normal'로 변경하여 담백하게 표현
                 list_html += f"""
                 <div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:12px 10px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:6px; flex-shrink:0;'>
                     <div style='display:flex; flex-direction:column; gap:6px;'>
@@ -1112,59 +1116,78 @@ if st.session_state.current_view == '대시보드':
                             <span style='color:#94a3b8; font-size:13px; margin-left:4px;'>({pct:.1f}%)</span>
                         </div>
                         <div>
-                            <span style='color:{p_class}; font-size:13.5px; font-weight:bold;'>{sign}{fmt(row['평가손익'])} ({fmt_p(row['수익률'])})</span>
+                            <span style='color:{p_class}; font-size:13.5px; font-weight:normal;'>{sign}{fmt(row['평가손익'])} ({fmt_p(row['수익률'])})</span>
                         </div>
                     </div>
                 </div>
                 """
-                
+               
             html_code = f"""
             <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>
             body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; overflow:hidden; }}
-            .box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:520px; border:1px solid #2c3140; box-sizing:border-box; }}
+            .box {{ background:#1a1e28; border-radius:15px; padding:25px; display:flex; flex-direction:column; height:100vh; max-height:560px; border:1px solid #2c3140; box-sizing:border-box; }}
             .title {{ color:#fff; font-size:19px; font-weight:bold; margin-bottom:20px; flex-shrink:0; }}
-            .content {{ display:flex; height:calc(100% - 40px); overflow:hidden; }}
+            .content {{ display:flex; height:calc(100% - 40px); overflow:hidden; flex-direction:row; }}
+            /* 💡 hover-panel 제거에 따라 left-panel이 목록 영역을 가득 채우도록 레이아웃 정리 */
             .left-panel {{ flex:1.15; display:flex; flex-direction:column; padding-right:15px; border-right:1px solid #2c3140; overflow:hidden; }}
-            .hover-panel {{ min-height:90px; margin-bottom:15px; border-bottom:1px dashed #3a3f50; display:flex; flex-direction:column; justify-content:center; flex-shrink:0; }}
-            .list-area {{ flex:1; overflow-y:auto; padding-right:10px; }}
+            .list-area {{ flex:1; overflow-y:auto; padding-right:10px; scroll-behavior: smooth; }}
             .list-area::-webkit-scrollbar {{ width:6px; }}
             .list-area::-webkit-scrollbar-thumb {{ background:#4b5563; border-radius:3px; }}
             .chart-area {{ flex:1.2; position:relative; }}
-            .legend-item {{ transition:all 0.2s; }}
-            .legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(5px); border-left:3px solid #4CAF50; }}
+           
+            .legend-item {{ transition:all 0.2s; border-left:4px solid transparent; }}
+            .legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(4px); }}
+           
+            /* 노트북 화면(좁은 폭)에서 자동 세로(상하) 배치 반응형 쿼리 유지 */
+            @media screen and (max-width: 750px) {{
+                .content {{ flex-direction: column-reverse !important; }}
+                .left-panel {{ flex: 1.2 !important; border-right: none !important; border-top: 1px solid #2c3140; padding-right: 0 !important; padding-top: 15px; }}
+                .chart-area {{ flex: 1 !important; min-height: 230px; }}
+            }}
             </style></head>
-            <body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="hover-panel" id="hover-info"><div style='color:#64748b; font-size:13px; text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div></div><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
+            <body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
             <script>
                 var itemsData = {json.dumps(items_js, ensure_ascii=False)};
                 var chart = echarts.init(document.getElementById('pie-chart'));
                 chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
-                chart.on('mouseover', function(p){{ updateHover(p.dataIndex); highlightLegend(p.dataIndex); }});
-                chart.on('mouseout', function(){{ clearHover(); highlightLegend(-1); }});
-                function updateHover(idx){{ 
-                    var d=itemsData[idx]; 
-                    document.getElementById('hover-info').innerHTML = `<div style='display:flex;align-items:center;margin-bottom:8px;'>${{d.logo}}<span style='color:#fff;font-size:17px;font-weight:bold;'>${{d.name}}</span><span style='margin-left:8px; padding:3px 6px; background:#1e293b; color:#94a3b8; border-radius:4px; font-size:11.5px; font-weight:bold;'>보유 ${{d.qty}}주</span></div><div style='text-align:right;'><span style='color:#f1f5f9;font-size:20px;font-weight:bold;'>${{d.asset}}</span>원<br><span style='color:${{d.p_class}};font-size:14px;font-weight:bold;'>${{d.profit}} (${{d.rate}})</span></div>`; 
+               
+                chart.on('mouseover', function(p){{ highlightLegend(p.dataIndex); }});
+                chart.on('mouseout', function(){{ highlightLegend(-1); }});
+               
+                /* 스크롤 이동 기능 + 알약 모양 고유 색상으로 하이라이트 선 동기화 */
+                function highlightLegend(idx){{
+                    document.querySelectorAll('.legend-item').forEach(el => {{
+                        el.classList.remove('active');
+                        el.style.borderLeftColor = 'transparent'; // 초기화
+                    }});
+                    if(idx >= 0) {{
+                        var target = document.getElementById('leg-item-'+idx);
+                        if(target) {{
+                            target.classList.add('active');
+                            target.style.borderLeftColor = itemsData[idx].color; // 알약 고유 색상 매칭
+                            target.scrollIntoView({{behavior: "smooth", block: "nearest"}});
+                        }}
+                    }}
                 }}
-                function clearHover(){{ document.getElementById('hover-info').innerHTML = "<div style='color:#64748b;font-size:13px;text-align:center;'>마우스를 올리면 상세 정보가 표시됩니다.</div>"; }}
-                function highlightLegend(idx){{ document.querySelectorAll('.legend-item').forEach(el=>el.classList.remove('active')); if(idx>=0) document.getElementById('leg-item-'+idx).classList.add('active'); }}
             </script></body></html>
             """
-            components.html(html_code, height=540)
+            components.html(html_code, height=580)
 
         df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
         df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
-        
+       
         st.markdown("""
             <style>
             div[data-testid="column"] { padding-bottom: 80px !important; }
             </style>
         """, unsafe_allow_html=True)
-        
+       
         cb1, cb2 = st.columns(2)
-        
+       
         flag_kr = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
         flag_us = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png"
 
-        with cb1: 
+        with cb1:
             title_kr = f"""
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
@@ -1179,7 +1202,7 @@ if st.session_state.current_view == '대시보드':
                     st.info("한국 계좌 데이터가 없습니다.")
             except: pass
 
-        with cb2: 
+        with cb2:
             title_us = f"""
             <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
                 <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
@@ -1193,6 +1216,7 @@ if st.session_state.current_view == '대시보드':
                 else:
                     st.info("미국 계좌 데이터가 없습니다.")
             except: pass
+
 # =========================================================
 # 퀀트매매 화면
 # =========================================================
