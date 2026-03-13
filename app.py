@@ -1395,7 +1395,7 @@ elif st.session_state.current_view == '가상자산':
         """
         st.markdown(cards_html, unsafe_allow_html=True)
 
-    else:
+else:
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
        
