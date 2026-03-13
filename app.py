@@ -1439,7 +1439,7 @@ elif st.session_state.current_view == '가상자산':
         with c3: components.html(get_dynamic_chart_with_link("UPBIT:SOLKRW", "SOL"), height=255)
         with c4: components.html(get_dynamic_chart_with_link("UPBIT:XRPKRW", "XRP"), height=255)
 
-     else:
+    else:
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
 # =========================================================
