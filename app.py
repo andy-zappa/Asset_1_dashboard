@@ -1399,39 +1399,48 @@ elif st.session_state.current_view == '가상자산':
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
        
+               
         # =========================================================
-        # 💡 [핵심 패치 3] 하단 실시간 TradingView 차트 추가 (업비트 기준 KRW 페어 연동)
+        # 💡 [패치 5] 다이나믹 TradingView 위젯 + 하단 업비트 연동 링크 버튼 결합
         # =========================================================
-        st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 시세 추이</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 실시간 시세 추이</h4>", unsafe_allow_html=True)
        
-        def get_mini_chart_html(symbol):
+        def get_dynamic_chart_with_link(symbol, coin_id):
             return f"""
-            <div class="tradingview-widget-container" style="width: 100%; height: 230px; border-radius: 12px; overflow: hidden; border: 1px solid #dcdcdc; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
-              <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px); width:100%;"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
-              {{
-              "symbol": "{symbol}",
-              "width": "100%",
-              "height": "100%",
-              "locale": "kr",
-              "dateRange": "1M",
-              "colorTheme": "light",
-              "trendLineColor": "rgba(41, 98, 255, 1)",
-              "underLineColor": "rgba(41, 98, 255, 0.3)",
-              "underLineBottomColor": "rgba(41, 98, 255, 0)",
-              "isTransparent": false,
-              "autosize": true,
-              "largeChartUrl": ""
-            }}
-              </script>
+            <div style="border: 1px solid #eaeaea; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); background: #fff; display: flex; flex-direction: column;">
+                <div class="tradingview-widget-container" style="height: 200px;">
+                  <div class="tradingview-widget-container__widget" style="height: 100%; width: 100%;"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                  {{
+                  "symbol": "{symbol}",
+                  "width": "100%",
+                  "height": "100%",
+                  "locale": "kr",
+                  "dateRange": "1M",
+                  "colorTheme": "light",
+                  "trendLineColor": "rgba(41, 98, 255, 1)",
+                  "underLineColor": "rgba(41, 98, 255, 0.3)",
+                  "underLineBottomColor": "rgba(41, 98, 255, 0)",
+                  "isTransparent": true,
+                  "autosize": true,
+                  "largeChartUrl": ""
+                  }}
+                  </script>
+                </div>
+                <a href="https://upbit.com/exchange?code=CRIX.UPBIT.KRW-{coin_id}" target="_blank" style="display: block; text-align: center; padding: 12px 0; background-color: #f8f9fa; color: #0055ff; font-size: 13.5px; font-weight: bold; text-decoration: none; border-top: 1px solid #eaeaea; letter-spacing: -0.5px;">
+                    업비트 거래소로 이동 ↗
+                </a>
             </div>
             """
 
-        c_chart1, c_chart2, c_chart3, c_chart4 = st.columns(4)
-        with c_chart1: components.html(get_mini_chart_html("UPBIT:BTCKRW"), height=240) # 업비트 비트코인
-        with c_chart2: components.html(get_mini_chart_html("UPBIT:ETHKRW"), height=240) # 업비트 이더리움
-        with c_chart3: components.html(get_mini_chart_html("UPBIT:SOLKRW"), height=240) # 업비트 솔라나
-        with c_chart4: components.html(get_mini_chart_html("UPBIT:XRPKRW"), height=240) # 업비트 리플
+        c1, c2, c3, c4 = st.columns(4)
+        with c1: components.html(get_dynamic_chart_with_link("UPBIT:BTCKRW", "BTC"), height=255)
+        with c2: components.html(get_dynamic_chart_with_link("UPBIT:ETHKRW", "ETH"), height=255)
+        with c3: components.html(get_dynamic_chart_with_link("UPBIT:SOLKRW", "SOL"), height=255)
+        with c4: components.html(get_dynamic_chart_with_link("UPBIT:XRPKRW", "XRP"), height=255)
+
+    else:
+        st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
 
 # =========================================================
 # ⏳ 절세계좌 대시보드 상세 페이지
