@@ -1356,55 +1356,11 @@ elif st.session_state.current_view == '가상자산':
         t_h += f"<tr style='background-color:#fcfcfc;'><td style='text-align:center;'><div style='display:flex; justify-content:center; align-items:center; gap:8px;'><span style='font-size:18px;'>💵</span><span style='color:#555;'>현금성자산</span></div></td><td style='text-align:right; padding-right:15px;'>{krw_pct:.1f}%</td><td style='text-align:right; padding-right:15px; color:#555;'>{fmt(ck)}</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td></tr></table>"
         st.markdown(t_h, unsafe_allow_html=True)
        
-        # =========================================================
-        # 💡 [핵심 패치 5] 무거운 위젯을 제거하고, 클릭 시 업비트 실시간 차트로 열리는 초경량 링크 카드 4개 구성
-        # =========================================================
-        st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 실시간 시세 추이</h4>", unsafe_allow_html=True)
-       
-        cards_html = """
-        <div style='display:flex; gap:15px; width:100%;'>
-            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-BTC' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
-                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
-                    <img src='https://www.google.com/s2/favicons?domain=bitcoin.org&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
-                    <div style='font-size:16px; font-weight:bold; color:#111;'>비트코인 (BTC)</div>
-                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
-                </div>
-            </a>
-            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-ETH' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
-                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
-                    <img src='https://www.google.com/s2/favicons?domain=ethereum.org&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
-                    <div style='font-size:16px; font-weight:bold; color:#111;'>이더리움 (ETH)</div>
-                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
-                </div>
-            </a>
-            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-SOL' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
-                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
-                    <img src='https://www.google.com/s2/favicons?domain=solana.com&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
-                    <div style='font-size:16px; font-weight:bold; color:#111;'>솔라나 (SOL)</div>
-                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
-                </div>
-            </a>
-            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-XRP' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
-                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
-                    <img src='https://www.google.com/s2/favicons?domain=ripple.com&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
-                    <div style='font-size:16px; font-weight:bold; color:#111;'>리플 (XRP)</div>
-                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
-                </div>
-            </a>
-        </div>
-        """
-        st.markdown(cards_html, unsafe_allow_html=True)
-
-else:
-        st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
-
-       
-               
-        # =========================================================
-        # 💡 [패치 5] 다이나믹 TradingView 위젯 + 하단 업비트 연동 링크 버튼 결합
+                # =========================================================
+        # 💡 [최종 패치] 다이나믹 TradingView 위젯 + 하단 업비트 연동 링크 버튼 결합
         # =========================================================
         st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 실시간 시세 추이</h4>", unsafe_allow_html=True)
-       
+        
         def get_dynamic_chart_with_link(symbol, coin_id):
             return f"""
             <div style="border: 1px solid #eaeaea; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); background: #fff; display: flex; flex-direction: column;">
@@ -1427,7 +1383,7 @@ else:
                   }}
                   </script>
                 </div>
-                <a href="https://upbit.com/exchange?code=CRIX.UPBIT.KRW-{coin_id}" target="_blank" style="display: block; text-align: center; padding: 12px 0; background-color: #f8f9fa; color: #0055ff; font-size: 13.5px; font-weight: bold; text-decoration: none; border-top: 1px solid #eaeaea; letter-spacing: -0.5px;">
+                <a href="https://upbit.com/exchange?code=CRIX.UPBIT.KRW-{coin_id}" target="_blank" style="display: block; text-align: center; padding: 12px 0; background-color: #f8f9fa; color: #0055ff; font-size: 13.5px; font-weight: bold; text-decoration: none; border-top: 1px solid #eaeaea; letter-spacing: -0.5px; transition: background-color 0.2s;">
                     업비트 거래소로 이동 ↗
                 </a>
             </div>
