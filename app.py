@@ -834,20 +834,27 @@ if st.session_state.get('show_admin_page', False):
             - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
             """)
             st.write("")
+           
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("✅ 배포 진행 (Confirm)", type="primary", use_container_width=True):
-                    try:
-                        # 🎯 오라클 서버 API를 통해 설정을 업데이트합니다.
-                        res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
-                        if res.status_code == 200:
-                            # 💡 [수정3] 배포 성공 팝업 안내 문구 변경
-                            st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 대시보드 반영까지는 1~2분이 소요됩니다.")
-                            time.sleep(2)
-                            st.rerun()
-                        else:
-                            st.error(f"❌ 서버 배포 실패: {res.text}")
-                    except Exception as e: st.error(f"❌ 연결 오류: {e}")
+                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", use_container_width=True)
+            with c2:
+                if st.button("❌ 취소 (Cancel)", use_container_width=True):
+                    st.rerun()
+           
+            # 💡 [핵심 패치] 버튼을 감싸는 컬럼을 벗어나 가장 바깥쪽에 배치하여 성공 메시지가 가로 전체를 차지하게 만듭니다.
+            if confirm_btn:
+                try:
+                    # 🎯 오라클 서버 API를 통해 설정을 업데이트합니다.
+                    res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
+                    if res.status_code == 200:
+                        st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 대시보드 반영까지는 1~2분이 소요됩니다.")
+                        time.sleep(2)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ 서버 배포 실패: {res.text}")
+                except Exception as e: st.error(f"❌ 연결 오류: {e}")
+
             with c2:
                 if st.button("❌ 취소 (Cancel)", use_container_width=True):
                     st.rerun()
@@ -1253,7 +1260,7 @@ elif st.session_state.current_view == '가상자산':
         cp = ce - cb
         cr = (cp / cb * 100) if cb > 0 else 0
         total_principal = cb + ck
-        
+       
         pie_items = []
         cl = crypto_data.get('coins', [])
         if isinstance(cl, list):
@@ -1261,20 +1268,33 @@ elif st.session_state.current_view == '가상자산':
                 if isinstance(c, dict) and c.get('ticker') != 'KRW':
                     pie_items.append({'name': c.get('ticker'), 'val': safe_float(c.get('eval', 0))})
         if ck > 0: pie_items.append({'name': 'KRW', 'val': ck})
-        pie_items.sort(key=lambda x: x['val'], reverse=True)
-        
-        c_m = {'KRW': '#d870ad', 'BTC': '#8bc34a', 'ETH': '#00bcd4', 'TRX': '#673ab7'}
-        d_c = ['#ff9800', '#f44336', '#9c27b0']
+       
+        # 💡 [핵심 패치 1] 파이차트 우선순위 고정 (BTC, ETH, SOL, XRP 순서 -> 기타 -> KRW 마지막)
+        order_map = {'BTC': 1, 'ETH': 2, 'SOL': 3, 'XRP': 4, 'KRW': 999}
+        def get_sort_key(x):
+            nm = x['name']
+            if nm in order_map:
+                return (order_map[nm], -x['val'])
+            return (500, -x['val']) # 기타 코인은 중간(500)에 두고 평가금액이 큰 순서로 정렬
+           
+        pie_items.sort(key=get_sort_key)
+       
+        c_m = {'KRW': '#d870ad', 'BTC': '#f7931a', 'ETH': '#627eea', 'SOL': '#14F195', 'XRP': '#23292F', 'TRX': '#eb0029'}
+        d_c = ['#ff9800', '#f44336', '#9c27b0', '#00bcd4', '#8bc34a']
         grad, leg, labels_html = [], "", ""
         curr_p = 0
-        
-        for idx, it in enumerate(pie_items):
+       
+        color_idx = 0
+        for it in pie_items:
             p = (it['val'] / ca * 100) if ca > 0 else 0
-            clr = c_m.get(it['name'], d_c[idx % len(d_c)])
+            if it['name'] in c_m: clr = c_m[it['name']]
+            else:
+                clr = d_c[color_idx % len(d_c)]
+                color_idx += 1
+               
             grad.append(f"{clr} {curr_p}% {curr_p + p}%")
-            
             leg += f"<div style='display:flex; align-items:center; gap:6px; font-size:14.5px; color:#333; font-weight:bold;'><div style='width:12px; height:12px; background-color:{clr}; border-radius:50%;'></div>{it['name']} <span style='margin-left:4px;'>{p:.1f}%</span></div>"
-            
+           
             if p > 3:
                 mid_angle = (curr_p + p / 2) / 100 * 360
                 rad = np.radians(mid_angle - 90)
@@ -1282,41 +1302,136 @@ elif st.session_state.current_view == '가상자산':
                 y = 80 + 55 * np.sin(rad)
                 labels_html += f"<div style='position:absolute; left:{x}px; top:{y}px; transform:translate(-50%, -50%); font-size:12px; font-weight:bold; color:#fff; text-shadow:1px 1px 2px rgba(0,0,0,0.8); z-index:10;'>{p:.1f}%</div>"
             curr_p += p
-            
+           
         conic_str = ", ".join(grad)
-        donut_html = f"<div style='display:flex; flex-direction:row; align-items:center; gap:25px;'><div style='display:flex; flex-direction:column; align-items:center;'><div style='position: relative; width: 160px; height: 160px; border-radius: 50%; background: conic-gradient({conic_str}); border: 1px solid #ddd; flex-shrink: 0;'>{labels_html}<div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45%; height: 45%; background-color: #fff; border-radius: 50%; display:flex; align-items:center; justify-content:center; text-align:center;'><span style='font-size:12.5px; color:#333; font-weight:bold; line-height:1.2;'>보유 비중<br>(%)</span></div></div><div style='font-size:15.5px; font-weight:bold; color:#444; margin-top:15px;'>원금 : {fmt(total_principal)}</div></div><div style='display:flex; flex-direction:column; gap:8px;'>{leg}</div></div>"
-        
+       
+        # 💡 [핵심 패치 2] 범례(Legend)를 파이차트의 정확한 중간 높이(160px)에 세로 중앙 정렬시킴
+        donut_html = f"<div style='display:flex; flex-direction:row; align-items:flex-start; gap:35px;'><div style='display:flex; flex-direction:column; align-items:center;'><div style='position: relative; width: 160px; height: 160px; border-radius: 50%; background: conic-gradient({conic_str}); border: 1px solid #ddd; flex-shrink: 0;'>{labels_html}<div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45%; height: 45%; background-color: #fff; border-radius: 50%; display:flex; align-items:center; justify-content:center; text-align:center;'><span style='font-size:12.5px; color:#333; font-weight:bold; line-height:1.2;'>보유 비중<br>(%)</span></div></div><div style='font-size:15.5px; font-weight:bold; color:#444; margin-top:15px;'>원금 : {fmt(total_principal)}</div></div><div style='display:flex; flex-direction:column; justify-content:center; height:160px; gap:8px;'>{leg}</div></div>"
+       
         top_box = f"<div class='card-main' style='width:100%; display:flex; flex-direction:row; align-items:center; padding:35px 50px; background-color:#ffffff; border:1px solid #ddd; border-radius:15px; margin-bottom:30px;'><div style='flex: 1; border-right: 1px solid #eee; padding-right: 30px;'><div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 20px;'>📊 총 보유자산 비중</div>{donut_html}</div><div style='flex: 1.2; padding-left: 50px;'><div style='text-align:right; margin-bottom:30px;'><div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom:5px;'>총 보유자산</div><div style='font-size: 24px; font-weight: 800; color: #111; line-height: 1;'>{fmt(ca)} <span style='font-size: 16px;'>KRW</span></div><div style='font-size: 16px; font-weight: bold; margin-top: 8px;' class='{col(cp)}'>{fmt(cp, True)} <span style='font-size:14px;'>({fmt_p(cr)})</span></div></div><div style='background:#f9f9f9; padding:20px; border-radius:10px; display:flex; flex-direction:column; gap:12px;'><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>평가금액</span><span style='color:#111;'>{fmt(ce)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>현금성(예수금)</span><span style='color:#111;'>{fmt(ck)}</span></div><div style='display:flex; justify-content:space-between;'><span style='color:#666; font-size:15px;'>총 손익</span><span class='{col(cp)}'>{fmt(cp, True)}</span></div></div></div></div>"
         st.markdown(top_box, unsafe_allow_html=True)
-        
+       
         st.markdown(f"<h4 style='margin-bottom:10px; font-weight:bold;'>📂 보유 코인 목록</h4><div style='margin-bottom:15px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div></div><div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
-        
+       
         t_h = "<table class='main-table'><tr>"
         headers = ['코인명', '비중', '평가금액', '평가손익', '손익률', '보유량', '매입가', '현재가']
         for h in headers: t_h += f"<th style='text-align:center;'>{h}</th>"
         t_h += "</tr>"
-        
-        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ce)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td></tr>"
-        
-        c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'TRX': 'tron'}
-        c_n = {'BTC': '비트코인(BTC)', 'ETH': '이더리움(ETH)', 'TRX': '트론(TRX)'}
-        
+       
+        # 💡 [핵심 패치 3] '-' 문자는 text-align:center 적용
+        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:center;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ce)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td></tr>"
+       
+        c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'TRX': 'tron', 'SOL': 'solana', 'XRP': 'ripple'}
+        c_n = {'BTC': '비트코인(BTC)', 'ETH': '이더리움(ETH)', 'TRX': '트론(TRX)', 'SOL': '솔라나(SOL)', 'XRP': '리플(XRP)'}
+       
         if isinstance(cl, list):
-            s_cl = sorted([c for c in cl if isinstance(c, dict) and c.get('ticker') != 'KRW'], key=lambda x: safe_float(x.get('eval', 0)), reverse=True)
+            s_cl = []
+            for p_item in pie_items:
+                if p_item['name'] == 'KRW': continue
+                for c in cl:
+                    if isinstance(c, dict) and c.get('ticker') == p_item['name']:
+                        s_cl.append(c)
+                        break
+
             for c in s_cl:
                 tk = c.get('ticker', '')
-                nm = c_n.get(tk, f"{c.get('name', tk)}({tk})")
+                # 💡 [핵심 패치 4] Admin에 직접 입력한 종목명을 최우선으로 출력 (미입력시 기본 맵핑 사용)
+                admin_name = str(c.get('name', '')).strip()
+                nm = admin_name if admin_name else c_n.get(tk, f"{tk}")
+               
                 icon = f"https://www.google.com/s2/favicons?domain={c_i.get(tk, 'cryptocompare.com')}.org&sz=64"
                 logo = f"<div style='display:flex; justify-content:center; align-items:center; gap:8px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span>{nm}</span></div>"
                 c_pct = (safe_float(c.get('eval', 0)) / ca * 100) if ca > 0 else 0
-                
-                t_h += f"<tr><td style='text-align:center;'>{logo}</td><td style='text-align:right; padding-right:15px;'>{c_pct:.1f}%</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('eval',0))}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td><td style='text-align:right; padding-right:15px;'>{safe_float(c.get('qty',0)):.6f}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('avg_price',0))}</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('curr_price',0))}</td></tr>"
-        
+               
+                qty_val = safe_float(c.get('qty',0))
+                qty_td = f"<td style='text-align:right; padding-right:15px;'>{qty_val:.6f}</td>" if qty_val > 0 else "<td style='text-align:center;'>-</td>"
+                avg_p = fmt(c.get('avg_price',0))
+                avg_td = f"<td style='text-align:right; padding-right:15px;'>{avg_p}</td>" if avg_p != '0' else "<td style='text-align:center;'>-</td>"
+                curr_p = fmt(c.get('curr_price',0))
+                curr_td = f"<td style='text-align:right; padding-right:15px;'>{curr_p}</td>" if curr_p != '0' else "<td style='text-align:center;'>-</td>"
+               
+                t_h += f"<tr><td style='text-align:center;'>{logo}</td><td style='text-align:right; padding-right:15px;'>{c_pct:.1f}%</td><td style='text-align:right; padding-right:15px;'>{fmt(c.get('eval',0))}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td><td style='text-align:right; padding-right:15px;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td>{qty_td}{avg_td}{curr_td}</tr>"
+       
         krw_pct = (ck / ca * 100) if ca > 0 else 0
-        t_h += f"<tr style='background-color:#fcfcfc;'><td style='text-align:center;'><div style='display:flex; justify-content:center; align-items:center; gap:8px;'><span style='font-size:18px;'>💵</span><span style='color:#555;'>현금성자산</span></div></td><td style='text-align:right; padding-right:15px;'>{krw_pct:.1f}%</td><td style='text-align:right; padding-right:15px; color:#555;'>{fmt(ck)}</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td><td style='text-align:right; padding-right:15px;'>-</td></tr></table>"
+        t_h += f"<tr style='background-color:#fcfcfc;'><td style='text-align:center;'><div style='display:flex; justify-content:center; align-items:center; gap:8px;'><span style='font-size:18px;'>💵</span><span style='color:#555;'>현금성자산</span></div></td><td style='text-align:right; padding-right:15px;'>{krw_pct:.1f}%</td><td style='text-align:right; padding-right:15px; color:#555;'>{fmt(ck)}</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td></tr></table>"
         st.markdown(t_h, unsafe_allow_html=True)
+       
+        # =========================================================
+        # 💡 [핵심 패치 5] 무거운 위젯을 제거하고, 클릭 시 업비트 실시간 차트로 열리는 초경량 링크 카드 4개 구성
+        # =========================================================
+        st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 실시간 시세 추이</h4>", unsafe_allow_html=True)
+       
+        cards_html = """
+        <div style='display:flex; gap:15px; width:100%;'>
+            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-BTC' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
+                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
+                    <img src='https://www.google.com/s2/favicons?domain=bitcoin.org&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
+                    <div style='font-size:16px; font-weight:bold; color:#111;'>비트코인 (BTC)</div>
+                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
+                </div>
+            </a>
+            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-ETH' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
+                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
+                    <img src='https://www.google.com/s2/favicons?domain=ethereum.org&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
+                    <div style='font-size:16px; font-weight:bold; color:#111;'>이더리움 (ETH)</div>
+                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
+                </div>
+            </a>
+            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-SOL' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
+                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
+                    <img src='https://www.google.com/s2/favicons?domain=solana.com&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
+                    <div style='font-size:16px; font-weight:bold; color:#111;'>솔라나 (SOL)</div>
+                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
+                </div>
+            </a>
+            <a href='https://upbit.com/exchange?code=CRIX.UPBIT.KRW-XRP' target='_blank' style='flex:1; text-decoration:none; color:inherit;'>
+                <div class='card-sub' style='text-align:center; padding:20px 10px; border-radius:12px; transition:transform 0.2s; background:#fff;'>
+                    <img src='https://www.google.com/s2/favicons?domain=ripple.com&sz=64' style='width:40px; height:40px; margin-bottom:10px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.1);'>
+                    <div style='font-size:16px; font-weight:bold; color:#111;'>리플 (XRP)</div>
+                    <div style='font-size:13px; color:#0088ff; font-weight:bold; margin-top:8px;'>📊 차트 보기 ↗</div>
+                </div>
+            </a>
+        </div>
+        """
+        st.markdown(cards_html, unsafe_allow_html=True)
+
     else:
         st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
+
+       
+        # =========================================================
+        # 💡 [핵심 패치 3] 하단 실시간 TradingView 차트 추가 (업비트 기준 KRW 페어 연동)
+        # =========================================================
+        st.markdown("<h4 style='margin-bottom:15px; margin-top:35px; font-weight:bold;'>📈 종목별 시세 추이</h4>", unsafe_allow_html=True)
+       
+        def get_mini_chart_html(symbol):
+            return f"""
+            <div class="tradingview-widget-container" style="width: 100%; height: 230px; border-radius: 12px; overflow: hidden; border: 1px solid #dcdcdc; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+              <div class="tradingview-widget-container__widget" style="height:calc(100% - 32px); width:100%;"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+              {{
+              "symbol": "{symbol}",
+              "width": "100%",
+              "height": "100%",
+              "locale": "kr",
+              "dateRange": "1M",
+              "colorTheme": "light",
+              "trendLineColor": "rgba(41, 98, 255, 1)",
+              "underLineColor": "rgba(41, 98, 255, 0.3)",
+              "underLineBottomColor": "rgba(41, 98, 255, 0)",
+              "isTransparent": false,
+              "autosize": true,
+              "largeChartUrl": ""
+            }}
+              </script>
+            </div>
+            """
+
+        c_chart1, c_chart2, c_chart3, c_chart4 = st.columns(4)
+        with c_chart1: components.html(get_mini_chart_html("UPBIT:BTCKRW"), height=240) # 업비트 비트코인
+        with c_chart2: components.html(get_mini_chart_html("UPBIT:ETHKRW"), height=240) # 업비트 이더리움
+        with c_chart3: components.html(get_mini_chart_html("UPBIT:SOLKRW"), height=240) # 업비트 솔라나
+        with c_chart4: components.html(get_mini_chart_html("UPBIT:XRPKRW"), height=240) # 업비트 리플
 
 # =========================================================
 # ⏳ 절세계좌 대시보드 상세 페이지
