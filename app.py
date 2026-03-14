@@ -511,10 +511,14 @@ with st.sidebar:
         return "AI 퀀트매매" if option == "퀀트매매" else option
     st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
 
-    # 4. 💡 가상자산 퍼센트 연산 준비 (기존 유지)
+    # 4. 💡 가상자산 퍼센트 연산 (BTC, ETH 반올림 및 Alts 합산)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-    c_trx = crypto_data.get('trx_pct', 0) if isinstance(crypto_data, dict) else 0
+    
+    r_btc = int(round(c_btc))
+    r_eth = int(round(c_eth))
+    # 전체 100%에서 BTC, ETH를 뺀 나머지를 Alts로 할당
+    r_alts = 100 - r_btc - r_eth if (r_btc + r_eth) > 0 else 0
 
     # 5. 💡 [포맷 수정] 날짜 및 시간 계산 (2026 -> 26)
     from datetime import datetime, timedelta, timezone
@@ -608,10 +612,10 @@ with st.sidebar:
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
             <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>BTC {c_btc:.1f}% / ETH {c_eth:.1f}% / TRX {c_trx:.1f}%</div>
+            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>BTC {r_btc}% / ETH {r_eth}% / Alts {r_alts}%</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)    
+    """, unsafe_allow_html=True)   
     
     # 💡 Admin 세션 초기화
     if 'show_admin_page' not in st.session_state:
