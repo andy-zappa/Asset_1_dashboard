@@ -575,7 +575,7 @@ with st.sidebar:
     # 8. 🌎 총 자산 통합 카드
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 통합 포트폴리오 (Total AUM)</div>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 전체 운용자산 (Total AUM)</div>
         <div style='text-align: right;'>
             <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
             <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:600;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
@@ -1322,12 +1322,12 @@ elif st.session_state.current_view == '암호화폐':
         st.markdown(f"<h4 style='margin-bottom:10px; font-weight:bold;'>📂 보유 코인 목록</h4><div style='margin-bottom:15px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div></div><div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
        
         t_h = "<table class='main-table'><tr>"
-        headers = ['코인명', '비중', '평가금액', '평가손익', '손익률', '보유량', '매입가', '현재가']
+        headers = ['코인명', '비중', '총 자산', '평가손익', '손익률', '보유량', '매입가', '현재가']
         for h in headers: t_h += f"<th style='text-align:center;'>{h}</th>"
         t_h += "</tr>"
        
         # 💡 [핵심 패치 3] '-' 문자는 text-align:center 적용
-        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:center;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ce)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td></tr>"
+        t_h += f"<tr class='sum-row'><td style='text-align:center;'>[ 합  계 ]</td><td style='text-align:center;'>-</td><td style='text-align:right; padding-right:15px;'>{fmt(ca)}</td><td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td><td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td><td style='text-align:center;'>-</td></tr>"
        
         c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'TRX': 'tron', 'SOL': 'solana', 'XRP': 'ripple'}
         c_n = {'BTC': '비트코인(BTC)', 'ETH': '이더리움(ETH)', 'TRX': '트론(TRX)', 'SOL': '솔라나(SOL)', 'XRP': '리플(XRP)'}
