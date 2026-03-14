@@ -109,7 +109,7 @@ function bindSidebarClicks() {
     bindClick('card-total', '대시보드');
     bindClick('card-pension', '절세계좌');
     bindClick('card-general', '일반계좌');
-    bindClick('card-crypto', '가상자산');
+    bindClick('card-crypto', '암호화폐');
     bindClick('card-quant', '퀀트매매');
 }
 setInterval(bindSidebarClicks, 1000);
@@ -303,7 +303,7 @@ def normalize_insight(raw_data):
 tot = normalize_insight(data)
 
 # =========================================================
-# 🪙 가상자산 오라클 로드 로직
+# 🪙 암호화폐 오라클 로드 로직
 # =========================================================
 @st.cache_data(ttl=60)
 def get_crypto_data():
@@ -506,19 +506,30 @@ with st.sidebar:
     """, height=0)
 
     # 3. 💡 메뉴 선택 라디오 (기존 유지)
-    menu_options = ["대시보드", "절세계좌", "일반계좌", "가상자산", "퀀트매매"]
+    menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "퀀트매매"]
     def format_menu(option):
         return "AI 퀀트매매" if option == "퀀트매매" else option
     st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
 
-    # 4. 💡 가상자산 퍼센트 연산 (BTC, ETH 반올림 및 Alts 합산)
+    # 4. 💡 암호화폐 퍼센트 연산 (현금 제외 순수 Alts 비중 계산)
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
     
+    c_alts = 0
+    if isinstance(crypto_data, dict):
+        ta = safe_float(crypto_data.get('total_asset', 0))
+        coins = crypto_data.get('coins', [])
+        alt_sum = 0
+        if ta > 0 and isinstance(coins, list):
+            for c in coins:
+                # BTC, ETH, KRW를 제외한 나머지 코인의 평가금액만 합산
+                if isinstance(c, dict) and c.get('ticker') not in ['BTC', 'ETH', 'KRW']:
+                    alt_sum += safe_float(c.get('eval', 0))
+            c_alts = (alt_sum / ta) * 100
+
     r_btc = int(round(c_btc))
     r_eth = int(round(c_eth))
-    # 전체 100%에서 BTC, ETH를 뺀 나머지를 Alts로 할당
-    r_alts = 100 - r_btc - r_eth if (r_btc + r_eth) > 0 else 0
+    r_alts = int(round(c_alts))
 
     # 5. 💡 [포맷 수정] 날짜 및 시간 계산 (2026 -> 26)
     from datetime import datetime, timedelta, timezone
@@ -564,14 +575,14 @@ with st.sidebar:
     # 8. 🌎 총 자산 통합 카드
     st.markdown(f"""
     <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 총 자산 통합</div>
+        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 통합 포트폴리오 (Total AUM)</div>
         <div style='text-align: right;'>
             <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
             <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:600;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
         </div>
         <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed #3a3a3a;'>
             <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
-                <span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 금융자산 <span style='font-size: 13px;'>30</span>억 목표</span>
+                <span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
                 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
             </div>
             <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
@@ -605,10 +616,10 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    # 11. 🪙 가상자산 카드
+    # 11. 🪙 암호화폐 카드
     st.markdown(f"""
     <div id='card-crypto' class='sidebar-card'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🪙 가상자산</div>
+        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🪙 암호화폐</div>
         <div style='text-align: right;'>
             <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
             <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum)})</span></div>
@@ -828,7 +839,7 @@ if st.session_state.get('show_admin_page', False):
            
         st.markdown("<br>", unsafe_allow_html=True)
        
-        # 💡 [새 기능] 배포 전 최종 확인 팝업창 정의 (중복 제거됨)
+        # 💡 [레이아웃 수정] 메시지가 팝업창 가로 전체를 차지하도록 통신 로직을 컬럼 밖으로 분리
         @st.dialog("🚀 실시간 데이터 배포 최종 확인")
         def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
             st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
@@ -838,31 +849,28 @@ if st.session_state.get('show_admin_page', False):
             - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
             """)
             st.write("")
-           
+            
+            # 1. 버튼만 나란히 배치합니다.
             c1, c2 = st.columns(2)
             with c1:
-                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", use_container_width=True)
+                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
             with c2:
-                if st.button("❌ 취소 (Cancel)", use_container_width=True):
+                if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
                     st.rerun()
-           
-            # 💡 [핵심 패치] 버튼을 감싸는 컬럼을 벗어나 가장 바깥쪽에 배치하여 성공 메시지가 가로 전체를 차지하게 만듭니다.
+            
+            # 2. 버튼이 눌렸을 때의 동작과 메시지 출력은 컬럼 밖(전체 너비)에서 실행합니다.
             if confirm_btn:
                 try:
-                    # 🎯 오라클 서버 API를 통해 설정을 업데이트합니다.
                     res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
                     if res.status_code == 200:
-                        st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 대시보드 반영까지는 1~2분이 소요됩니다.")
+                        st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
                         time.sleep(2)
                         st.rerun()
                     else:
                         st.error(f"❌ 서버 배포 실패: {res.text}")
-                except Exception as e: st.error(f"❌ 연결 오류: {e}")
-
-            with c2:
-                if st.button("❌ 취소 (Cancel)", use_container_width=True):
-                    st.rerun()
-                   
+                except Exception as e: 
+                    st.error(f"❌ 연결 오류:\n{e}")
+                    
         # 💡 빈칸(NaN) 에러를 방지하는 배포 로직
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             save_df = edited_df.copy()
@@ -870,13 +878,13 @@ if st.session_state.get('show_admin_page', False):
                 save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
             else:
                 save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
-               
+                
             # 표 안의 빈칸(NaN)을 빈 문자열("")로 청소해서 JSON 에러 방지
             save_df = save_df.fillna("")
             cfg[sel_key] = save_df.to_dict('records')
             cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
             cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
-           
+            
             if category == "📂절세계좌":
                 safe_df = edited_safe.copy().fillna("")
                 safe_records = safe_df.to_dict('records')
@@ -887,7 +895,7 @@ if st.session_state.get('show_admin_page', False):
                     else:
                         r['매입일자'] = ""
                 cfg[f"{sel_key}_SAFE"] = safe_records
-               
+                
             # 확인 팝업창 띄우기
             confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
            
@@ -1243,17 +1251,13 @@ elif st.session_state.current_view == '퀀트매매':
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🪙 가상자산 상세 화면
+# 🪙 암호화폐 상세 화면
 # =========================================================
-elif st.session_state.current_view == '가상자산':
+elif st.session_state.current_view == '암호화폐':
     st.markdown("""
-        <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; margin-bottom: 25px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
-            <div style="font-size:40px;">🪙</div>
-            <div>
-                <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">가상자산 포트폴리오 <span style="font-size:18px; color:#555; font-weight:normal;">(Oracle 실시간 연동)</span></h3>
-                <div style="font-size:14.5px; color:#666; margin-top:5px;">오라클 서버에서 실시간으로 수집하여 렌더링하는 업비트 계좌 데이터입니다.</div>
-            </div>
-        </div>
+        <h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>
+        <div class='sub-title' style='margin-bottom: 15px;'>🪙 [암호화폐] 자산 현황 요약</div>
+        <div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>
     """, unsafe_allow_html=True)
 
     if isinstance(crypto_data, dict) and 'total_asset' in crypto_data:
@@ -1400,13 +1404,13 @@ elif st.session_state.current_view == '가상자산':
         with c4: components.html(get_dynamic_chart_with_link("UPBIT:XRPKRW", "XRP"), height=255)
 
     else:
-        st.info("🔄 오라클 서버에서 실시간 가상자산 데이터를 동기화하는 중입니다...")
+        st.info("🔄 오라클 서버에서 실시간 암호화폐 데이터를 동기화하는 중입니다...")
 
 # =========================================================
 # ⏳ 절세계좌 대시보드 상세 페이지
 # =========================================================
 elif st.session_state.current_view == '절세계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [절세계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
     FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
     P_MAP = {'DC': '퇴직연금(DC)계좌', 'IRP': '퇴직연금(IRP)계좌', 'PENSION': '연금저축(CMA)계좌', 'ISA': 'ISA(중개형)계좌'}
     DATE_TAGS = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
@@ -1466,7 +1470,7 @@ elif st.session_state.current_view == '절세계좌':
        
         def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
        
-        st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 [절세계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>⏳ [절세계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
         tax_proj_pct = (t_asset / 1500000000) * 100
        
         html_main = f"""
@@ -1476,7 +1480,7 @@ elif st.session_state.current_view == '절세계좌':
                 <div class='card-main'>
                     <div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'>
                         <div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'>
-                            <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>총 자산</div>
+                            <div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>💡총 자산</div>
                             {donut_html}
                             <div style='font-size: 13.5px; color: #333; font-weight: bold; margin-top: 14px;'><span style='font-size: 12.5px; color: #666;'>원금</span> : {fmt(t_principal)}</div>
                         </div>
@@ -1775,7 +1779,7 @@ elif st.session_state.current_view == '절세계좌':
 # 🌱 일반계좌 대시보드 상세페이지
 # =========================================================
 elif st.session_state.current_view == '일반계좌':
-    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [일반계좌] 통합 대시보드</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
 
     if not isinstance(g_data, dict):
         st.warning("데이터가 올바르지 않습니다. 좌측 사이드바의 업데이트 버튼을 눌러주세요.")
@@ -1846,7 +1850,7 @@ elif st.session_state.current_view == '일반계좌':
 
     zappa_html = f"<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'><div style='margin-bottom: 22px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약</span><div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_profit)}'><strong>{fmt(t_profit, True)}</strong></span> (<span class='{col(t_rate)}'><strong>{fmt_p(t_rate)}</strong></span>) 이며, <strong>{best_acc_name}</strong> 계좌가 계좌별 수익률 1위를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div></div><div style='margin-bottom: 15px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망</span><div>최근 국내 시장은 <strong>{short_name(dom_best[0]['종목명']) if dom_best else '국내 우량주'}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{short_name(dom_worst[0]['종목명']) if dom_worst else '일부 조정주'}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div></div><div style='margin-bottom: 0px;'><span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'><span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망</span><div>미국 증시는 <strong>{short_name(ovs_best[0]['종목명']) if ovs_best else '빅테크 우량주'}</strong> 위주로 긍정적 흐름을 보이나, <strong>{short_name(ovs_worst[0]['종목명']) if ovs_worst else '단기 하락주'}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{(cash_total/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금성(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div></div></div>"
 
-    st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>💡 [일반계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>🌱 [일반계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
    
     p_cash_donut = (cash_total/t_asset*100) if t_asset>0 else 0
     p_ovs_donut = (ovs_total/t_asset*100) if t_asset>0 else 0
@@ -1856,7 +1860,7 @@ elif st.session_state.current_view == '일반계좌':
     donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_cash_donut:.0f}%<br>현금성자산</div><div style='position: absolute; top: 55px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_ovs_donut:.0f}%<br>해외투자</div><div style='position: absolute; bottom: 42px; left: -20px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_dom_donut:.0f}%<br>국내투자</div></div>"
 
     html_parts = []
-    html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div><div class='insight-container'><div class='insight-left'><div class='card-main'><div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'><div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>총 자산</div>")
+    html_parts.append("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div><div class='insight-container'><div class='insight-left'><div class='card-main'><div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'><div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>💡총 자산</div>")
     html_parts.append(donut_html)
     html_parts.append(f"<div style='font-size: 13.5px; color: #333; font-weight: bold; margin-top: 14px;'><span style='font-size: 12.5px; color: #666;'>원금</span> : {fmt(t_original_sum)}</div></div><div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'><div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'><div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div><div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]</div></div><div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div><div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div><div style='text-align: right;'><div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_profit)}'>{fmt(t_profit, True)}</div><div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate)}'>{fmt_p(t_rate)}</div></div></div></div></div><div style='margin-top: 20px;'><div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>{render_bar(p_dom1, '#b4a7d6')}{render_bar(p_dom2, '#f4b183')}{render_bar(p_usa1, '#a9d18e')}{render_bar(p_usa2, '#ffd966')}</div><div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>키움증권(국내Ⅰ)</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>삼성증권(국내Ⅱ)</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>키움증권(해외Ⅰ)</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>키움증권(해외Ⅱ)</div></div><div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 주식투자 자산 15억 프로젝트</span><div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span></div></div><div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'><div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div></div></div></div></div></div><div class='insight-right'><div class='grid-2x2'>")
     for k in GEN_ACC_ORDER:
@@ -2065,17 +2069,6 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
