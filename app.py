@@ -438,16 +438,8 @@ with st.sidebar:
 
     # 1. 💡 상태창 및 디자인 설정 (Live Sync 교체본)
     # ---------------------------------------------------------
-    # 오라클 구름 로고 변환 (기존 로봇 로직과 간섭 없도록 1번 구역 내부에 독립 배치)
-    cloud_logo_base64 = ""
-    if os.path.exists("oracle_cloud_logo.png"):
-        with open("oracle_cloud_logo.png", "rb") as img_file:
-            cloud_logo_base64 = base64.b64encode(img_file.read()).decode()
-            
-    if cloud_logo_base64:
-        logo_src = f"data:image/png;base64,{cloud_logo_base64}"
-    else:
-        logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
+    # 오라클 클라우드 로고 (웹 URL 고정 연동)
+    logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
 
     short_p = "<span style='font-size: 10px; vertical-align: 1px; color: #111111; opacity: 0.3; margin: 0 4px;'>|</span>"
     
