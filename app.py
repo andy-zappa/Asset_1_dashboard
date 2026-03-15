@@ -436,46 +436,49 @@ with st.sidebar:
     else:
         robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
-    # 1. 💡 상태창 및 디자인 설정 (세로 바 축소 및 색상 반영)
+    # 1. 💡 상태창 및 디자인 설정 (Live Sync 교체본)
     # ---------------------------------------------------------
-    # 세로 바(|) 스타일: 크기 10px로 축소 및 위치 보정
-    short_p = "<span style='font-size: 10px; vertical-align: 1px; color: #111111; opacity: 0.6; margin: 0 4px;'>|</span>"
-    powered_by_html = f"<div style='text-align:center; font-size:14px; color:#111111; margin-top:2px; margin-bottom:2px; font-weight:500;'>DATA  : KIS{short_p}UPbit{short_p}Yahoo Finance</div>"
-   
-    # 상태 박스 스타일 (가운데 정렬)
-    status_box_style = "display:flex; justify-content:center; align-items:center; padding: 12px 10px; margin-bottom: 0px !important; background-color: #1f293a; border: 1.2px solid #888888; border-radius: 8px;"
-   
-    # 박스 내부 세로 바 스타일
-    divider_html = "<div style='color:#666666; font-size:10px; margin-left: 8px; margin-right: 6px; font-weight:bold; transform: translateY(0.5px);'>|</div>"
-   
-    if is_oracle_online:
-        status_html = f"""
-        <div class='status-box-dark' style='{status_box_style}'>
-            <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#00e676; letter-spacing:-0.5px;'>실시간 연동</span>
-            </div>
-            {divider_html}
-            <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
-                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>백업 데이터</span>
-            </div>
-        </div>
-        {powered_by_html}
-        <hr style='margin: 4px 0 8px 0; border: 0; border-top: 1px solid #444444; opacity: 0.5;'>
-        """
+    # 오라클 구름 로고 변환 (기존 로봇 로직과 간섭 없도록 1번 구역 내부에 독립 배치)
+    cloud_logo_base64 = ""
+    if os.path.exists("oracle_cloud_logo.png"):
+        with open("oracle_cloud_logo.png", "rb") as img_file:
+            cloud_logo_base64 = base64.b64encode(img_file.read()).decode()
+            
+    if cloud_logo_base64:
+        logo_src = f"data:image/png;base64,{cloud_logo_base64}"
     else:
-        status_html = f"""
-        <div class='status-box-dark' style='{status_box_style}'>
-            <div style='display:flex; align-items:center; opacity:0.35; filter:grayscale(100%);'>
-                <span style='font-size:14px; margin-right:2px;'>🟢</span><span style='font-size:13.5px; font-weight:500; color:#bbbbbb; letter-spacing:-0.5px;'>실시간 연동</span>
-            </div>
-            {divider_html}
-            <div style='display:flex; align-items:center;'>
-                <span style='font-size:14px; margin-right:2px;'>🔴</span><span style='font-size:13.5px; font-weight:700; color:#ff5252; letter-spacing:-0.5px;'>백업 데이터</span>
-            </div>
+        logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
+
+    short_p = "<span style='font-size: 10px; vertical-align: 1px; color: #111111; opacity: 0.3; margin: 0 4px;'>|</span>"
+    
+    # 블랙 박스
+    status_box_style = "background-color: #1f293a; padding: 4px 12px 4px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 0px;"
+    off_light_style = "filter: grayscale(100%); opacity: 0.35; font-size:12px; margin-right:5px;"
+    inactive_text_color = "#555555"
+
+    if is_oracle_online:
+        status_indicator = f"<div style='{status_box_style}'><div style='display:flex; align-items:center;'><span style='font-size:12px; margin-right:5px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#00c853; letter-spacing:-0.5px;'>LIVE SYNC</span></div><div style='display:flex; align-items:center;'><span style='{off_light_style}'>🔴</span><span style='font-size:13.5px; font-weight:400; color:{inactive_text_color}; letter-spacing:-0.5px;'>OFF LINE</span></div></div>"
+    else:
+        status_indicator = f"<div style='{status_box_style}'><div style='display:flex; align-items:center;'><span style='{off_light_style}'>🟢</span><span style='font-size:13.5px; font-weight:400; color:{inactive_text_color}; letter-spacing:-0.5px;'>LIVE SYNC</span></div><div style='display:flex; align-items:center;'><span style='font-size:12px; margin-right:5px;'>🔴</span><span style='font-size:13.5px; font-weight:400; color:#ff5252; letter-spacing:-0.5px;'>OFF LINE</span></div></div>"
+
+# ⚠️ HTML 태그 앞 공백 제거 유지
+    status_html = f"""
+<div style='border: 1px solid #dddddd; border-radius: 15px; padding: 15px 15px 5px 15px; background-color: #ffffff; margin-bottom: 2px;'>
+    <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;'>
+        <div style='text-align:center;'>
+            <img src="{logo_src}" width="90">
         </div>
-        {powered_by_html}
-        <hr style='margin: 4px 0 8px 0; border: 0; border-top: 1px solid #444444; opacity: 0.5;'>
-        """
+        {status_indicator}
+    </div>
+    <div style='text-align:center; margin-bottom: 4px;'>
+        <div style='font-size:13.5px; font-weight:400; color:#333;'>오라클 서버에서 실시간 수집/전송</div>
+    </div>
+    <hr style='margin: 4px 0; border: 0; border-top: 1px solid #eeeeee;'>
+    <div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
+        <div style='font-size:12.5px; font-weight:400; color:#888;'>DATA : <span style='font-weight:700; color:#444;'>KIS</span>{short_p}<span style='font-weight:700; color:#444;'>UPbit</span>{short_p}<span style='font-weight:700; color:#444;'>Yahoo Finance</span></div>
+    </div>
+</div>
+"""
     st.markdown(status_html, unsafe_allow_html=True)
 
     # 2. 💡 백그라운드 업데이트 트리거 (기존 유지)
@@ -2069,6 +2072,5 @@ elif st.session_state.current_view == '일반계좌':
                     h3.append(row)
                 h3.append("</table>")
                 st.markdown("".join(h3), unsafe_allow_html=True)
-
 
 
