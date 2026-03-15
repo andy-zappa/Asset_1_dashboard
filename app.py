@@ -510,7 +510,18 @@ with st.sidebar:
     </script>
     """, height=0)
 
-    # 3. 💡 메뉴 선택 라디오 (기존 유지)
+    # 3. 💡 메뉴 선택 라디오 (유령 공간 압착 및 강제 견인)
+    st.markdown("""
+    <style>
+    /* 숨겨진 컴포넌트들이 차지하는 투명한 여백을 원천 차단하고 라디오 메뉴를 위로 강력하게 끌어올림 */
+    div.element-container:has(div[role="radiogroup"]) {
+        margin-top: -55px !important; 
+        position: relative;
+        z-index: 50;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "퀀트매매"]
     def format_menu(option):
         return "AI 퀀트매매" if option == "퀀트매매" else option
@@ -557,45 +568,53 @@ with st.sidebar:
     </style>
     """, unsafe_allow_html=True)
 
-    # 7. 💡 [양쪽 정렬] Updated(좌) / 날짜·시간(우) 정밀 배치
-    comma = f"<span style='font-size: 12.0px;'>,</span>"
-    bracket_l = f"<span style='font-size: 12.0px;'>(</span>"
-    bracket_r = f"<span style='font-size: 12.0px;'>)</span>"
-    day_styled = f"<span style='font-size: 12.0px;'>{day_str}</span>"
+    # 7 & 8. 💡 [텍스트 우측 정렬] UPDATE 글자를 좌측으로 밀어 초침과 끝선 맞추기
+    
+    # [1. 시간 계산]
+    import pytz
+    now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
+    d_str = now_seoul.strftime("%y/%m/%d")
+    t_str = now_seoul.strftime("%H:%M:%S")
+    days_kr = ["월", "화", "수", "목", "금", "토", "일"]
+    dw_str = days_kr[now_seoul.weekday()]
 
-    now_str_split = f"""
-        <div id='unified-update-btn' style='display: flex; justify-content: space-between; align-items: center; width: 100%; color: #111111; font-weight: 500; cursor: pointer; transition: color 0.2s ease; padding: 0 4px;'>
-            <span style='font-size: 12.5px;'>🔄 Updated</span>
-            <span style='font-size: 12.5px;'>[ {date_part_short}{bracket_l}{day_styled}{bracket_r}{comma} {time_part} ]</span>
-        </div>
-    """
+    # [2. 이미지 로드]
+    try:
+        r_b64 = get_image_base64("robot.png")
+        r_src = f"data:image/png;base64,{r_b64}" if r_b64 else ""
+    except:
+        r_src = ""
 
-    st.markdown(f"""
-        <div style='margin-top: 5px; margin-bottom: 0px; position: relative; z-index: 10;'>
-            {now_str_split}
-        </div>
-    """, unsafe_allow_html=True)
+    # [3. 화면 출력] 
+    st.sidebar.markdown(f"""
+<div style='margin-top: 5px;'>
+<div style='display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; margin-bottom: 0px;'>
+<img src='{r_src}' style='width: 63px; display: block; margin-bottom: 0px; margin-left: 2px;'>
 
+<div id='unified-update-btn' style='text-align: right; font-family: sans-serif; padding-bottom: 0px; margin-bottom: 2px; cursor: pointer;' title='클릭하여 데이터 최신화'>
+<div style='font-size: 11px; color: #111111; font-weight: 400; letter-spacing: 0.5px; margin-bottom: 2px; position: relative; top: 2px; padding-right: 7px;'>🔄 UPDATE</div>
+<div style='font-size: 11px; font-weight: 400; color: #111111; letter-spacing: 0.1px;'>[ {d_str}({dw_str}), {t_str} ]</div>
+</div>
+</div>
 
-    # 8. 🌎 총 자산 통합 카드
-    st.markdown(f"""
-    <div id='card-total' class='sidebar-card sidebar-card-dark'>
-        <div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 전체 운용자산 (Total AUM)</div>
-        <div style='text-align: right;'>
-            <div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
-            <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:600;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
-        </div>
-        <div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed #3a3a3a;'>
-            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
-                <span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
-                <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
-            </div>
-            <div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
-                <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+<div id='card-total' class='sidebar-card sidebar-card-dark' style='margin-top: 0px;'>
+<div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 전체 운용자산 (AUM)</div>
+<div style='text-align: right;'>
+<div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
+<div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:600;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
+</div>
+<div style='margin-top: 10px; padding-top: 10px; border-top: 1px dashed #3a3a3a;'>
+<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
+<span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
+<span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
+</div>
+<div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
+<div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
+</div>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
     
     # 9. ⏳ 절세계좌 카드
     st.markdown(f"""
@@ -637,27 +656,23 @@ with st.sidebar:
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
-    # 12. 🤖 AI 퀀트매매 카드 및 Admin 버튼
-    quant_card_html = f"""
-    <div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding-left: 27px; gap:6px; height: 80px; margin-bottom: 5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px;'>
-        <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-        <div style='display:flex; flex-direction:column; align-items:flex-end; align-self:flex-end; margin-bottom:6px; line-height:1.0;'>
-            <div style='font-size:20px; font-weight:600; color:#111111; letter-spacing:-1.2px; margin-bottom:5px; text-align:right; width:100%; white-space:nowrap;'>Zappa Quant</div>
-            <div style='font-size:11.5px; color:#555; font-style:italic; font-weight:400; letter-spacing:0px; text-align:right; width:100%; white-space:nowrap;'>Built & Algo by Andy</div>
-        </div>
-    </div>
-    """
-    st.markdown(quant_card_html, unsafe_allow_html=True)
-    
-    st.markdown("""
-        <style>
-        div.element-container:has(button[key="admin_lock_btn"]) { margin-top: -12px !important; }
-        button[key="admin_lock_btn"] { background: transparent !important; border: none !important; box-shadow: none !important; padding-left: 10px !important; justify-content: flex-start !important; }
-        button[key="admin_lock_btn"] p { color: #FFD700 !important; font-size: 14.5px !important; font-weight: 900 !important; }
-        </style>
-    """, unsafe_allow_html=True)
+    import textwrap
 
-    if st.button("🔒\uFE0F Admin", key="admin_lock_btn"):
+    # 12. 🤖 AI 퀀트매매 카드 및 Admin 버튼 (Hover 기능 + 1px 상승 + 진한 SINCE)
+    # 💡 하단 2줄만 1px 상승(margin-bottom: 1px), SINCE 색상(#777), Hover 효과 추가
+    quant_card_html = f"<div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding-left:16px; gap:8px; height:85px; margin-bottom:5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; transition: background-color 0.2s;'><img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'><div style='display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; height:54px; padding:0;'><div style='font-size:20px; font-weight:800; color:#111111; letter-spacing:-1.2px; line-height:1.0; text-align:right; white-space:nowrap; margin-top:2px;'>Zappa Quant</div><div style='display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; margin-bottom:1px;'><div style='font-size:9.5px; color:#444; font-weight:700; letter-spacing:1px; text-align:right; white-space:nowrap; text-transform:uppercase;'>Architect & UI by Andy</div><div style='font-size:8px; color:#777; font-weight:400; letter-spacing:2px; text-align:right; white-space:nowrap; margin-top:1px;'>SINCE 2026</div></div></div></div>"
+    
+    st.sidebar.markdown(quant_card_html, unsafe_allow_html=True)
+    
+    # 💡 Hover 효과 및 Admin 버튼 스타일 통합
+    st.sidebar.markdown("""<style>
+        #card-quant:hover { background-color: #f0f2f6 !important; cursor: pointer; }
+        div.element-container:has(button[key="admin_final_btn"]) { margin-top: -12px !important; }
+        button[key="admin_final_btn"] { background: transparent !important; border: none !important; box-shadow: none !important; padding-left: 10px !important; justify-content: flex-start !important; }
+        button[key="admin_final_btn"] p { color: #FFD700 !important; font-size: 14.5px !important; font-weight: 900 !important; }
+    </style>""", unsafe_allow_html=True)
+
+    if st.sidebar.button("🔒\uFE0F Admin", key="admin_final_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
         
@@ -665,60 +680,74 @@ with st.sidebar:
 # 🔒 [Zappa Admin] 통합 자산 관리 패널 (박스 제거 & 디자인 완결판)
 # =========================================================
 if st.session_state.get('show_admin_page', False):
+    # 1. 디자인 스타일 (1px 정밀 조정 및 모든 테두리 제거)
     st.markdown("""
         <style>
-        /* 기본 버튼 스타일 */
-        div.stButton > button[kind="primary"] {
-            background-color: #0088ff !important;
-            color: white !important;
-            border: none !important;
-            font-weight: bold !important;
-            height: 2.8rem !important;
-        }
-        /* 💡 Admin 비밀번호 Expander 커스텀 (좌측과 수평 라인 완벽 일치) */
-        div[data-testid="stExpander"] {
+        /* [1] 모든 종류의 테두리, 그림자, 빨간색 선 완전 제거 */
+        div[data-testid="stExpander"], 
+        div.stAlert, 
+        div[data-testid="stNotification"],
+        div[data-testid="stVerticalBlock"] > div {
             border: none !important;
             box-shadow: none !important;
+            outline: none !important;
             background: transparent !important;
-            margin-top: -11px !important; /* 좌측 로그인 텍스트 높이와 정확히 맞춤 */
         }
-        div[data-testid="stExpander"] > details { border: none !important; padding: 0 !important; }
-        div[data-testid="stExpander"] summary {
-            padding: 0 !important;
-            background: transparent !important;
-            margin-bottom: 5px !important;
+
+        /* [2] 관리자 비밀번호 변경 내부의 선 제거 */
+        div[data-testid="stExpander"] details { border: none !important; }
+        div[data-testid="stExpander"] summary { border: none !important; outline: none !important; }
+        
+        /* [3] 메인 타이틀: 24px, 굵기 700 */
+        .admin-main-header {
+            font-size: 24px !important;
+            font-weight: 700 !important;
+            color: #111;
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+            line-height: 1;
+        }
+
+        /* [4] 관리자 로그인 라벨 스타일 */
+        .login-label {
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            color: #222 !important;
+            display: flex;
+            align-items: center;
+            height: 32px;
+            margin: 0 !important;
+        }
+
+        /* [5] 비밀번호 변경 Expander - 1px 위로 정밀 이동 (기존 -5px -> -6px) */
+        div[data-testid="stExpander"] {
+            margin-top: -6px !important; 
         }
         div[data-testid="stExpander"] summary p {
-            font-size: 18px !important; /* 요청하신 18px 적용 */
+            font-size: 18px !important;
             font-weight: 700 !important;
             color: #222 !important;
+            margin: 0 !important;
         }
-        /* 입력창 높이 조정 */
-        div[data-testid="stTextInput"] > div > div > input {
-            height: 42px !important;
-        }
-        /* 타이틀 스타일 정의 */
-        .admin-section-title {
-            font-size: 18px !important; /* 요청하신 18px 적용 */
-            font-weight: 700 !important;
-            color: #111 !important;
-            margin-bottom: 12px !important;
-            margin-top: 10px !important;
-        }
-        .login-label {
-            font-size: 18px !important; /* 요청하신 18px 적용 */
-            font-weight: 700 !important;
-            color: #222 !important;
-            margin-bottom: 8px !important;
-        }
+
+        /* [6] 버튼 및 입력창 스타일 */
+        div.stButton > button[kind="primary"] { background-color: #0088ff !important; color: white !important; font-weight: bold !important; height: 2.8rem !important; border: none !important; }
+        div[data-testid="stTextInput"] > div > div > input { height: 42px !important; border: 1px solid #eeeeee !important; }
         </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🔒 Andy-Zappa Admin")
-    if st.button("⬅️ Back to Dashboard"):
+    # 2. 타이틀 (노란 자물쇠 + 24px 세련된 굵기)
+    st.markdown("<div class='admin-main-header'>🔒\uFE0F Andy-Zappa Admin</div>", unsafe_allow_html=True)
+    
+    if st.button("⬅️ Back to Dashboard", key="final_align_btn"):
         st.session_state['show_admin_page'] = False
         st.rerun()
+        
     st.markdown("---")
+
+    # 💡 이 아래부터 Andy님의 기존 데이터 로직을 유지하세요!
+
+    # 💡 이 아래부터 Andy님의 기존 데이터 로직을 유지하세요!
    
     try:
         res = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
