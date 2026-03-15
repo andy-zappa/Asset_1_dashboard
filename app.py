@@ -242,25 +242,32 @@ def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
     ts = int(time.time())
+    
     try:
         r_p = requests.get(f"http://158.179.172.40:8000/tax_advantaged?t={ts}", timeout=5)
         r_g = requests.get(f"http://158.179.172.40:8000/taxable?t={ts}", timeout=5)
         
         if r_p.status_code == 200:
-            p_data = r_p.json()
-            is_online = True
-            with open('data_tax-advantaged.json', 'w', encoding='utf-8') as f:
-                json.dump(p_data, f, ensure_ascii=False, indent=4)
+            temp_p = r_p.json()
+            # 💡 [핵심 패치] "error"가 없을 때만 데이터를 저장합니다! (백업 파괴 방지)
+            if isinstance(temp_p, dict) and "error" not in temp_p:
+                p_data = temp_p
+                is_online = True
+                with open('data_tax_advantaged.json', 'w', encoding='utf-8') as f:
+                    json.dump(p_data, f, ensure_ascii=False, indent=4)
                 
         if r_g.status_code == 200:
-            g_data = r_g.json()
-            with open('data_taxable.json', 'w', encoding='utf-8') as f:
-                json.dump(g_data, f, ensure_ascii=False, indent=4)
+            temp_g = r_g.json()
+            if isinstance(temp_g, dict) and "error" not in temp_g:
+                g_data = temp_g
+                with open('data_taxable.json', 'w', encoding='utf-8') as f:
+                    json.dump(g_data, f, ensure_ascii=False, indent=4)
     except: pass
     
-    if not is_online or not p_data:
+    # 💡 위에서 정상 데이터를 못 받았을 경우에만 로컬 백업을 읽어옵니다.
+    if not p_data:
         try:
-            with open('data_tax-advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
+            with open('data_tax_advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
         except: pass
             
     if not g_data:
@@ -429,7 +436,7 @@ with st.sidebar:
             with open(image_path, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
         return ""
-   
+    
     robot_b64 = get_image_base64("robot.png")
     if robot_b64:
         robot_img_src = f"data:image/png;base64,{robot_b64}"
@@ -453,24 +460,23 @@ with st.sidebar:
     else:
         status_indicator = f"<div style='{status_box_style}'><div style='display:flex; align-items:center;'><span style='{off_light_style}'>🟢</span><span style='font-size:13.5px; font-weight:400; color:{inactive_text_color}; letter-spacing:-0.5px;'>LIVE SYNC</span></div><div style='display:flex; align-items:center;'><span style='font-size:12px; margin-right:5px;'>🔴</span><span style='font-size:13.5px; font-weight:400; color:#ff5252; letter-spacing:-0.5px;'>OFF LINE</span></div></div>"
 
-# ⚠️ HTML 태그 앞 공백 제거 유지
     status_html = f"""
-<div style='border: 1px solid #dddddd; border-radius: 15px; padding: 15px 15px 5px 15px; background-color: #ffffff; margin-bottom: 2px;'>
-    <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;'>
-        <div style='text-align:center;'>
-            <img src="{logo_src}" width="90">
+    <div style='border: 1px solid #dddddd; border-radius: 15px; padding: 15px 15px 5px 15px; background-color: #ffffff; margin-bottom: 2px;'>
+        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;'>
+            <div style='text-align:center;'>
+                <img src="{logo_src}" width="90">
+            </div>
+            {status_indicator}
         </div>
-        {status_indicator}
+        <div style='text-align:center; margin-bottom: 4px;'>
+            <div style='font-size:13.5px; font-weight:400; color:#333;'>오라클 서버에서 실시간 수집/전송</div>
+        </div>
+        <hr style='margin: 4px 0; border: 0; border-top: 1px solid #eeeeee;'>
+        <div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
+            <div style='font-size:12.5px; font-weight:400; color:#888;'>DATA : <span style='font-weight:700; color:#444;'>KIS</span>{short_p}<span style='font-weight:700; color:#444;'>UPbit</span>{short_p}<span style='font-weight:700; color:#444;'>Yahoo Finance</span></div>
+        </div>
     </div>
-    <div style='text-align:center; margin-bottom: 4px;'>
-        <div style='font-size:13.5px; font-weight:400; color:#333;'>오라클 서버에서 실시간 수집/전송</div>
-    </div>
-    <hr style='margin: 4px 0; border: 0; border-top: 1px solid #eeeeee;'>
-    <div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
-        <div style='font-size:12.5px; font-weight:400; color:#888;'>DATA : <span style='font-weight:700; color:#444;'>KIS</span>{short_p}<span style='font-weight:700; color:#444;'>UPbit</span>{short_p}<span style='font-weight:700; color:#444;'>Yahoo Finance</span></div>
-    </div>
-</div>
-"""
+    """
     st.markdown(status_html, unsafe_allow_html=True)
 
     # 2. 💡 백그라운드 업데이트 트리거 (기존 유지)
