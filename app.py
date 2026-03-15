@@ -430,10 +430,14 @@ import os
 import streamlit as st
 
 with st.sidebar:
-    # 0. 💡 [로컬 이미지 연동] GitHub에 올리신 'robot.png' 처리
-    def get_image_base64(image_path):
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as img_file:
+    # 0. 💡 [로컬 이미지 연동] 절대 경로를 사용하여 무조건 파일 찾아내기
+    def get_image_base64(image_name):
+        # 현재 실행 중인 andy_test.py의 폴더 위치를 강제로 찾아냄
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        abs_path = os.path.join(base_dir, image_name)
+        
+        if os.path.exists(abs_path):
+            with open(abs_path, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode()
         return ""
     
