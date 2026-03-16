@@ -763,6 +763,7 @@ if st.session_state.get('show_admin_page', False):
     st.markdown("---")
 
     # 💡 이 아래부터 Andy님의 기존 데이터 로직을 유지하세요!
+    
     try:
         res = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
         cfg = res.json() if res.status_code == 200 else {}
@@ -828,7 +829,7 @@ if st.session_state.get('show_admin_page', False):
         df_sum = pd.DataFrame(sum_data)
         
         sum_cfg = {
-            "현금성자산(예수금)": st.column_config.NumberColumn(f"💵 현금성자산 ({cash_unit})", format="%,.2f" if is_usa else "%,.0f", step=0.01 if is_usa else 1.0),
+            "현금성자산(예수금)": st.column_config.NumberColumn(f"💵 현금성자산 ({cash_unit})", format="%,.4f" if is_usa else "%,.0f", step=0.0001 if is_usa else 1.0),
             "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f", step=1.0)
         }
         
@@ -856,11 +857,8 @@ if st.session_state.get('show_admin_page', False):
                 "매입단가": st.column_config.NumberColumn("매입단가 (KRW)", format="%,.2f", step=0.01)
             }
         else:
-            # 💡 [버그 픽스 완료] 미국 주식 소수점 입력을 위해 step=0.0001 추가 적용!
-            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
-            if not is_usa:
-                df_items["보유수량"] = df_items["보유수량"].astype(int)
-            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
+            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0).astype(float)
+            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0).astype(float)
             
             p_format = "%,.4f" if is_usa else "%,.0f"
             p_step = 0.0001 if is_usa else 1.0
@@ -893,7 +891,7 @@ if st.session_state.get('show_admin_page', False):
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 💡 [레이아웃 수정] 메시지가 팝업창 가로 전체를 차지하도록 통신 로직을 컬럼 밖으로 분리
+        # 💡 [복구 완료] Andy님의 오리지널 팝업창(Dialog) 코드 원상 복구!
         @st.dialog("🚀 실시간 데이터 배포 최종 확인")
         def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
             st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
@@ -904,7 +902,6 @@ if st.session_state.get('show_admin_page', False):
             """)
             st.write("")
             
-            # 1. 버튼만 나란히 배치합니다.
             c1, c2 = st.columns(2)
             with c1:
                 confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
@@ -912,12 +909,12 @@ if st.session_state.get('show_admin_page', False):
                 if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
                     st.rerun()
             
-            # 2. 버튼이 눌렸을 때의 동작과 메시지 출력은 컬럼 밖(전체 너비)에서 실행합니다.
             if confirm_btn:
                 try:
                     res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
                     if res.status_code == 200:
                         st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
+                        st.cache_data.clear() # 💡 저장 즉시 대시보드 캐시 강제 삭제
                         time.sleep(2)
                         st.rerun()
                     else:
@@ -925,17 +922,26 @@ if st.session_state.get('show_admin_page', False):
                 except Exception as e: 
                     st.error(f"❌ 연결 오류:\n{e}")
                     
-        # 💡 빈칸(NaN) 에러를 방지하는 배포 로직
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             save_df = edited_df.copy()
+            
             if sel_key == "CRYPTO":
                 save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
             else:
                 save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
                 
-            # 표 안의 빈칸(NaN)을 빈 문자열("")로 청소해서 JSON 에러 방지
-            save_df = save_df.fillna("")
-            cfg[sel_key] = save_df.to_dict('records')
+            # 💡 [핵심 데이터 정제] Numpy float64 에러를 막기 위해 순수 Python 자료형으로 안전하게 변환
+            clean_records = []
+            for _, row in save_df.iterrows():
+                rec = {}
+                for k, v in row.items():
+                    if pd.isna(v): rec[k] = ""
+                    elif isinstance(v, (int, np.integer)): rec[k] = int(v)
+                    elif isinstance(v, (float, np.floating)): rec[k] = float(v)
+                    else: rec[k] = str(v)
+                clean_records.append(rec)
+                
+            cfg[sel_key] = clean_records
             cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
             cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
             
@@ -950,7 +956,6 @@ if st.session_state.get('show_admin_page', False):
                         r['매입일자'] = ""
                 cfg[f"{sel_key}_SAFE"] = safe_records
                 
-            # 확인 팝업창 띄우기
             confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
             
     elif admin_pw != "":
