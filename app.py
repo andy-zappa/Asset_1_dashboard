@@ -17,14 +17,14 @@ warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
 # =========================================================
-# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
+# [ Part 1 ] 공통 설정 및 오리지널 CSS 복원 (콩쥐가 위 / 로봇 아래 위치)
 # =========================================================
 css = """
 <style>
 [data-testid="stStatusWidget"] { display: none !important; }
 html, body, .stApp, .main, [data-testid="stAppViewContainer"], .block-container { scroll-behavior: smooth !important; }
 [data-testid="stSidebarUserContent"] { padding-top: 0.1rem !important; }
-section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -45px !important; gap: 0 !important; }
+section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; margin-top: -110px !important; gap: 0 !important; }
 .sidebar-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; background-color: #ffffff; border-radius: 12px; padding: 12px 14px; border: 1px solid #eaeaea; margin-bottom: 10px; }
 .sidebar-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; border-color: #ccc !important; }
 .sidebar-card-dark { background-color: #1a1a1a !important; color: #ffffff !important; border: none !important; }
@@ -63,18 +63,18 @@ div[data-baseweb="select"] > div { padding: 0px 10px !important; border-radius: 
 div[data-baseweb="select"] span { font-size: 13.5px !important; line-height: 34px !important; }
 div[data-testid="stSelectbox"] label { display: none !important; }
 
-/* 🎯 플로팅 배너 CSS 수정 */
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu), div[data-testid="column"]:has(span#zappa-floating-menu) {
+/* 🎯 플로팅 배너 CSS 수정 (원본 위치 복구 및 겹침 방지 유지) */
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) {
     position: fixed !important; top: 15px !important; right: 20px !important; bottom: auto !important; left: auto !important;
     transform: none !important; width: max-content !important; min-width: 0 !important;
     background: rgba(255, 255, 255, 0.95) !important; padding: 6px 12px !important; border-radius: 8px !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important; border: 1px solid #e5e7eb !important; z-index: 999999 !important;
     display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important;
-    gap: 0px !important; backdrop-filter: blur(4px);
+    gap: 4px !important; backdrop-filter: blur(4px);
 }
 div.element-container:has(span#zappa-floating-menu) { display: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
-div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 3px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 24px !important; min-height: 24px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) > div[data-testid="column"] { min-width: 0 !important; width: auto !important; padding: 0 !important; margin: 0 !important; flex: 0 0 auto !important; border-right: none !important; }
+div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button { margin: 0 !important; padding: 0 6px !important; width: auto !important; background: transparent !important; border: none !important; border-radius: 0 !important; height: 26px !important; min-height: 26px !important; color: #9ca3af !important; font-size: 13.5px !important; font-weight: normal !important; white-space: nowrap !important; box-shadow: none !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button p { color: inherit !important; font-size: 13.5px !important; font-weight: inherit !important; margin: 0 !important; padding: 0 !important; line-height: 1 !important; text-align: center !important; white-space: nowrap !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button:hover { color: #111111 !important; background-color: #e5e7eb !important; border-radius: 4px !important; }
 div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="primary"] { background: transparent !important; border: none !important; color: #111111 !important; font-weight: bold !important; }
@@ -82,6 +82,7 @@ div[data-testid="stHorizontalBlock"]:has(span#zappa-floating-menu) button[kind="
 """
 st.markdown(css, unsafe_allow_html=True)
 
+# 💡 [패치 1] 자바스크립트로 메뉴 닫힘 현상 완벽 방어 (Streamlit 새로고침 간섭 무력화)
 components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -111,10 +112,44 @@ function bindSidebarClicks() {
     bindClick('card-general', '일반계좌');
     bindClick('card-crypto', '암호화폐');
     bindClick('card-quant', '퀀트매매');
-    // 💡 [Zappa Arbi 패치 1] 자바스크립트 클릭 이벤트 연동
     bindClick('card-arbi', 'Zappa Arbi');
+
+    // 👇👇👇 [Zappa Expander 강력한 상태 유지 로직] 👇👇👇
+    const ids = ['zappa-exp-total', 'zappa-exp-tax', 'zappa-exp-gen', 'zappa-exp-cryp'];
+    ids.forEach(id => {
+        const el = parentDoc.getElementById(id);
+        if (el) {
+            // 1. 최초 이벤트 바인딩
+            if (!el.hasAttribute('data-state-binded')) {
+                el.setAttribute('data-state-binded', 'true');
+                
+                // 세션값이 없으면 파이썬이 넘겨준 기본값으로 세팅
+                if (!sessionStorage.getItem(id)) {
+                    const isDefault = el.getAttribute('data-default-open') === 'true';
+                    sessionStorage.setItem(id, isDefault ? 'open' : 'closed');
+                }
+                
+                // 유저가 '>' 버튼을 클릭했을 때의 '진짜' 상태 기록
+                const summary = el.querySelector('summary');
+                if (summary) {
+                    summary.addEventListener('click', () => {
+                        const nextState = el.hasAttribute('open') ? 'closed' : 'open';
+                        sessionStorage.setItem(id, nextState);
+                    });
+                }
+            }
+            
+            // 2. Streamlit이 화면을 갱신해서 메뉴를 멋대로 닫아버려도 강제로 다시 엶!
+            const targetState = sessionStorage.getItem(id);
+            if (targetState === 'open' && !el.hasAttribute('open')) {
+                el.setAttribute('open', '');
+            } else if (targetState === 'closed' && el.hasAttribute('open')) {
+                el.removeAttribute('open');
+            }
+        }
+    });
 }
-setInterval(bindSidebarClicks, 1000);
+setInterval(bindSidebarClicks, 300);
 </script>
 """, height=0)
 
@@ -160,6 +195,12 @@ if 'gen_show_change_rate' not in st.session_state: st.session_state.gen_show_cha
 if 'current_view' not in st.session_state: st.session_state.current_view = '대시보드'
 if 'usa_show_krw' not in st.session_state: st.session_state.usa_show_krw = True
 if 'usa_show_usd' not in st.session_state: st.session_state.usa_show_usd = False
+# 👇👇👇 [여기서부터 새로 추가된 부분] 👇👇👇
+if 'open_aum' not in st.session_state: st.session_state.open_aum = False
+if 'open_tax' not in st.session_state: st.session_state.open_tax = False
+if 'open_gen' not in st.session_state: st.session_state.open_gen = False
+if 'open_crypto' not in st.session_state: st.session_state.open_crypto = False
+if 'last_sync_time' not in st.session_state: st.session_state.last_sync_time = "업데이트 필요"
 
 def toggle_usa_krw():
     st.session_state.usa_show_krw = not st.session_state.usa_show_krw
@@ -208,7 +249,9 @@ def fmt_p(v):
     if v == '-' or v is None: return '-'
     try:
         val = float(v)
-        return f"▲{val:.2f}%" if val > 0 else (f"▼{abs(val):.2f}%" if val < 0 else "0.00%")
+        # 💡 삼각형 크기 축소 (0.7em) 및 위치 보정
+        tri = "<span style='font-size:0.7em; vertical-align:1px;'>▲</span>" if val > 0 else "<span style='font-size:0.7em; vertical-align:1px;'>▼</span>"
+        return f"{tri} {abs(val):.2f}%" if val != 0 else "0.00%"
     except: return str(v)
 
 def fmt_p1(v):
@@ -216,8 +259,10 @@ def fmt_p1(v):
     try:
         val = float(v)
         abs_val = abs(val)
-        if abs_val < 1.0 and abs_val != 0.0: return f"▲{val:.2f}%" if val > 0 else f"▼{abs_val:.2f}%"
-        else: return f"▲{val:.1f}%" if val > 0 else (f"▼{abs_val:.1f}%" if val < 0 else "0.0%")
+        # 💡 삼각형 크기 축소 (0.7em) 및 위치 보정
+        tri = "<span style='font-size:0.7em; vertical-align:1px;'>▲</span>" if val > 0 else "<span style='font-size:0.7em; vertical-align:1px;'>▼</span>"
+        if abs_val < 1.0 and abs_val != 0.0: return f"{tri} {abs_val:.2f}%"
+        else: return f"{tri} {abs_val:.1f}%" if val != 0 else "0.0%"
     except: return str(v)
 
 def col(v):
@@ -227,7 +272,7 @@ def col(v):
 def short_name(nm):
     return str(nm)
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=None)
 def fetch_hybrid_data():
     p_data, g_data = {}, {}
     is_online = False
@@ -293,7 +338,7 @@ def normalize_insight(raw_data):
 
 tot = normalize_insight(data)
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=None)
 def get_crypto_data():
     ts = int(time.time())
     url = f"http://158.179.172.40:8000/crypto?t={ts}"
@@ -420,10 +465,18 @@ with st.sidebar:
     else:
         robot_img_src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
-    logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
+    # 💡 [패치 추가] sealogo1, sealogo2 이미지 Base64 변환
+    sea1_b64 = get_image_base64("sealogo1.gif")
+    sea2_b64 = get_image_base64("sealogo2.gif")
+    sea_src1 = f"data:image/gif;base64,{sea1_b64}" if sea1_b64 else ""
+    sea_src2 = f"data:image/gif;base64,{sea2_b64}" if sea2_b64 else ""
 
+    # 💡 [Oracle 시스템 헤더 정밀 패치] 
+    # 팩트 반영: CHUNCHEON / LINUX 9.7
+    # 디자인: 로고 상단 밀착(-20px), 하단 문구와 이격(+30px) 확보
+    logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
     short_p = "<span style='font-size: 10px; vertical-align: 1px; color: #111111; opacity: 0.3; margin: 0 4px;'>|</span>"
-   
+    
     status_box_style = "background-color: #1f293a; padding: 4px 12px 4px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 0px;"
     off_light_style = "filter: grayscale(100%); opacity: 0.35; font-size:12px; margin-right:5px;"
     inactive_text_color = "#555555"
@@ -433,29 +486,69 @@ with st.sidebar:
     else:
         status_indicator = f"<div style='{status_box_style}'><div style='display:flex; align-items:center;'><span style='{off_light_style}'>🟢</span><span style='font-size:13.5px; font-weight:400; color:{inactive_text_color}; letter-spacing:-0.5px;'>LIVE SYNC</span></div><div style='display:flex; align-items:center;'><span style='font-size:12px; margin-right:5px;'>🔴</span><span style='font-size:13.5px; font-weight:400; color:#ff5252; letter-spacing:-0.5px;'>OFF LINE</span></div></div>"
 
+    # 💡 [Oracle 시스템 헤더 최종 패치 - 하단 영역 바싹 밀착 버전] 
     status_html = f"""
-    <div style='border: 1px solid #dddddd; border-radius: 15px; padding: 15px 15px 5px 15px; background-color: #ffffff; margin-bottom: 2px;'>
-        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;'>
-            <div style='text-align:center;'>
-                <img src="{logo_src}" width="90">
-            </div>
-            {status_indicator}
-        </div>
-        <div style='text-align:center; margin-bottom: 4px;'>
-            <div style='font-size:13px; font-weight:400; color:#888;'>오라클 서버에서 실시간 DATA 집계</div>
-        </div>
-        <hr style='margin: 4px 0; border: 0; border-top: 1px solid #eeeeee;'>
-        <div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
-            <div style='font-size:12.5px; font-weight:700; color:#444;'>KIS</span>{short_p}<span style='font-weight:700; color:#444;'>UPbit</span>{short_p}<span style='font-weight:700; color:#444;'>Binance</span>{short_p}<span style='font-weight:700; color:#444;'>Y! Finance</span></div>
-        </div>
-    </div>
-    """
+<style>
+.seal-hover-box {{
+position: absolute;
+top: -64px; 
+left: 12px; 
+width: 75px; 
+height: 75px;
+z-index: 10;
+background-image: url('{sea_src1}');
+background-size: contain;
+background-repeat: no-repeat;
+background-position: center bottom;
+transition: background-image 0.2s ease-in-out;
+cursor: pointer;
+}}
+.seal-hover-box:hover {{
+background-image: url('{sea_src2}');
+}}
+</style>
+<div style='position: relative; margin-top: -15px;'>
+<div class='seal-hover-box'></div>
+<div style='border: 1px solid #dddddd; border-radius: 15px; padding: 15px 15px 8px 15px; background-color: #ffffff; margin-bottom: 2px; position: relative; z-index: 1;'>
+<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom: 3px;'>
+
+<div style='position: relative; width: 90px; margin-top: -22px;'>
+<img src="{logo_src}" width="95" style="display: block;">
+<div style='position: absolute; right: 0px; bottom: -28px; font-size: 8px; color: #aaa; font-weight: 500; letter-spacing: 0.5px; line-height: 1.3; text-align: right; white-space: nowrap;'>
+OCI CHUNCHEON<br>LINUX 9.7 GEN, 24GB
+</div>
+</div>
+{status_indicator}
+
+</div>
+<div style='text-align:center; margin-top: 6px; margin-bottom: 6px;'>
+<div style='font-size:13px; font-weight:400; color:#888;'>오라클 서버에서 실시간 DATA 집계</div>
+</div>
+<hr style='margin: 2px 0; border: 0; border-top: 1px solid #eeeeee;'>
+<div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
+<div style='font-size:12.5px; font-weight:700; color:#444;'>KIS{short_p}UPbit{short_p}Binance{short_p}Y! Finance</div>
+</div>
+</div>
+</div>
+"""
     st.markdown(status_html, unsafe_allow_html=True)
 
+    # 💡 [패치] 토스트 알림 및 진짜 시계 연동
     st.markdown("<div class='hidden-update-marker'></div>", unsafe_allow_html=True)
     if st.button("TRIGGER_UPDATE_BACKEND"):
+        st.toast("📡 오라클 서버에 접속 중입니다...", icon="⏳")
         fetch_hybrid_data.clear()
         get_crypto_data.clear()
+        p_tmp, g_tmp, is_ok = fetch_hybrid_data()
+        if is_ok:
+            # 성공 시에만 시계 갱신
+            import pytz
+            now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
+            dw_str = ["월", "화", "수", "목", "금", "토", "일"][now_seoul.weekday()]
+            st.session_state.last_sync_time = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
+            st.toast("✅ 데이터 동기화가 완료되었습니다!", icon="✨")
+        else:
+            st.toast("⚠️ 서버 연결 실패 (이전 데이터를 유지합니다)", icon="🚨")
         st.rerun()
 
     components.html("""
@@ -478,15 +571,7 @@ with st.sidebar:
     </script>
     """, height=0)
 
-    st.markdown("""
-    <style>
-    div.element-container:has(div[role="radiogroup"]) {
-        margin-top: -55px !important;
-        position: relative;
-        z-index: 50;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.markdown('<style>div.element-container:has(div[role="radiogroup"]) { margin-top: -55px !important; position: relative; z-index: 50; }</style>', unsafe_allow_html=True)
 
     # 💡 [패치 1] Zappa Arbi 라디오 메뉴 추가 완료
     menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "퀀트매매", "Zappa Arbi"]
@@ -496,7 +581,7 @@ with st.sidebar:
 
     c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
     c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-   
+    
     c_alts = 0
     if isinstance(crypto_data, dict):
         ta = safe_float(crypto_data.get('total_asset', 0))
@@ -515,7 +600,7 @@ with st.sidebar:
     c_tot_asset = safe_float(crypto_data.get('total_asset', 0)) if isinstance(crypto_data, dict) else 0
     c_tot_krw = safe_float(crypto_data.get('total_krw', 0)) if isinstance(crypto_data, dict) else 0
     c_tot_buy = safe_float(crypto_data.get('total_buy', 0)) if isinstance(crypto_data, dict) else 0
-   
+    
     c_eval_pure = c_tot_asset - c_tot_krw
     c_buy_pure = c_tot_buy - c_tot_krw
     c_prof_pure = c_eval_pure - c_buy_pure
@@ -526,7 +611,7 @@ with st.sidebar:
         cfg_data_side = res_cfg_side.json() if res_cfg_side.status_code == 200 else {}
     except:
         cfg_data_side = {}
-       
+        
     p_principal_tot = sum(safe_float(cfg_data_side.get(f"{k}_PRINCIPAL", 0)) for k in ['DC', 'IRP', 'PENSION', 'ISA'])
     p_rate_invested = (p_profit_all / p_principal_tot * 100) if p_principal_tot > 0 else 0
 
@@ -541,15 +626,11 @@ with st.sidebar:
     <style>
     div.element-container:has(.hidden-update-marker) { display: none !important; }
     div.element-container:has(.hidden-update-marker) + div.element-container { display: none !important; }
-    .sidebar-card { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, background-color 0.2s ease !important; cursor: pointer !important; }
-    .sidebar-card:hover { transform: translateY(-2px) !important; }
-    /* 기본 계좌 카드 3종 (절세/일반/암호화폐) - 연한 회색 유지 */
-    .sidebar-card:not(#card-total):not(#card-quant):not(#card-arbi):hover { background-color: #f0f2f6 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
     .spin-globe { display: inline-block; animation: spin 5s linear infinite; margin-right: 3px; font-size: 14px; }
     </style>
     """, unsafe_allow_html=True)
-   
+    
     import pytz
     now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
     d_str = now_seoul.strftime("%y/%m/%d")
@@ -557,101 +638,197 @@ with st.sidebar:
     days_kr = ["월", "화", "수", "목", "금", "토", "일"]
     dw_str = days_kr[now_seoul.weekday()]
 
+    # 💡 [자동 시간 기록] 첫 로딩 시 '업데이트 필요' 문구가 있다면 즉시 현재 시간으로 교체합니다.
+    if st.session_state.get('last_sync_time', '업데이트 필요') == '업데이트 필요':
+        st.session_state.last_sync_time = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
+
     try:
         r_b64 = get_image_base64("robot.png")
         r_src = f"data:image/png;base64,{r_b64}" if r_b64 else ""
     except:
         r_src = ""
 
+    # 💡 [로봇 영역 및 시간 정렬]
     st.sidebar.markdown(f"""
-<div style='margin-top: 5px;'>
-<div style='display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; margin-bottom: 0px;'>
-<img src='{r_src}' style='width: 63px; display: block; margin-bottom: 0px; margin-left: 2px;'>
+    <div style='margin-top: -10px;'>
+        <div style='display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; margin-bottom: 0px;'>
+            <img src='{r_src}' style='width: 63px; display: block; margin-bottom: 0px; margin-left: 2px;'>
+            <div id='unified-update-btn' style='text-align: right; font-family: sans-serif; padding-bottom: 0px; margin-bottom: 2px; cursor: pointer;' title='클릭하여 데이터 최신화'>
+                <div style='font-size: 11px; color: #111111; font-weight: 400; letter-spacing: 0.5px; margin-bottom: 2px; position: relative; top: 2px; padding-right: 7px;'>🔄 UPDATE</div>
+                <div style='font-size: 11px; font-weight: 400; color: #111111; letter-spacing: 0.1px; padding-right: 7px;'>{st.session_state.last_sync_time}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-<div id='unified-update-btn' style='text-align: right; font-family: sans-serif; padding-bottom: 0px; margin-bottom: 2px; cursor: pointer;' title='클릭하여 데이터 최신화'>
-<div style='font-size: 11px; color: #111111; font-weight: 400; letter-spacing: 0.5px; margin-bottom: 2px; position: relative; top: 2px; padding-right: 7px;'>🔄 UPDATE</div>
-<div style='font-size: 11px; font-weight: 400; color: #111111; letter-spacing: 0.1px;'>[ {d_str}({dw_str}), {t_str} ]</div>
-</div>
-</div>
+    # =========================================================
+    # 💡 [최종] 계좌 및 종목 수 자동 합산 로직
+    # =========================================================
+    # 1. 절세계좌 카운트
+    p_acc_cnt, p_item_cnt = 0, 0
+    if isinstance(data, dict):
+        for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+            if k in data and isinstance(data[k], dict):
+                p_acc_cnt += 1
+                for item in data[k].get('상세', []):
+                    nm = str(item.get('종목명', ''))
+                    if nm and nm not in ["[ 합  계 ]", "예수금", "현금성자산", "현금성자산(예수금)"] and "현금" not in nm:
+                        p_item_cnt += 1
 
-<div id='card-total' class='sidebar-card sidebar-card-dark' style='margin-top: 0px; padding-top: 10px; padding-bottom: 14px; margin-bottom: 8px;'>
-<div style='font-size:13px; font-weight:bold; color:#aaaaaa; margin-bottom:4px;'><span class='spin-globe'>🌎</span> 전체 운용자산 (AUM)</div>
+    # 2. 일반계좌 카운트
+    g_acc_cnt, g_item_cnt = 0, 0
+    if isinstance(g_data, dict):
+        for k in ['DOM1', 'DOM2', 'USA1', 'USA2']:
+            if k in g_data and isinstance(g_data[k], dict):
+                g_acc_cnt += 1
+                for item in g_data[k].get('상세', []):
+                    nm = str(item.get('종목명', ''))
+                    if nm and nm not in ["[ 합  계 ]", "예수금", "현금성자산", "현금성자산(예수금)", "외화예수금", "USD", "KRW"]:
+                        g_item_cnt += 1
+
+    # 3. 암호화폐 카운트
+    c_acc_cnt = 1 
+    c_item_cnt = 0
+    if isinstance(crypto_data, dict):
+        for c in crypto_data.get('coins', []):
+            if isinstance(c, dict) and c.get('ticker') != 'KRW':
+                c_item_cnt += 1
+
+    # 4. 전체 합산 (AUM용)
+    total_acc_cnt = p_acc_cnt + g_acc_cnt + c_acc_cnt
+    total_item_cnt = p_item_cnt + g_item_cnt + c_item_cnt
+
+    # =========================================================
+    # 💡 사이드바 메뉴 디자인 (CSS)
+    # =========================================================
+    st.markdown("""
+    <style>
+    .zappa-expander {
+        background-color: #ffffff; border-radius: 12px; border: 1px solid #eaeaea; 
+        margin-bottom: 8px; overflow: hidden; 
+        transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .zappa-expander:not(.zappa-expander-dark):hover { 
+        background-color: #E6F2FF !important; transform: translateY(-2px); 
+        box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; border-color: #ccc; 
+    }
+    .zappa-expander-dark { background-color: #1a1a1a !important; border: none !important; }
+    .zappa-expander-dark:hover { 
+        background-color: #1a1a1a !important; transform: translateY(-2px); 
+        box-shadow: 0 6px 12px rgba(255,255,255,0.08) !important; 
+    }
+    .zappa-summary {
+        padding: 12px 14px; font-size: 13px; font-weight: bold; color: #777;
+        cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;
+    }
+    .zappa-summary::-webkit-details-marker { display: none; } 
+    .zappa-summary::after {
+        content: '>'; font-family: monospace; font-weight: 900; font-size: 15px; color: #aaa;
+        transition: transform 0.2s ease; display: inline-block;
+    }
+    .zappa-expander[open] .zappa-summary::after { transform: rotate(90deg); }
+    .zappa-expander-dark .zappa-summary { color: #aaa; }
+    .zappa-expander-dark .zappa-summary::after { color: #666; }
+    .zappa-content { padding: 0px 14px 14px 14px; cursor: pointer; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 💡 현재 보고 있는 메뉴 자동 열기 설정
+    open_aum = "open" if st.session_state.current_view == '대시보드' else ""
+    open_tax = "open" if st.session_state.current_view == '절세계좌' else ""
+    open_gen = "open" if st.session_state.current_view == '일반계좌' else ""
+    open_cryp = "open" if st.session_state.current_view == '암호화폐' else ""
+
+    # 💡 [패치 2] 사이드바 카드 렌더링 (Python의 강제 open 개입을 완전히 배제하고 JS에 위임)
+    st.sidebar.markdown(f"""
+<details id='zappa-exp-total' class='zappa-expander zappa-expander-dark' data-default-open='{"true" if st.session_state.current_view == "대시보드" else "false"}' style='margin-top: -16px;'>
+<summary class='zappa-summary'>
+<span><span class='spin-globe'>🌎</span>&nbsp;총 운용자산<span style='font-size: 13px; font-weight: 500; color: #aaa; margin-left: 4px;'>( <b style='font-weight:700; color:#eee;'>{total_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#eee;'>{total_item_cnt}</b> 종목 )</span></span>
+</summary>
+<div id='card-total' class='zappa-content'>
 <div style='text-align: right;'>
-<div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
+<div style='font-size:24px; font-weight:600; letter-spacing:-0.5px; line-height: 1.1; color:#fff;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
 <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_profit)}' style='font-weight:600;'>{fmt(total_profit, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate)})</span></div>
 </div>
-<div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #333333;'>
+<div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
-<span style='font-size: 12px; color: #999; font-weight: 500;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
+<span style='font-size: 12px; color: #888; font-weight: 500;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
 <span style='font-size: 13.5px; font-weight: bold; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
 </div>
-<div style='width: 100%; height: 6px; background-color: #333; border-radius: 3px; overflow: hidden;'>
+<div style='width: 100%; height: 6px; background-color: #444; border-radius: 3px; overflow: hidden;'>
 <div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
 </div>
 </div>
 </div>
+</details>
+
+<details id='zappa-exp-tax' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "절세계좌" else "false"}'>
+<summary class='zappa-summary'>
+<span>⏳ 절세계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{p_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{p_item_cnt}</b> 종목 )</span></span>
+</summary>
+<div id='card-pension' class='zappa-content'>
+<div style='text-align: right;'>
+<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_invested)})</span></div>
+<div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
 </div>
+</div>
+</details>
+
+<details id='zappa-exp-gen' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "일반계좌" else "false"}'>
+<summary class='zappa-summary'>
+<span>🌱 일반계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{g_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{g_item_cnt}</b> 종목 )</span></span>
+</summary>
+<div id='card-general' class='zappa-content'>
+<div style='text-align: right;'>
+<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_all)})</span></div>
+<div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
+</div>
+</div>
+</details>
+
+<details id='zappa-exp-cryp' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "암호화폐" else "false"}'>
+<summary class='zappa-summary'>
+<span>🪙 암호화폐<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{c_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{c_item_cnt}</b> 종목 )</span></span>
+</summary>
+<div id='card-crypto' class='zappa-content'>
+<div style='text-align: right;'>
+<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum_actual)})</span></div>
+<div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>BTC {r_btc}% / ETH {r_eth}% / Alts {r_alts}%</div>
+</div>
+</div>
+</details>
 """, unsafe_allow_html=True)
-   
-    # ⏳ 절세계좌 카드
-    # 💡 style='margin-bottom: 5px;' 숫자를 조절하여 절세계좌 아래쪽 여백을 섬세하게 조절하세요!
-    st.markdown(f"""
-    <div id='card-pension' class='sidebar-card' style='margin-bottom: 8px;'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>⏳ 절세계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(p_profit_all)}' style='font-weight:bold;'>{fmt(p_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_invested)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {p_dom_pct:.0f}% / 해외 {p_ovs_pct:.0f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-   
-    # 🌱 일반계좌 카드
-    # 💡 style='margin-bottom: 5px;' 숫자를 조절하여 일반계좌 아래쪽 여백을 조절하세요!
-    st.markdown(f"""
-    <div id='card-general' class='sidebar-card' style='margin-bottom: 8px;'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🌱 일반계좌</div>
-        <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(g_profit_all)}' style='font-weight:bold;'>{fmt(g_profit_all, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_all)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>국내 {g_dom_pct:.0f}% / 해외 {g_ovs_pct:.0f}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-   
-    # 🪙 암호화폐 카드
-    # 💡 style='margin-bottom: 10px;' 숫자를 조절하여 암호화폐와 Zappa Quant 사이의 큰 공간을 조절하세요!
-    st.markdown(f"""
-    <div id='card-crypto' class='sidebar-card' style='margin-bottom: 8px;'>
-        <div style='font-size:13px; font-weight:bold; color:#777; margin-bottom:2px;'>🪙 암호화폐</div>
-        <div style='text-align: right;'>
-            <div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
-            <div style='font-size:16px; margin-top:0px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum_actual)})</span></div>
-            <div style='font-size:12.5px; color:#888; font-weight:500; margin-top:6px;'>BTC {r_btc}% / ETH {r_eth}% / Alts {r_alts}%</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-   
+
     if 'show_admin_page' not in st.session_state:
         st.session_state['show_admin_page'] = False
 
   
-    import textwrap
-    
+    import textwrap  
     # =========================================================
     # 🪙 Zappa Alpha (퀀트매매) 카드
     # =========================================================
     quant_card_html = f"""
-<div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding-left:16px; gap:8px; height:85px; margin-bottom:8px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; transition: background-color 0.2s;'>
+<div id='card-quant' class='sidebar-card' style='display:flex; flex-direction:column; padding:10px 14px 6px 14px; margin-bottom:8px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; transition: background-color 0.2s;'>
+<div style='display:flex; flex-direction:row; align-items:center; gap:12px; width: 100%; margin-bottom:5px;'>
 <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-<div style='display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; height:60px; padding:0; flex:1; padding-right:8px;'>
+<div style='display:flex; flex-direction:column; align-items:flex-start; justify-content:center; flex:1;'>
 <div style='display:flex; flex-direction:column; align-items:flex-start; margin-top:-1px;'>
 <div style='font-size:11.5px; color:#888; font-weight:500; letter-spacing:0.5px; margin-bottom:-6px; margin-left:15px; position:relative; z-index:2;'>퀀트매매</div>
 <div style='font-size:20px; font-weight:700; color:#222222; letter-spacing:-1.2px; line-height:1.0; position:relative; z-index:1;'>Zappa <span style='font-size:18px; color:#1976D2;'>Alpha</span></div>
 </div>
-<div style='display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; margin-bottom:1px;'>
-<div style='font-size:8.5px; color:#888; font-weight:600; letter-spacing:1px; text-transform:uppercase; text-align:right;'>Architect & UI by Andy</div>
-<div style='font-size:7.5px; color:#aaa; font-weight:500; letter-spacing:1px; margin-top:1px; text-align:right;'>SINCE 2026</div>
+<div style='font-size:12.5px; color:#555; font-weight:500; letter-spacing:0.5px; margin-top:3px;'>총 거래 <span style='font-weight:bold; color:#111;'>48</span>건 / 승률 <span style='font-weight:bold; color:#111;'>64</span>%</div>
+</div>
+</div>
+<div style='width: 100%; height: 1px; background-color: #f0f0f0; margin-bottom: 5px;'></div>
+<div style='display:flex; flex-direction:row; justify-content:center; gap:16px; width:100%;'>
+<div style='display:flex; align-items:center; gap:5px;'>
+<span style='font-size:12px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#333; letter-spacing:-0.5px;'>ACTIVE</span>
+</div>
+<div style='display:flex; align-items:center; gap:5px;'>
+<span style='font-size:12px; filter:grayscale(100%); opacity:0.4;'>🔴</span><span style='font-size:13.5px; font-weight:700; color:#aaa; letter-spacing:-0.5px;'>IN POSITION</span>
 </div>
 </div>
 </div>
@@ -662,16 +839,24 @@ with st.sidebar:
     # 💡 Zappa Bridge (차익거래) 카드
     # =========================================================
     arbi_card_html = f"""
-<div id='card-arbi' class='sidebar-card' style='display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding-left:16px; gap:8px; height:85px; margin-bottom:5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; transition: background-color 0.2s;'>
+<div id='card-arbi' class='sidebar-card' style='display:flex; flex-direction:column; padding:10px 14px 6px 14px; margin-bottom:5px; background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; transition: background-color 0.2s;'>
+<div style='display:flex; flex-direction:row; align-items:center; gap:12px; width: 100%; margin-bottom:5px;'>
 <img src='{robot_img_src}' style='width:52px; height:52px; object-fit:contain;'>
-<div style='display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; height:60px; padding:0; flex:1; padding-right:8px;'>
+<div style='display:flex; flex-direction:column; align-items:flex-start; justify-content:center; flex:1;'>
 <div style='display:flex; flex-direction:column; align-items:flex-start; margin-top:-1px;'>
 <div style='font-size:11.5px; color:#888; font-weight:500; letter-spacing:0.5px; margin-bottom:-6px; margin-left:15px; position:relative; z-index:2;'>차익거래</div>
 <div style='font-size:20px; font-weight:700; color:#222222; letter-spacing:-1.2px; line-height:1.0; position:relative; z-index:1;'>Zappa <span style='font-size:18px; color:#1976D2;'>x-Arbi</span></div>
 </div>
-<div style='display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; margin-bottom:1px;'>
-<div style='font-size:8.5px; color:#888; font-weight:600; letter-spacing:1px; text-transform:uppercase; text-align:right;'>Architect & UI by Andy</div>
-<div style='font-size:7.5px; color:#aaa; font-weight:500; letter-spacing:1px; margin-top:1px; text-align:right;'>SINCE 2026</div>
+<div style='font-size:12.5px; color:#555; font-weight:500; letter-spacing:0.5px; margin-top:3px;'>총 거래 <span style='font-weight:bold; color:#111;'>48</span>건 / 승률 <span style='font-weight:bold; color:#111;'>64</span>%</div>
+</div>
+</div>
+<div style='width: 100%; height: 1px; background-color: #f0f0f0; margin-bottom: 5px;'></div>
+<div style='display:flex; flex-direction:row; justify-content:center; gap:16px; width:100%;'>
+<div style='display:flex; align-items:center; gap:5px;'>
+<span style='font-size:12px;'>🟢</span><span style='font-size:13.5px; font-weight:700; color:#333; letter-spacing:-0.5px;'>ACTIVE</span>
+</div>
+<div style='display:flex; align-items:center; gap:5px;'>
+<span style='font-size:12px;'>🟡</span><span style='font-size:13.5px; font-weight:700; color:#333; letter-spacing:-0.5px;'>SEARCHING</span>
 </div>
 </div>
 </div>
@@ -679,29 +864,70 @@ with st.sidebar:
     st.sidebar.markdown(arbi_card_html, unsafe_allow_html=True)
 
     # =========================================================
-    # 🖋️ 서명 (카드 외부 하단 유지)
+    # 🖋️ ZAPPA 통합 마스터 서명 및 하단 여백 제거 패치
     # =========================================================
-    signature_html = """
-<div style='display:flex; flex-direction:column; align-items:flex-end; padding-right:19px; margin-bottom:15px; margin-top:12px;'>
-<div style='font-size:10px; color:#888; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; line-height:1.2; text-align:right;'>Architect & UI by Andy</div>
-<div style='font-size:8.5px; color:#aaa; font-weight:500; letter-spacing:1px; margin-top:2px; line-height:1.2; text-align:right;'>SINCE 2026</div>
+    
+    # 💡 [핵심 패치] 사이드바 하단의 모든 강제 여백을 0으로 제거
+    st.markdown("""
+        <style>
+            /* 사이드바 컨텐츠 자체의 하단 패딩 제거 */
+            div[data-testid="stSidebarContent"] {
+                padding-bottom: 0px !important;
+            }
+            /* 사이드바 내부 아이템들의 마지막 마진 제거 */
+            div[data-testid="stSidebarUserContent"] {
+                padding-bottom: 0px !important;
+                margin-bottom: -30px !important; /* 더 바짝 올리기 위해 마이너스 마진 사용 */
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # =========================================================
+    # 🖋️ ZAPPA 통합 마스터 서명 (사이드바 하단 여백 제거 패치)
+    # =========================================================
+    # 💡 [패치] 스트림릿 사이드바 자체의 기본 하단 여백(padding)을 0으로 만듭니다.
+    st.markdown("""
+        <style>
+            [data-testid="stSidebarUserContent"] {
+                padding-bottom: 0rem !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 💡 [패치] margin-top을 -5px로 줄여 위쪽 Zappa 로고 카드와 바짝 붙였습니다.
+    master_signature_html = """<div style='margin-top: -22px; padding-right: 15px; margin-bottom: 10px; display: flex; justify-content: flex-end;'>
+<div style='display: flex; flex-direction: column; width: max-content;'>
+<div style='font-size: 9.5px; color: #777; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1; margin-bottom: 3px;'>
+ALGORITHM &amp; AI Engine <span style='color:#cccccc; margin:0 4px; font-weight:300;'>|</span> Architect &amp; UI
 </div>
-"""
-    st.sidebar.markdown(signature_html, unsafe_allow_html=True)
+<div style='display: flex; justify-content: space-between; align-items: baseline; line-height: 1;'>
+<div style='font-size: 9.5px; color: #aaaaaa; font-weight: 500; letter-spacing: 1px;'>SINCE 2026,</div>
+<div style='font-size: 9.5px; color: #666666; font-weight: 700; letter-spacing: 0.5px;'>BY ANDY</div>
+</div>
+</div>
+</div>"""
+    st.sidebar.markdown(master_signature_html, unsafe_allow_html=True)
 
     # =========================================================
     # [ Admin 버튼 꽉 찬 박스 (왼쪽으로 강제 이동 패치) ]
     # =========================================================
     st.sidebar.markdown("""<style>
-        /* Zappa Alpha, x-Arbi 카드 2종 - 하늘색 호버 효과 */
-        div#card-quant:hover, div#card-arbi:hover { background-color: #E6F2FF !important; cursor: pointer; }                
-       
+        /* 💡 [패치] 메뉴 5종 전체 - 밝은 하늘색 호버 효과 통합 */
+        div#card-pension:hover, 
+        div#card-general:hover, 
+        div#card-crypto:hover, 
+        div#card-quant:hover, 
+        div#card-arbi:hover { 
+            background-color: #E6F2FF !important; 
+            cursor: pointer; 
+        }                
+        
         div.element-container:has(#admin-btn-anchor) + div.element-container {
             margin-top: 2px !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 0px !important; /* 하단 스크롤 방지를 위해 마진 제거 */
             padding-left: 16px !important;
         }
-       
+        
         /* 💡 버튼 외곽 박스 디자인 */
         div.element-container:has(#admin-btn-anchor) + div.element-container button {
             background: #f4f5f7 !important;
@@ -711,16 +937,16 @@ with st.sidebar:
             min-height: 26px !important;  
             height: 28px !important;      
             width: fit-content !important;
-           
+            
             /* 👇 Streamlit 레이아웃을 무시하고 버튼을 강제로 왼쪽으로 15px 당깁니다 */
             margin-left: -15px !important;
-           
+            
             box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
         }
-       
+        
         /* 💡 버튼 내부 글씨 디자인 */
         div.element-container:has(#admin-btn-anchor) + div.element-container button p {
             color: #444444 !important;
@@ -730,7 +956,7 @@ with st.sidebar:
             padding: 0 !important;
             line-height: 1 !important;    
         }
-       
+        
         div.element-container:has(#admin-btn-anchor) + div.element-container button:hover {
             background: #e9ecef !important;
             border-color: #bbbbbb !important;
@@ -742,6 +968,55 @@ with st.sidebar:
     if st.sidebar.button("🔒\uFE0F Admin", key="admin_final_btn"):
         st.session_state['show_admin_page'] = True
         st.rerun()
+    # =========================================================
+    # 👇👇👇 여기서부터 복사해서 맨 아래에 추가해 주세요 👇👇👇
+    # =========================================================
+    # 💡 [패치] 모든 메뉴 & 버튼 호버 시 '공부하는 여자아이' 이미지 전환 연동
+    st.sidebar.markdown(f"""
+    <style>
+    /* JS에서 호버 상태일 때 추가할 클래스 (sea_src2 강제 적용) */
+    .seal-hover-box.active-girl {{ background-image: url('{sea_src2}') !important; }}
+    </style>
+    """, unsafe_allow_html=True)
+
+    components.html("""
+    <script>
+    const parentDoc = window.parent.document;
+    function bindGirlHover() {
+        // 공부하는 여자아이 이미지 박스 찾기
+        const girlBox = parentDoc.querySelector('.seal-hover-box');
+        if (!girlBox) return;
+
+        // 호버 이벤트를 연결할 타겟 ID 목록
+        const targetIds = [
+            'card-total', 'card-pension', 'card-general', 
+            'card-crypto', 'card-quant', 'card-arbi', 'unified-update-btn'
+        ];
+        let elements = targetIds.map(id => parentDoc.getElementById(id)).filter(el => el);
+        
+        // Admin 버튼 찾기 (anchor를 통해 추적)
+        const adminAnchor = parentDoc.getElementById('admin-btn-anchor');
+        if (adminAnchor) {
+            const adminContainer = adminAnchor.closest('.element-container').nextElementSibling;
+            if (adminContainer) {
+                const adminBtn = adminContainer.querySelector('button');
+                if (adminBtn) elements.push(adminBtn);
+            }
+        }
+
+        // 각 요소에 마우스를 올리고 내릴 때 이벤트 부여
+        elements.forEach(el => {
+            if (!el.hasAttribute('data-girl-binded')) {
+                el.setAttribute('data-girl-binded', 'true');
+                el.addEventListener('mouseenter', () => girlBox.classList.add('active-girl'));
+                el.addEventListener('mouseleave', () => girlBox.classList.remove('active-girl'));
+            }
+        });
+    }
+    // 스트림릿 렌더링 지연을 대비하여 1초마다 체크 후 바인딩
+    setInterval(bindGirlHover, 1000);
+    </script>
+    """, height=0) 
 
 # =========================================================
 # 🔒 [Zappa Admin] 통합 자산 관리 패널 (박스 제거 & 디자인 완결판)
@@ -1767,10 +2042,10 @@ elif st.session_state.current_view == '절세계좌':
             lbl4 = "손익률(▼) ]" if st.session_state.sort_mode == 'rate' else "손익률(▽) ]"
             if st.button(lbl4, type="primary" if st.session_state.sort_mode == 'rate' else "secondary", key='tax_btn4', on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
         with tb5:
-            lbl5 = "↕️등락률[+]" if st.session_state.show_change_rate else "↕️등락률[-]"
+            lbl5 = "↕️등락률[-]" if st.session_state.show_change_rate else "↕️등락률[+]"
             if st.button(lbl5, type="primary" if st.session_state.show_change_rate else "secondary", key='tax_btn5', on_click=lambda: setattr(st.session_state, 'show_change_rate', not st.session_state.show_change_rate)): pass
         with tb6:
-            lbl6 = "💻종목코드[+]" if st.session_state.show_code else "💻종목코드[-]"
+            lbl6 = "💻종목코드[-]" if st.session_state.show_code else "💻종목코드[+]"
             if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='tax_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
            
         st.markdown("<br>", unsafe_allow_html=True)
