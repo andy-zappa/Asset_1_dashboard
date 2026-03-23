@@ -17,35 +17,51 @@ import streamlit_authenticator as stauth
 warnings.filterwarnings("ignore")
 st.set_page_config(layout="wide", page_title="ZAPPA Asset Dashboard")
 
-# --- 로그인 설정 시작 (최신 버전 완벽 대응) ---
+# --- 로그인 설정 시작 (비밀번호 통합 + 모바일 자동 로그인 파라미터 적용) ---
+import bcrypt
+
+# 1. Oracle 서버에서 최신 해시 암호 가져오기 시도
+fetched_hashed_pw = None
+try:
+    res_cfg_auth = requests.get("http://158.179.172.40:8000/get_config", timeout=2)
+    if res_cfg_auth.status_code == 200:
+        fetched_hashed_pw = res_cfg_auth.json().get("ZAPPA_HASHED_PW")
+except:
+    pass
+
+# 2. 오라클 서버 장애 시, Streamlit Secrets(비밀 금고)에서 백업 암호 가져오기
+if not fetched_hashed_pw:
+    try:
+        fetched_hashed_pw = st.secrets["ZAPPA_HASHED_PW"]
+    except:
+        fetched_hashed_pw = stauth.Hasher(['andy1234']).generate()[0]
+
 credentials = {
     "usernames": {
         "andy": {
             "name": "Andy",
-            "password": "andy1234" # 임시 비밀번호
+            "password": fetched_hashed_pw
         }
     }
 }
 
-# 1. 비밀번호 자동 암호화
-stauth.Hasher.hash_passwords(credentials)
+authenticator = stauth.Authenticate(credentials, 'zappa_cookie', 'signature_key', 30)
 
-# 2. 인증 객체 생성
-authenticator = stauth.Authenticate(
-    credentials,
-    'zappa_cookie', 
-    'signature_key', 
-    30
-)
+# 3. 💡 모바일 자동 로그인 (비밀 URL 토큰 감지)
+is_auto_login = False
+# 주소창에 ?token=andy_zappa_pass 가 있으면 무조건 통과!
+if st.query_params.get("token") == "andy_zappa_pass":
+    st.session_state["authentication_status"] = True
+    is_auto_login = True
 
-# 3. 로그인 위젯 실행 (값을 따로 받지 않고 바로 실행만 함)
-authenticator.login()
+# 토큰이 없을 때만 정식 로그인 창 띄우기
+if not is_auto_login:
+    authenticator.login()
 
-# 4. 세션 상태(session_state)를 통한 결과 제어
 if st.session_state.get("authentication_status") is False:
-    st.error('비밀번호가 일치하지 않습니다.')
+    st.error('❌ 비밀번호가 일치하지 않습니다.')
 elif st.session_state.get("authentication_status") is None:
-    st.warning('아이디와 비밀번호를 입력해주세요.')
+    st.warning('🔒 대시보드 접속을 위해 비밀번호를 입력해주세요.')
 elif st.session_state.get("authentication_status"):
     # 🔴 여기서 로그아웃 버튼을 지웠습니다!
 
@@ -162,7 +178,7 @@ div.element-container:has(#logout-btn-anchor) + div.element-container button:hov
 """ 
     st.markdown(css, unsafe_allow_html=True)
 
-    # 💡 [패치 1] 자바스크립트로 메뉴 닫힘 현상 완벽 방어 (Streamlit 새로고침 간섭 무력화)
+    # 💡 [패치 1] 사이드바 클릭 연동 JS (복잡한 강제 열림/닫힘 로직 제거, 파이썬에 통제권 위임)
     components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -192,42 +208,7 @@ bindClick('card-pension', '절세계좌');
 bindClick('card-general', '일반계좌');
 bindClick('card-crypto', '암호화폐');
 bindClick('card-quant', '알고리즘');
-bindClick('card-arbi', 'Zappa Arbi');
-
-// 👇👇👇 [Zappa Expander 강력한 상태 유지 로직] 👇👇👇
-const ids = ['zappa-exp-total', 'zappa-exp-tax', 'zappa-exp-gen', 'zappa-exp-cryp', 'zappa-exp-quant', 'zappa-exp-arbi'];
-ids.forEach(id => {
-const el = parentDoc.getElementById(id);
-if (el) {
-// 1. 최초 이벤트 바인딩
-if (!el.hasAttribute('data-state-binded')) {
-el.setAttribute('data-state-binded', 'true');
-
-// 세션값이 없으면 파이썬이 넘겨준 기본값으로 세팅
-if (!sessionStorage.getItem(id)) {
-const isDefault = el.getAttribute('data-default-open') === 'true';
-sessionStorage.setItem(id, isDefault ? 'open' : 'closed');
-}
-
-// 유저가 '>' 버튼을 클릭했을 때의 '진짜' 상태 기록
-const summary = el.querySelector('summary');
-if (summary) {
-summary.addEventListener('click', () => {
-const nextState = el.hasAttribute('open') ? 'closed' : 'open';
-sessionStorage.setItem(id, nextState);
-});
-}
-}
-
-// 2. Streamlit이 화면을 갱신해서 메뉴를 멋대로 닫아버려도 강제로 다시 엶!
-const targetState = sessionStorage.getItem(id);
-if (targetState === 'open' && !el.hasAttribute('open')) {
-el.setAttribute('open', '');
-} else if (targetState === 'closed' && el.hasAttribute('open')) {
-el.removeAttribute('open');
-}
-}
-});
+bindClick('card-arbi', '차익거래');
 }
 setInterval(bindSidebarClicks, 300);
 </script>
@@ -811,15 +792,17 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 </style>
 """, unsafe_allow_html=True)
 
-        # 💡 현재 보고 있는 메뉴 자동 열기 설정
+        # 💡 현재 보고 있는 메뉴 자동 열기 설정 (파이썬 100% 통제)
         open_aum = "open" if st.session_state.current_view == '대시보드' else ""
         open_tax = "open" if st.session_state.current_view == '절세계좌' else ""
         open_gen = "open" if st.session_state.current_view == '일반계좌' else ""
         open_cryp = "open" if st.session_state.current_view == '암호화폐' else ""
+        open_quant = "open" if st.session_state.current_view == '알고리즘' else ""
+        open_arbi = "open" if st.session_state.current_view == '차익거래' else ""
 
-        # 💡 [패치 2] 사이드바 카드 렌더링 (Python의 강제 open 개입을 완전히 배제하고 JS에 위임)
+        # 💡 [패치 2] 사이드바 카드 렌더링 (파이썬이 직접 <details open> 속성 주입)
         st.sidebar.markdown(f"""
-<details id='zappa-exp-total' class='zappa-expander zappa-expander-dark' data-default-open='{"true" if st.session_state.current_view == "대시보드" else "false"}' style='margin-top: -16px;'>
+<details id='zappa-exp-total' class='zappa-expander zappa-expander-dark' {open_aum} style='margin-top: -16px;'>
 <summary class='zappa-summary'>
 <span><span class='spin-globe'>🌎</span>&nbsp;총 운용자산<span style='font-size: 13px; font-weight: 500; color: #aaa; margin-left: 4px;'>( <b style='font-weight:700; color:#eee;'>{total_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#eee;'>{total_item_cnt}</b> 종목 )</span></span>
 </summary>
@@ -840,7 +823,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 </div>
 </details>
 
-<details id='zappa-exp-tax' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "절세계좌" else "false"}'>
+<details id='zappa-exp-tax' class='zappa-expander' {open_tax}>
 <summary class='zappa-summary'>
 <span>⏳ 절세계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{p_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{p_item_cnt}</b> 종목 ]</span></span>
 </summary>
@@ -853,7 +836,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 </div>
 </details>
 
-<details id='zappa-exp-gen' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "일반계좌" else "false"}'>
+<details id='zappa-exp-gen' class='zappa-expander' {open_gen}>
 <summary class='zappa-summary'>
 <span>🌱 일반계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{g_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{g_item_cnt}</b> 종목 ]</span></span>
 </summary>
@@ -866,7 +849,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 </div>
 </details>
 
-<details id='zappa-exp-cryp' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "암호화폐" else "false"}'>
+<details id='zappa-exp-cryp' class='zappa-expander' {open_cryp}>
 <summary class='zappa-summary'>
 <span>🪙 암호화폐<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{c_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{c_item_cnt}</b> 종목 ]</span></span>
 </summary>
@@ -883,13 +866,13 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
         if 'show_admin_page' not in st.session_state:
             st.session_state['show_admin_page'] = False
 
-    
+   
         import textwrap  
         # =========================================================
-        # 🪙 Zappa Alpha (알고리즘) 카드 (글자만 바닥에서 2px 띄움)
+        # 🪙 Zappa Alpha (알고리즘) 카드
         # =========================================================
         quant_card_html = f"""
-<details id='zappa-exp-quant' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "알고리즘" else "false"}'>
+<details id='zappa-exp-quant' class='zappa-expander' {open_quant}>
 <summary class='zappa-summary'>
 <span>🧩 알고리즘&nbsp; <span style='font-weight: normal;'>[</span> <span style='color:#444;'>Algorithmic T.</span> <span style='font-weight: normal;'>]</span></span>
 </summary>
@@ -920,10 +903,10 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
         st.sidebar.markdown(quant_card_html, unsafe_allow_html=True)
 
         # =========================================================
-        # 💡 차익거래 카드 (글자만 바닥에서 2px 띄움)
+        # 💡 차익거래 카드
         # =========================================================
         arbi_card_html = f"""
-<details id='zappa-exp-arbi' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "차익거래" else "false"}'>
+<details id='zappa-exp-arbi' class='zappa-expander' {open_arbi}>
 <summary class='zappa-summary'>
 <span>⚖️ 차익거래&nbsp; <span style='font-weight: normal;'>[</span> <span style='color:#444;'>X-Arbitrage T.</span> <span style='font-weight: normal;'>]</span></span>
 </summary>
@@ -1123,262 +1106,214 @@ setInterval(bindGirlHover, 1000);
     # =========================================================
     if st.session_state.get('show_admin_page', False):
         # 1. 디자인 스타일 (1px 정밀 조정 및 모든 테두리 제거)
-        st.markdown("""
-<style>
-/* [1] 모든 종류의 테두리, 그림자, 빨간색 선 완전 제거 */
-div[data-testid="stExpander"],
-div.stAlert,
-div[data-testid="stNotification"],
-div[data-testid="stVerticalBlock"] > div {
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    background: transparent !important;
-}
-
-/* [2] 관리자 비밀번호 변경 내부의 선 제거 */
-div[data-testid="stExpander"] details { border: none !important; }
-div[data-testid="stExpander"] summary { border: none !important; outline: none !important; }
-
-/* [3] 메인 타이틀: 24px, 굵기 700 */
-.admin-main-header {
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    color: #111;
-    letter-spacing: -1px;
-    margin-bottom: 20px;
-    line-height: 1;
-}
-
-/* [4] 관리자 로그인 라벨 스타일 */
-.login-label {
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    color: #222 !important;
-    display: flex;
-    align-items: center;
-    height: 32px;
-    margin: 0 !important;
-}
-
-/* [5] 비밀번호 변경 Expander - 1px 위로 정밀 이동 (기존 -5px -> -6px) */
-div[data-testid="stExpander"] {
-    margin-top: -6px !important;
-}
-div[data-testid="stExpander"] summary p {
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    color: #222 !important;
-    margin: 0 !important;
-}
-
-/* [6] 버튼 및 입력창 스타일 */
-div.stButton > button[kind="primary"] { background-color: #0088ff !important; color: white !important; font-weight: bold !important; height: 2.8rem !important; border: none !important; }
-div[data-testid="stTextInput"] > div > div > input { height: 42px !important; border: 1px solid #eeeeee !important; }
-</style>
-""", unsafe_allow_html=True)
-
-        # 2. 타이틀 (노란 자물쇠 + 24px 세련된 굵기)
-        st.markdown("<div class='admin-main-header'>🔒\uFE0F Andy-Zappa Admin</div>", unsafe_allow_html=True)
-    
-        if st.button("⬅️ Back to Dashboard", key="final_align_btn"):
-            st.session_state['show_admin_page'] = False
-            st.rerun()
-        
         st.markdown("---")
-    
+   
         try:
             res = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
             cfg = res.json() if res.status_code == 200 else {}
         except:
             cfg = {}
-        
-        current_pw = cfg.get("ADMIN_PW", "1234")
-    
-        col_pw1, col_pw2 = st.columns(2)
-        with col_pw1:
-            st.markdown("<div class='login-label'>🔑 관리자 로그인</div>", unsafe_allow_html=True)
-            admin_pw = st.text_input("현재 비밀번호 입력", type="password", label_visibility="collapsed", placeholder="비밀번호를 입력하세요", key="login_pw_input")
-        
-        with col_pw2:
-            with st.expander("🔐 관리자 비밀번호 변경", expanded=False):
-                old_pw = st.text_input("현재 비밀번호", type="password", placeholder="기존 비밀번호", key="pw_change_old")
-                new_pw = st.text_input("신규 비밀번호", type="password", placeholder="새 비밀번호", key="pw_change_new")
-            
-                if st.button("비밀번호 변경 실행", use_container_width=True):
-                    if old_pw == current_pw and new_pw:
-                        cfg["ADMIN_PW"] = new_pw
+       
+        # 💡 [패치] 이중 로그인 제거 및 비밀번호 변경 단방향 암호화 적용
+        with st.expander("🔐 대시보드 로그인 비밀번호 변경", expanded=False):
+            st.markdown("<div style='font-size:13.5px; color:#666; margin-bottom:10px;'>※ 변경된 비밀번호는 즉시 단방향 암호화(Bcrypt) 처리되어 서버에 안전하게 저장됩니다. 파이썬 코드에 남지 않습니다.</div>", unsafe_allow_html=True)
+            col_old, col_new = st.columns(2)
+            with col_old: old_pw = st.text_input("현재 비밀번호", type="password", key="pw_change_old")
+            with col_new: new_pw = st.text_input("새로운 비밀번호", type="password", key="pw_change_new")
+       
+            if st.button("비밀번호 변경 실행", use_container_width=True):
+                if not old_pw or not new_pw:
+                    st.warning("비밀번호를 모두 입력해주세요.")
+                else:
+                    import bcrypt
+                    is_pw_correct = False
+                   
+                    # 1. 💡 [정상 모드] 이제 서버에 저장된 해시 암호와 입력한 비번을 대조합니다.
+                    if fetched_hashed_pw:
+                        try:
+                            # bcrypt.checkpw는 (입력비번, 서버해시)를 비교해 True/False를 반환합니다.
+                            if bcrypt.checkpw(old_pw.encode('utf-8'), fetched_hashed_pw.encode('utf-8')):
+                                is_pw_correct = True
+                        except Exception:
+                            # 만약의 에러를 대비해 텍스트 직접 비교 보조 (마이그레이션용)
+                            if old_pw == fetched_hashed_pw:
+                                is_pw_correct = True
+                   
+                    if is_pw_correct:
+                        # 2. 신규 비번 해싱 후 서버 덮어쓰기
+                        new_hashed_pw = bcrypt.hashpw(new_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                        cfg["ZAPPA_HASHED_PW"] = new_hashed_pw
+                        cfg["ADMIN_PW"] = "" # 평문 기록은 영구 삭제
+                       
                         try:
                             res = requests.post("http://158.179.172.40:8000/update_config", json=cfg, timeout=5)
                             if res.status_code == 200:
-                                st.success("✅ 비밀번호가 변경되었습니다!")
+                                st.success("✅ 비밀번호가 안전하게 변경되었습니다!")
                             else:
                                 st.error("❌ 서버 오류로 변경에 실패했습니다.")
                         except Exception as e:
                             st.error(f"❌ 서버 연결 오류 발생: {e}")
-                    elif old_pw != current_pw:
+                    else:
                         st.error("❌ 현재 비밀번호가 일치하지 않습니다.")
+        st.markdown("<br>", unsafe_allow_html=True)
+   
+        # 💡 [패치] 관리자 인증 과정 생략 (메인 로그인으로 갈음) 후 즉시 자산 관리 렌더링
+        col_cat, col_acc = st.columns(2)
+        with col_cat: category = st.selectbox("1️⃣ 자산 유형 선택", ["📂절세계좌", "📂일반계좌", "📂암호화폐"])
+   
+        if category == "📂절세계좌":
+            acc_list = {"[ 퇴직연금(DC) (삼성 : 7165962472-28) ]": "DC", "[ 퇴직연금(IRP)계좌 (삼성 : 7164499007-29) ]": "IRP", "[ 연금저축(CMA)계좌 (삼성 : 7169434836-15) ]": "PENSION", "[ ISA(중개형) (키움 : 6448-4934) ]": "ISA"}
+        elif category == "📂일반계좌":
+            acc_list = {"[ 국내Ⅰ. 키움증권 (위탁종합 : 6312-5329) ]": "DOM1", "[ 국내Ⅱ. 삼성증권 (주식보상 : 7162669785-01) ]": "DOM2", "[ 미국Ⅰ. 키움증권 (위탁종합 : 6312-5329) ]": "USA1", "[ 미국Ⅱ. 키움증권 (위탁종합 : 6443-5993) ]": "USA2"}
+        else:
+            acc_list = {"[ UPbit 거래소 ]": "CRYPTO"}
+
+            
+        with col_acc: sel_acc_label = st.selectbox("2️⃣ 세부 계좌 선택", options=list(acc_list.keys()))
+    
+        sel_key = acc_list[sel_acc_label]
+        is_usa = "USA" in sel_key
+        cash_unit = "USD" if is_usa else "KRW"
+    
+        st.markdown("---")
+        st.markdown("<div class='admin-section-title'>1️⃣ 자산정보 요약</div>", unsafe_allow_html=True)
+    
+        sum_data = {
+            "현금성자산(예수금)": [safe_float(cfg.get(f"{sel_key}_CASH", 0))],
+            "투자원금": [safe_float(cfg.get(f"{sel_key}_PRINCIPAL", 0))]
+        }
+        df_sum = pd.DataFrame(sum_data)
+    
+        sum_cfg = {
+            "현금성자산(예수금)": st.column_config.NumberColumn(f"💵 현금성자산 ({cash_unit})", format="%,.4f" if is_usa else "%,.0f", step=0.0001 if is_usa else 1.0),
+            "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f", step=1.0)
+        }
+    
+        edited_sum = st.data_editor(df_sum, use_container_width=True, column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
+        new_cash = edited_sum.iloc[0]["현금성자산(예수금)"]
+        new_prin = edited_sum.iloc[0]["투자원금"]
     
         st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div class='admin-section-title'>2️⃣ 보유종목 리스트</div>", unsafe_allow_html=True)
     
-        if admin_pw == current_pw:
-            col_cat, col_acc = st.columns(2)
-            with col_cat: category = st.selectbox("1️⃣ 자산 유형 선택", ["📂절세계좌", "📂일반계좌", "📂암호화폐"])
-        
-            if category == "📂절세계좌":
-                acc_list = {"[ 퇴직연금(DC) (삼성 : 7165962472-28) ]": "DC", "[ 퇴직연금(IRP)계좌 (삼성 : 7164499007-29) ]": "IRP", "[ 연금저축(CMA)계좌 (삼성 : 7169434836-15) ]": "PENSION", "[ ISA(중개형) (키움 : 6448-4934) ]": "ISA"}
-            elif category == "📂일반계좌":
-                acc_list = {"[ 국내Ⅰ. 키움증권 (위탁종합 : 6312-5329) ]": "DOM1", "[ 국내Ⅱ. 삼성증권 (주식보상 : 7162669785-01) ]": "DOM2", "[ 미국Ⅰ. 키움증권 (위탁종합 : 6312-5329) ]": "USA1", "[ 미국Ⅱ. 키움증권 (위탁종합 : 6443-5993) ]": "USA2"}
-            else:
-                acc_list = {"[ UPbit 거래소 ]": "CRYPTO"}
-            
-            with col_acc: sel_acc_label = st.selectbox("2️⃣ 세부 계좌 선택", options=list(acc_list.keys()))
-        
-            sel_key = acc_list[sel_acc_label]
-            is_usa = "USA" in sel_key
-            cash_unit = "USD" if is_usa else "KRW"
-        
-            st.markdown("---")
-            st.markdown("<div class='admin-section-title'>1️⃣ 자산정보 요약</div>", unsafe_allow_html=True)
-        
-            sum_data = {
-                "현금성자산(예수금)": [safe_float(cfg.get(f"{sel_key}_CASH", 0))],
-                "투자원금": [safe_float(cfg.get(f"{sel_key}_PRINCIPAL", 0))]
+        curr_items = cfg.get(sel_key, [])
+        df_items = pd.DataFrame(curr_items)
+        rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
+        if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
+        for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
+            if col not in df_items.columns: df_items[col] = None
+        df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
+    
+        if sel_key == "CRYPTO":
+            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
+            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
+            col_cfg = {
+                "종목명": st.column_config.TextColumn("종목명"),
+                "보유수량": st.column_config.NumberColumn("보유수량", format="%.8f", step=1e-8),
+                "매입단가": st.column_config.NumberColumn("매입단가 (KRW)", format="%,.2f", step=0.01)
             }
-            df_sum = pd.DataFrame(sum_data)
+        else:
+            df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0).astype(float)
+            df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0).astype(float)
         
-            sum_cfg = {
-                "현금성자산(예수금)": st.column_config.NumberColumn(f"💵 현금성자산 ({cash_unit})", format="%,.4f" if is_usa else "%,.0f", step=0.0001 if is_usa else 1.0),
-                "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f", step=1.0)
+            p_format = "%,.4f" if is_usa else "%,.0f"
+            p_step = 0.0001 if is_usa else 1.0
+        
+            col_cfg = {
+                "종목명": st.column_config.TextColumn("종목명"),
+                "종목코드": st.column_config.TextColumn("종목코드"),
+                "보유수량": st.column_config.NumberColumn("보유수량", format=p_format, step=p_step),
+                "매입단가": st.column_config.NumberColumn(f"매입단가 ({cash_unit})", format=p_format, step=p_step)
             }
         
-            edited_sum = st.data_editor(df_sum, use_container_width=True, column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
-            new_cash = edited_sum.iloc[0]["현금성자산(예수금)"]
-            new_prin = edited_sum.iloc[0]["투자원금"]
-        
+        edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
+    
+        if category == "📂절세계좌":
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<div class='admin-section-title'>2️⃣ 보유종목 리스트</div>", unsafe_allow_html=True)
+            st.markdown("<div class='admin-section-title'>3️⃣ 안전자산 현황</div>", unsafe_allow_html=True)
+            safe_key = f"{sel_key}_SAFE"
+            raw_safe = cfg.get(safe_key, [])
+            df_safe = pd.DataFrame(raw_safe)
+            if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
+            if "매입일자" in df_safe.columns: df_safe["매입일자"] = pd.to_datetime(df_safe["매입일자"], errors='coerce')
         
-            curr_items = cfg.get(sel_key, [])
-            df_items = pd.DataFrame(curr_items)
-            rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
-            if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
-            for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
-                if col not in df_items.columns: df_items[col] = None
-            df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
+            safe_cfg = {
+                "종목명": st.column_config.TextColumn("종목명"),
+                "투자원금": st.column_config.NumberColumn("투자원금 (KRW)", format="%,.0f", step=1.0),
+                "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.01),
+                "매입일자": st.column_config.DateColumn("매입일자", format="YYYY-MM-DD")
+            }
+            edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+    
+        @st.dialog("🚀 실시간 데이터 배포 최종 확인")
+        def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
+            st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
+            st.markdown(f"""
+            - **입력된 현금**: {float(cash_val):,}
+            - **입력된 원금**: {float(prin_val):,}
+            - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
+            """)
+            st.write("")
+        
+            c1, c2 = st.columns(2)
+            with c1:
+                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
+            with c2:
+                if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
+                    st.rerun()
+        
+            if confirm_btn:
+                try:
+                    res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
+                    if res.status_code == 200:
+                        st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
+                        st.cache_data.clear()
+                        time.sleep(2)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ 서버 배포 실패: {res.text}")
+                except Exception as e:
+                    st.error(f"❌ 연결 오류:\n{e}")
+                
+        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
+            save_df = edited_df.copy()
         
             if sel_key == "CRYPTO":
-                df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
-                df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
-                col_cfg = {
-                    "종목명": st.column_config.TextColumn("종목명"),
-                    "보유수량": st.column_config.NumberColumn("보유수량", format="%.8f", step=1e-8),
-                    "매입단가": st.column_config.NumberColumn("매입단가 (KRW)", format="%,.2f", step=0.01)
-                }
+                save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
             else:
-                df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0).astype(float)
-                df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0).astype(float)
+                save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
             
-                p_format = "%,.4f" if is_usa else "%,.0f"
-                p_step = 0.0001 if is_usa else 1.0
+            clean_records = []
+            for _, row in save_df.iterrows():
+                rec = {}
+                for k, v in row.items():
+                    if pd.isna(v): rec[k] = ""
+                    elif isinstance(v, (int, np.integer)): rec[k] = int(v)
+                    elif isinstance(v, (float, np.floating)): rec[k] = float(v)
+                    else: rec[k] = str(v)
+                clean_records.append(rec)
             
-                col_cfg = {
-                    "종목명": st.column_config.TextColumn("종목명"),
-                    "종목코드": st.column_config.TextColumn("종목코드"),
-                    "보유수량": st.column_config.NumberColumn("보유수량", format=p_format, step=p_step),
-                    "매입단가": st.column_config.NumberColumn(f"매입단가 ({cash_unit})", format=p_format, step=p_step)
-                }
-            
-            edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
+            cfg[sel_key] = clean_records
+            cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
+            cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
         
             if category == "📂절세계좌":
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown("<div class='admin-section-title'>3️⃣ 안전자산 현황</div>", unsafe_allow_html=True)
-                safe_key = f"{sel_key}_SAFE"
-                raw_safe = cfg.get(safe_key, [])
-                df_safe = pd.DataFrame(raw_safe)
-                if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
-                if "매입일자" in df_safe.columns: df_safe["매입일자"] = pd.to_datetime(df_safe["매입일자"], errors='coerce')
+                safe_df = edited_safe.copy().fillna("")
+                safe_records = safe_df.to_dict('records')
+                for r in safe_records:
+                    date_val = r.get('매입일자')
+                    if date_val and str(date_val).strip() != "":
+                        r['매입일자'] = date_val.strftime('%Y-%m-%d') if hasattr(date_val, 'strftime') else str(date_val)[:10]
+                    else:
+                        r['매입일자'] = ""
+                cfg[f"{sel_key}_SAFE"] = safe_records
             
-                safe_cfg = {
-                    "종목명": st.column_config.TextColumn("종목명"),
-                    "투자원금": st.column_config.NumberColumn("투자원금 (KRW)", format="%,.0f", step=1.0),
-                    "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.01),
-                    "매입일자": st.column_config.DateColumn("매입일자", format="YYYY-MM-DD")
-                }
-                edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+            confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
         
-            @st.dialog("🚀 실시간 데이터 배포 최종 확인")
-            def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
-                st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
-                st.markdown(f"""
-                - **입력된 현금**: {float(cash_val):,}
-                - **입력된 원금**: {float(prin_val):,}
-                - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
-                """)
-                st.write("")
-            
-                c1, c2 = st.columns(2)
-                with c1:
-                    confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
-                with c2:
-                    if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
-                        st.rerun()
-            
-                if confirm_btn:
-                    try:
-                        res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
-                        if res.status_code == 200:
-                            st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
-                            st.cache_data.clear()
-                            time.sleep(2)
-                            st.rerun()
-                        else:
-                            st.error(f"❌ 서버 배포 실패: {res.text}")
-                    except Exception as e:
-                        st.error(f"❌ 연결 오류:\n{e}")
-                    
-            if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
-                save_df = edited_df.copy()
-            
-                if sel_key == "CRYPTO":
-                    save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
-                else:
-                    save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
-                
-                clean_records = []
-                for _, row in save_df.iterrows():
-                    rec = {}
-                    for k, v in row.items():
-                        if pd.isna(v): rec[k] = ""
-                        elif isinstance(v, (int, np.integer)): rec[k] = int(v)
-                        elif isinstance(v, (float, np.floating)): rec[k] = float(v)
-                        else: rec[k] = str(v)
-                    clean_records.append(rec)
-                
-                cfg[sel_key] = clean_records
-                cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
-                cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
-            
-                if category == "📂절세계좌":
-                    safe_df = edited_safe.copy().fillna("")
-                    safe_records = safe_df.to_dict('records')
-                    for r in safe_records:
-                        date_val = r.get('매입일자')
-                        if date_val and str(date_val).strip() != "":
-                            r['매입일자'] = date_val.strftime('%Y-%m-%d') if hasattr(date_val, 'strftime') else str(date_val)[:10]
-                        else:
-                            r['매입일자'] = ""
-                    cfg[f"{sel_key}_SAFE"] = safe_records
-                
-                confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
-            
-        elif admin_pw != "":
-            st.error("❌ 비밀번호가 틀렸습니다.")
         st.stop()
-        # =========================================================
+    # =========================================================
     # 💡 대시보드 화면 (Treemap & Pie Chart)
     # =========================================================
     if st.session_state.current_view == '대시보드':
