@@ -191,7 +191,7 @@ bindClick('card-total', '대시보드');
 bindClick('card-pension', '절세계좌');
 bindClick('card-general', '일반계좌');
 bindClick('card-crypto', '암호화폐');
-bindClick('card-quant', '퀀트매매');
+bindClick('card-quant', '알고리즘');
 bindClick('card-arbi', 'Zappa Arbi');
 
 // 👇👇👇 [Zappa Expander 강력한 상태 유지 로직] 👇👇👇
@@ -593,7 +593,7 @@ background-image: url('{sea_src2}');
 
 <div style='position: relative; width: 90px; margin-top: -22px;'>
 <img src="{logo_src}" width="95" style="display: block;">
-<div style='position: absolute; right: 0px; bottom: -28px; font-size: 8px; color: #aaa; font-weight: 500; letter-spacing: 0.5px; line-height: 1.3; text-align: right; white-space: nowrap;'>
+<div style='position: absolute; right: 0px; bottom: -28px; font-size: 8px; color: #999; font-weight: 500; letter-spacing: 0.5px; line-height: 1.3; text-align: right; white-space: nowrap;'>
 OCI CHUNCHEON<br>LINUX 9.7 GEN, 24GB
 </div>
 </div>
@@ -605,7 +605,7 @@ OCI CHUNCHEON<br>LINUX 9.7 GEN, 24GB
 </div>
 <hr style='margin: 2px 0; border: 0; border-top: 1px solid #eeeeee;'>
 <div style='text-align:center; margin-top: 4px; margin-bottom: 4px;'>
-<div style='font-size:12.5px; font-weight:700; color:#444;'>KIS{short_p}UPbit{short_p}Binance{short_p}Y! Finance</div>
+<div style='font-size:12.5px; font-weight:600; color:#444;'>KIS{short_p}UPbit{short_p}Binance{short_p}Y! Finance</div>
 </div>
 </div>
 </div>
@@ -653,9 +653,9 @@ const interval = setInterval(() => {
         st.markdown('<style>div.element-container:has(div[role="radiogroup"]) { margin-top: -55px !important; position: relative; z-index: 50; }</style>', unsafe_allow_html=True)
 
         # 💡 [패치 1] Zappa Arbi 라디오 메뉴 추가 완료
-        menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "퀀트매매", "Zappa Arbi"]
+        menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "알고리즘", "차익거래"]
         def format_menu(option):
-            return "AI 퀀트매매" if option == "퀀트매매" else option
+            return "AI 알고리즘" if option == "알고리즘" else option
         st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
 
         c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -842,7 +842,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 
 <details id='zappa-exp-tax' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "절세계좌" else "false"}'>
 <summary class='zappa-summary'>
-<span>⏳ 절세계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{p_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{p_item_cnt}</b> 종목 )</span></span>
+<span>⏳ 절세계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{p_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{p_item_cnt}</b> 종목 ]</span></span>
 </summary>
 <div id='card-pension' class='zappa-content'>
 <div style='text-align: right;'>
@@ -855,7 +855,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 
 <details id='zappa-exp-gen' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "일반계좌" else "false"}'>
 <summary class='zappa-summary'>
-<span>🌱 일반계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{g_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{g_item_cnt}</b> 종목 )</span></span>
+<span>🌱 일반계좌<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{g_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{g_item_cnt}</b> 종목 ]</span></span>
 </summary>
 <div id='card-general' class='zappa-content'>
 <div style='text-align: right;'>
@@ -868,7 +868,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 
 <details id='zappa-exp-cryp' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "암호화폐" else "false"}'>
 <summary class='zappa-summary'>
-<span>🪙 암호화폐<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>( <b style='font-weight:700; color:#666;'>{c_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#666;'>{c_item_cnt}</b> 종목 )</span></span>
+<span>🪙 암호화폐<span style='font-size: 13px; font-weight: 500; color: #888; margin-left: 4px;'>[ <b style='font-weight:700; color:#444;'>{c_acc_cnt}</b> 계좌, <b style='font-weight:700; color:#444;'>{c_item_cnt}</b> 종목 ]</span></span>
 </summary>
 <div id='card-crypto' class='zappa-content'>
 <div style='text-align: right;'>
@@ -886,12 +886,12 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
     
         import textwrap  
         # =========================================================
-        # 🪙 Zappa Alpha (퀀트매매) 카드 (글자만 바닥에서 2px 띄움)
+        # 🪙 Zappa Alpha (알고리즘) 카드 (글자만 바닥에서 2px 띄움)
         # =========================================================
         quant_card_html = f"""
-<details id='zappa-exp-quant' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "퀀트매매" else "false"}'>
+<details id='zappa-exp-quant' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "알고리즘" else "false"}'>
 <summary class='zappa-summary'>
-<span>📉 퀀트매매&nbsp; <span style='font-weight: normal;'>(</span> <span style='color:#111111;'>Zappa</span> <span style='color:#1976D2;'>Alpha</span> <span style='font-weight: normal;'>)</span></span>
+<span>🧩 알고리즘&nbsp; <span style='font-weight: normal;'>[</span> <span style='color:#444;'>Algorithmic T.</span> <span style='font-weight: normal;'>]</span></span>
 </summary>
 <div id='card-quant' class='zappa-content'>
 <table style='width: 100%; border-collapse: collapse; border: none; background: transparent; margin-top: -2px; margin-bottom: 0px;'>
@@ -920,12 +920,12 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
         st.sidebar.markdown(quant_card_html, unsafe_allow_html=True)
 
         # =========================================================
-        # 💡 Zappa Bridge (차익거래) 카드 (글자만 바닥에서 2px 띄움)
+        # 💡 차익거래 카드 (글자만 바닥에서 2px 띄움)
         # =========================================================
         arbi_card_html = f"""
-<details id='zappa-exp-arbi' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "Zappa Arbi" else "false"}'>
+<details id='zappa-exp-arbi' class='zappa-expander' data-default-open='{"true" if st.session_state.current_view == "차익거래" else "false"}'>
 <summary class='zappa-summary'>
-<span>⚖️ 차익거래&nbsp; <span style='font-weight: normal;'>(</span> <span style='color:#111111;'>Zappa</span> <span style='color:#1976D2;'>x-Arbi</span> <span style='font-weight: normal;'>)</span></span>
+<span>⚖️ 차익거래&nbsp; <span style='font-weight: normal;'>[</span> <span style='color:#444;'>X-Arbitrage T.</span> <span style='font-weight: normal;'>]</span></span>
 </summary>
 <div id='card-arbi' class='zappa-content'>
 <table style='width: 100%; border-collapse: collapse; border: none; background: transparent; margin-top: -2px; margin-bottom: 0px;'>
@@ -989,10 +989,10 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 <div style='margin-top: -22px; padding-right: 15px; margin-bottom: 10px; display: flex; justify-content: flex-end;'>
 <div style='display: flex; flex-direction: column; width: max-content;'>
 <div style='font-size: 9.5px; color: #777; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1; margin-bottom: 3px;'>
-ALGORITHM &amp; AI Engine <span style='color:#cccccc; margin:0 4px; font-weight:300;'>|</span> Architect &amp; UI
+ALGORITHM &amp; AI Engine <span style='color:#888888; margin:0 4px; font-weight:300;'>|</span> Architect &amp; UI
 </div>
 <div style='display: flex; justify-content: space-between; align-items: baseline; line-height: 1;'>
-<div style='font-size: 9.5px; color: #aaaaaa; font-weight: 500; letter-spacing: 1px;'>SINCE 2026,</div>
+<div style='font-size: 9.5px; color: #999999; font-weight: 500; letter-spacing: 1px;'>SINCE 2026,</div>
 <div style='font-size: 9.5px; color: #666666; font-weight: 700; letter-spacing: 0.5px;'>BY ANDY</div>
 </div>
 </div>
@@ -1537,7 +1537,7 @@ div[data-testid="stTextInput"] > div > div > input { height: 42px !important; bo
 """, unsafe_allow_html=True)
             
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-                if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🌱 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
+                if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
@@ -1677,7 +1677,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             with cb1:
                 title_kr = f"""
 <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 통합 상세비중 (</span>
     <img src='{flag_kr}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
     <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
 </div>
@@ -1692,7 +1692,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             with cb2:
                 title_us = f"""
 <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🌱 일반계좌 통합 상세비중 (</span>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 통합 상세비중 (</span>
     <img src='{flag_us}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
     <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
 </div>
@@ -1704,9 +1704,9 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                         st.info("미국 계좌 데이터가 없습니다.")
                 except: pass
     # =========================================================
-    # 퀀트매매 화면
+    # 알고리즘 화면
     # =========================================================
-    elif st.session_state.current_view == '퀀트매매':
+    elif st.session_state.current_view == '알고리즘':
         st.markdown("""
 <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
     <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
@@ -1718,7 +1718,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 """, unsafe_allow_html=True)
 
     # =========================================================
-    # 💡 [패치 3] Zappa Arbi 상세 화면 추가 완료
+    # 💡 [패치 3] 차익거래 상세 화면 추가 완료
     # =========================================================
     elif st.session_state.current_view == 'Zappa Arbi':
         st.markdown("""
@@ -2191,7 +2191,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 
 
      # =========================================================
-    # 🌱 일반계좌 대시보드 상세페이지
+    # 🪴 일반계좌 대시보드 상세페이지
     # =========================================================
     elif st.session_state.current_view == '일반계좌':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
@@ -2286,7 +2286,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 </div>
 """
 
-        st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>🌱 [일반계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>🪴 [일반계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
        
         p_cash_donut = (cash_total/t_asset*100) if t_asset>0 else 0
         p_ovs_donut = (ovs_total/t_asset*100) if t_asset>0 else 0
