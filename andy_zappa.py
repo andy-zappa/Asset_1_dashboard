@@ -2901,9 +2901,6 @@ font-weight: 700 !important;
 """
             st.markdown(top_box, unsafe_allow_html=True)
 
-              # =========================================================
-            # 💡 [핵심 패치] 종목코드의 [ 두께를 기준으로 모든 하이라이트(**) 두께/색상 100% 일치
-            # =========================================================
             st.markdown("""
 <style>
 /* 모든 버튼 내부의 강조(**) 태그를 검정색 + 표준 굵기(700)로 박제 */
@@ -2942,12 +2939,10 @@ font-weight: 700 !important;
                 if st.button(lbl4, type="primary" if st.session_state.cryp_sort_mode == 'rate' else "secondary", key='cryp_btn4', on_click=lambda: setattr(st.session_state, 'cryp_sort_mode', 'rate')): pass
                
             with cb5:
-                # 💡 등락률 기호 마크다운(**) 통일
                 lbl5 = "↕️등락률[+]" if st.session_state.cryp_show_change_rate else "↕️등락률[-]"
                 if st.button(lbl5, type="primary" if st.session_state.cryp_show_change_rate else "secondary", key='cryp_btn5', on_click=lambda: setattr(st.session_state, 'cryp_show_change_rate', not st.session_state.cryp_show_change_rate)): pass
                
             with cb6:
-                # 💡 종목코드 기호 마크다운(**) 통일
                 lbl6 = "💻종목코드[+]" if st.session_state.show_code else "💻종목코드[-]"
                 if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='cryp_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
            
@@ -2956,7 +2951,6 @@ font-weight: 700 !important;
             code_th = "<th style='text-align:center;'>종목코드</th>" if st.session_state.show_code else ""
             th_chg = "<th style='text-align:center;'>등락률</th>" if st.session_state.cryp_show_change_rate else ""
            
-            # 💡 헤더 렌더링 (보유량 명칭 유지)
             t_h = f"<table class='main-table'><tr><th style='text-align:center;'>코인명</th>{code_th}<th style='text-align:center;'>비중</th><th style='text-align:center;'>총 자산</th><th style='text-align:center;'>평가손익</th><th style='text-align:center;'>손익률</th><th style='text-align:center;'>보유량</th><th style='text-align:center;'>매입가</th><th style='text-align:center;'>현재가</th>{th_chg}</tr>"
            
             sum_code_td = "<td style='text-align:center;'>-</td>" if st.session_state.show_code else ""
@@ -2988,7 +2982,6 @@ font-weight: 700 !important;
                             s_cl.append(c)
                             break
                            
-                # 💡 [패치] 플로팅 배너 토글에 따른 정렬 로직
                 if st.session_state.cryp_sort_mode == 'asset': s_cl.sort(key=lambda x: safe_float(x.get('eval', 0)), reverse=True)
                 elif st.session_state.cryp_sort_mode == 'profit': s_cl.sort(key=lambda x: safe_float(x.get('profit', 0)), reverse=True)
                 elif st.session_state.cryp_sort_mode == 'rate': s_cl.sort(key=lambda x: safe_float(x.get('rate', 0)), reverse=True)
@@ -3002,19 +2995,25 @@ font-weight: 700 !important;
                     logo = f"<div style='display:flex; justify-content:flex-start; align-items:center; gap:8px; padding-left:10px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span>{nm}</span></div>"
                     c_pct = (safe_float(c.get('eval', 0)) / ca * 100) if ca > 0 else 0
                
+                    # 보유량 소수점 8자리 적용
                     qty_val = safe_float(c.get('qty',0))
-                    qty_td = f"<td style='text-align:right; padding-right:15px;'>{qty_val:.6f}</td>" if qty_val > 0 else "<td style='text-align:center;'>-</td>"
-                    avg_p = fmt(c.get('avg_price',0))
-                    avg_td = f"<td style='text-align:right; padding-right:15px;'>{avg_p}</td>" if avg_p != '0' else "<td style='text-align:center;'>-</td>"
-                    curr_price = safe_float(c.get('curr_price',0))
-                    curr_td = f"<td style='text-align:right; padding-right:15px;'>{fmt(curr_price)}</td>" if curr_price > 0 else "<td style='text-align:center;'>-</td>"
+                    qty_str = f"{qty_val:.8f}".rstrip('0').rstrip('.') if qty_val % 1 != 0 else f"{int(qty_val):,}"
+                    qty_td = f"<td style='text-align:right; padding-right:15px;'>{qty_str}</td>" if qty_val > 0 else "<td style='text-align:center;'>-</td>"
+                    
+                    # 💡 [패치] 매입가 및 현재가 10,000원 미만 시 소수점 1자리 적용
+                    raw_avg_p = safe_float(c.get('avg_price',0))
+                    avg_p = f"{raw_avg_p:,.1f}" if 0 < raw_avg_p < 10000 else fmt(raw_avg_p)
+                    avg_td = f"<td style='text-align:right; padding-right:15px;'>{avg_p}</td>" if raw_avg_p > 0 else "<td style='text-align:center;'>-</td>"
+                    
+                    raw_curr_p = safe_float(c.get('curr_price',0))
+                    curr_p_str = f"{raw_curr_p:,.1f}" if 0 < raw_curr_p < 10000 else fmt(raw_curr_p)
+                    curr_td = f"<td style='text-align:right; padding-right:15px;'>{curr_p_str}</td>" if raw_curr_p > 0 else "<td style='text-align:center;'>-</td>"
                    
                     code_td = f"<td style='text-align:center;'>{tk}</td>" if st.session_state.show_code else ""
                    
-                    # 💡 [패치] 등락률 표기 로직
                     if st.session_state.cryp_show_change_rate:
-                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', 0))) # 백엔드 데이터에 따라 대응
-                        diff_amt = (curr_price - (curr_price / (1 + d_rate / 100))) if curr_price > 0 and d_rate != 0 else 0
+                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', 0))) 
+                        diff_amt = (raw_curr_p - (raw_curr_p / (1 + d_rate / 100))) if raw_curr_p > 0 and d_rate != 0 else 0
                         d_class = col(d_rate)
                         if d_rate != 0 or diff_amt != 0:
                             chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px; font-weight:normal;'>{fmt_p(d_rate)}</div></td>"
