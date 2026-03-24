@@ -2943,12 +2943,12 @@ font-weight: 700 !important;
                
             with cb5:
                 # 💡 등락률 기호 마크다운(**) 통일
-                lbl5 = "↕️등락률**[+]**" if st.session_state.cryp_show_change_rate else "↕️등락률**[-]**"
+                lbl5 = "↕️등락률[+]" if st.session_state.cryp_show_change_rate else "↕️등락률[-]"
                 if st.button(lbl5, type="primary" if st.session_state.cryp_show_change_rate else "secondary", key='cryp_btn5', on_click=lambda: setattr(st.session_state, 'cryp_show_change_rate', not st.session_state.cryp_show_change_rate)): pass
                
             with cb6:
                 # 💡 종목코드 기호 마크다운(**) 통일
-                lbl6 = "💻종목코드**[+]**" if st.session_state.show_code else "💻종목코드**[-]**"
+                lbl6 = "💻종목코드[+]" if st.session_state.show_code else "💻종목코드[-]"
                 if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='cryp_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
            
             st.markdown("<div style='text-align:right; font-size:13px; color:#555; font-weight:bold; margin-bottom:5px;'>단위 : 원화(KRW)</div>", unsafe_allow_html=True)
