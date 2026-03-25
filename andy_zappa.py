@@ -62,7 +62,7 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, 'zappa_cookie', 'signature_key', 30)
+authenticator = stauth.Authenticate(credentials, 'zappa_cookie_v2', 'signature_key', 0)
 
 # 3. 💡 모바일 자동 로그인 (비밀 URL 토큰 감지)
 is_auto_login = False
@@ -71,19 +71,28 @@ if st.query_params.get("token") == "andy_zappa_pass":
     st.session_state["authentication_status"] = True
     is_auto_login = True
 
-# 토큰이 없을 때만 정식 로그인 창 띄우기
+# 💡 [패치] 로그인 창을 가둬둘 '빈 상자' 생성
+login_box = st.empty()
+
+# 토큰이 없을 때만 빈 상자 안에 정식 로그인 창 띄우기
 if not is_auto_login:
-    authenticator.login()
+    with login_box.container():
+        authenticator.login()
 
 if st.session_state.get("authentication_status") is False:
-    st.error('❌ 비밀번호가 일치하지 않습니다.')
+    st.error('❌ 아이디 또는 비밀번호가 일치하지 않습니다.')
 elif st.session_state.get("authentication_status") is None:
     st.warning('🔒 대시보드 접속을 위해 비밀번호를 입력해주세요.')
 elif st.session_state.get("authentication_status"):
-    # 🔴 여기서 로그아웃 버튼을 지웠습니다!
+    # 💡 [핵심 패치 1] 로그인이 성공하면 겹쳐있던 로그인 상자를 강제로 폭파시켜 흔적을 지웁니다.
+    login_box.empty()
+   
+    # 💡 [핵심 패치 2] 로그인 직후 디폴트 화면을 '총 운용자산(대시보드)'으로 확실하게 고정합니다.
+    if 'current_view' not in st.session_state:
+        st.session_state.current_view = '대시보드'
 
     # =========================================================
-    # [ Part 1 ] 공통 설정 및 오리지널 CSS 복원 
+    # [ Part 1 ] 공통 설정 및 오리지널 CSS 복원
     # =========================================================
     css = """
 <style>
@@ -192,10 +201,10 @@ div.element-container:has(#logout-btn-anchor) + div.element-container button:hov
     background: #e9ecef !important; border-color: #bbbbbb !important; transform: none !important;
 }
 </style>
-""" 
+"""
     st.markdown(css, unsafe_allow_html=True)
 
-    # 💡 [패치 1] 사이드바 클릭 연동 JS (복잡한 강제 열림/닫힘 로직 제거, 파이썬에 통제권 위임)
+    # 💡 [패치 1] 사이드바 클릭 연동 JS (DOM 변화 대응을 위해 클릭 시점에 라디오 버튼 동적 탐색)
     components.html("""
 <script>
 const parentDoc = window.parent.document;
@@ -209,13 +218,14 @@ if (targetElement) { targetElement.scrollIntoView({ behavior: 'smooth', block: '
 });
 
 function bindSidebarClicks() {
-const labels = Array.from(parentDoc.querySelectorAll('div[role="radiogroup"] label'));
 const bindClick = (cardId, routeName) => {
 const card = parentDoc.getElementById(cardId);
 if (card && !card.hasAttribute('data-binded')) {
 card.setAttribute('data-binded', 'true');
 card.addEventListener('click', () => {
-const target = labels.find(l => l.innerText.includes(routeName));
+// 👇 핵심: 찰나의 클릭 순간에 최신 메뉴 버튼을 다시 찾도록 안으로 넣었습니다.
+const currentLabels = Array.from(parentDoc.querySelectorAll('div[role="radiogroup"] label'));
+const target = currentLabels.find(l => l.innerText.includes(routeName));
 if(target) target.click();
 });
 }
@@ -243,7 +253,7 @@ setInterval(bindSidebarClicks, 300);
 
     def get_logo_html(nm):
         if not nm or nm in ["예수금", "[ 합  계 ]", "현금성자산", "현금성자산(예수금)"]: return ""
-    
+   
         nm_u = str(nm).upper()
         if any(x in nm_u for x in ['KODEX', 'TIGER', 'PLUS', 'RISE', 'ETF', 'ACE', '미국나스닥', '미국S&P']):
             clean_nm = re.sub(r'[^가-힣a-zA-Z0-9]', '', str(nm))
@@ -355,11 +365,11 @@ setInterval(bindSidebarClicks, 300);
         p_data, g_data = {}, {}
         is_online = False
         ts = int(time.time())
-    
+   
         try:
             r_p = requests.get(f"http://158.179.172.40:8000/tax_advantaged?t={ts}", timeout=5)
             r_g = requests.get(f"http://158.179.172.40:8000/taxable?t={ts}", timeout=5)
-        
+       
             if r_p.status_code == 200:
                 temp_p = r_p.json()
                 if isinstance(temp_p, dict) and "error" not in temp_p:
@@ -367,7 +377,7 @@ setInterval(bindSidebarClicks, 300);
                     is_online = True
                     with open('data_tax_advantaged.json', 'w', encoding='utf-8') as f:
                         json.dump(p_data, f, ensure_ascii=False, indent=4)
-                
+               
             if r_g.status_code == 200:
                 temp_g = r_g.json()
                 if isinstance(temp_g, dict) and "error" not in temp_g:
@@ -375,17 +385,17 @@ setInterval(bindSidebarClicks, 300);
                     with open('data_taxable.json', 'w', encoding='utf-8') as f:
                         json.dump(g_data, f, ensure_ascii=False, indent=4)
         except: pass
-    
+   
         if not p_data:
             try:
                 with open('data_tax_advantaged.json', 'r', encoding='utf-8') as f: p_data = json.load(f)
             except: pass
-            
+           
         if not g_data:
             try:
                 with open('data_taxable.json', 'r', encoding='utf-8') as f: g_data = json.load(f)
             except: pass
-            
+           
         return p_data, g_data, is_online
 
     data, g_data, is_oracle_online = fetch_hybrid_data()
@@ -393,7 +403,7 @@ setInterval(bindSidebarClicks, 300);
     def normalize_insight(raw_data):
         if not isinstance(raw_data, dict): return {}
         insight = raw_data.get("_total", raw_data.get("_insight", {}))
-    
+   
         if isinstance(insight, dict) and safe_float(insight.get('총 자산', insight.get('총자산', 0))) > 0:
             return {
                 '총자산': safe_float(insight.get('총 자산', insight.get('총자산', 0))),
@@ -409,7 +419,7 @@ setInterval(bindSidebarClicks, 300);
                 calc_asset += safe_float(acc.get('총 자산', acc.get('총자산', 0)))
                 calc_profit += safe_float(acc.get('평가손익', acc.get('총 수익', acc.get('총수익', 0))))
                 calc_orig += safe_float(acc.get('원금', 0))
-            
+           
         calc_rate = (calc_profit / calc_orig * 100) if calc_orig > 0 else 0
         return {'총자산': calc_asset, '총수익': calc_profit, '수익률(%)': calc_rate, '원금합': calc_orig, '조회시간': '실시간 동기화'}
 
@@ -420,7 +430,7 @@ setInterval(bindSidebarClicks, 300);
         ts = int(time.time())
         url = f"http://158.179.172.40:8000/crypto?t={ts}"
         crypto_d = None
-    
+   
         try:
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
@@ -431,7 +441,7 @@ setInterval(bindSidebarClicks, 300);
                 else:
                     crypto_d = None
         except: pass
-        
+       
         if not crypto_d:
             try:
                 with open('data_crypto.json', 'r', encoding='utf-8') as f:
@@ -442,19 +452,19 @@ setInterval(bindSidebarClicks, 300);
             ta = safe_float(crypto_d.get('total_asset', 0))
             coins = crypto_d.get('coins', [])
             btc_pct = eth_pct = trx_pct = 0
-        
+       
             if ta > 0 and isinstance(coins, list):
                 for c in coins:
                     if isinstance(c, dict):
                         if c.get('ticker') == 'BTC': btc_pct = (safe_float(c.get('eval', 0)) / ta) * 100
                         elif c.get('ticker') == 'ETH': eth_pct = (safe_float(c.get('eval', 0)) / ta) * 100
                         elif c.get('ticker') == 'TRX': trx_pct = (safe_float(c.get('eval', 0)) / ta) * 100
-        
+       
             crypto_d['btc_pct'] = btc_pct
             crypto_d['eth_pct'] = eth_pct
             crypto_d['trx_pct'] = trx_pct
             return crypto_d
-        
+       
         return None
 
     crypto_data = get_crypto_data()
@@ -530,12 +540,12 @@ setInterval(bindSidebarClicks, 300);
         def get_image_base64(image_name):
             base_dir = os.path.dirname(os.path.abspath(__file__))
             abs_path = os.path.join(base_dir, image_name)
-        
+       
             if os.path.exists(abs_path):
                 with open(abs_path, "rb") as img_file:
                     return base64.b64encode(img_file.read()).decode()
             return ""
-    
+   
         robot_b64 = get_image_base64("robot.png")
         if robot_b64:
             robot_img_src = f"data:image/png;base64,{robot_b64}"
@@ -548,12 +558,12 @@ setInterval(bindSidebarClicks, 300);
         sea_src1 = f"data:image/gif;base64,{sea1_b64}" if sea1_b64 else ""
         sea_src2 = f"data:image/gif;base64,{sea2_b64}" if sea2_b64 else ""
 
-        # 💡 [Oracle 시스템 헤더 정밀 패치] 
+        # 💡 [Oracle 시스템 헤더 정밀 패치]
         # 팩트 반영: CHUNCHEON / LINUX 9.7
         # 디자인: 로고 상단 밀착(-20px), 하단 문구와 이격(+30px) 확보
         logo_src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Oracle_logo.svg/200px-Oracle_logo.svg.png"
         short_p = "<span style='font-size: 10px; vertical-align: 1px; color: #111111; opacity: 0.3; margin: 0 4px;'>|</span>"
-        
+       
         status_box_style = "background-color: #1f293a; padding: 4px 12px 4px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 0px;"
         off_light_style = "filter: grayscale(100%); opacity: 0.35; font-size:12px; margin-right:5px;"
         inactive_text_color = "#555555"
@@ -563,14 +573,14 @@ setInterval(bindSidebarClicks, 300);
         else:
             status_indicator = f"<div style='{status_box_style}'><div style='display:flex; align-items:center;'><span style='{off_light_style}'>🟢</span><span style='font-size:13.5px; font-weight:400; color:{inactive_text_color}; letter-spacing:-0.5px;'>LIVE SYNC</span></div><div style='display:flex; align-items:center;'><span style='font-size:12px; margin-right:5px;'>🔴</span><span style='font-size:13.5px; font-weight:400; color:#ff5252; letter-spacing:-0.5px;'>OFF LINE</span></div></div>"
 
-        # 💡 [Oracle 시스템 헤더 최종 패치 - 하단 영역 바싹 밀착 버전] 
+        # 💡 [Oracle 시스템 헤더 최종 패치 - 하단 영역 바싹 밀착 버전]
         status_html = f"""
 <style>
 .seal-hover-box {{
 position: absolute;
-top: -64px; 
-left: 12px; 
-width: 75px; 
+top: -64px;
+left: 12px;
+width: 75px;
 height: 75px;
 z-index: 10;
 background-image: url('{sea_src1}');
@@ -658,7 +668,7 @@ const interval = setInterval(() => {
 
         c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
         c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
-        
+       
         c_alts = 0
         if isinstance(crypto_data, dict):
             ta = safe_float(crypto_data.get('total_asset', 0))
@@ -677,7 +687,7 @@ const interval = setInterval(() => {
         c_tot_asset = safe_float(crypto_data.get('total_asset', 0)) if isinstance(crypto_data, dict) else 0
         c_tot_krw = safe_float(crypto_data.get('total_krw', 0)) if isinstance(crypto_data, dict) else 0
         c_tot_buy = safe_float(crypto_data.get('total_buy', 0)) if isinstance(crypto_data, dict) else 0
-        
+       
         c_eval_pure = c_tot_asset - c_tot_krw
         c_buy_pure = c_tot_buy - c_tot_krw
         c_prof_pure = c_eval_pure - c_buy_pure
@@ -688,7 +698,7 @@ const interval = setInterval(() => {
             cfg_data_side = res_cfg_side.json() if res_cfg_side.status_code == 200 else {}
         except:
             cfg_data_side = {}
-            
+           
         p_principal_tot = sum(safe_float(cfg_data_side.get(f"{k}_PRINCIPAL", 0)) for k in ['DC', 'IRP', 'PENSION', 'ISA'])
         p_rate_invested = (p_profit_all / p_principal_tot * 100) if p_principal_tot > 0 else 0
 
@@ -707,7 +717,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 .spin-globe { display: inline-block; animation: spin 5s linear infinite; margin-right: 3px; font-size: 14px; }
 </style>
 """, unsafe_allow_html=True)
-        
+       
         import pytz
         now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
         d_str = now_seoul.strftime("%y/%m/%d")
@@ -764,7 +774,7 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
                             g_item_cnt += 1
 
         # 3. 암호화폐 카운트
-        c_acc_cnt = 1 
+        c_acc_cnt = 1
         c_item_cnt = 0
         if isinstance(crypto_data, dict):
             for c in crypto_data.get('coins', []):
@@ -952,9 +962,9 @@ transition: transform 0.2s ease; display: inline-block;
 """
         st.sidebar.markdown(arbi_card_html, unsafe_allow_html=True)
 
-        # =========================================================     
+        # =========================================================    
         # 💡 [핵심 패치] 사이드바 하단 여백 제거 및 메인 상세페이지 상단 끌어올림 통합
-        # ========================================================= 
+        # =========================================================
         st.markdown("""
 <style>
 /* 우측 메인 상세페이지 전체를 위로 끌어올림 (숫자를 조절하여 높이 맞춤) */
@@ -1049,11 +1059,28 @@ border-color: #bbbbbb !important;
             st.session_state['show_admin_page'] = True
             st.rerun()
 
-        # 💡 LOG-OUT 버튼 (대문 아이콘 적용)
+        # 💡 LOG-OUT 버튼 (대문 아이콘 적용 & 완전 로그아웃 콜백 적용)
         st.sidebar.markdown("<div id='logout-btn-anchor'></div>", unsafe_allow_html=True)
-        if st.sidebar.button("🚪 Logout", key="logout_final_btn"):
+       
+        def process_logout():
+            # 1. 주소창의 파라미터(토큰) 완전 삭제
+            st.query_params.clear()
+           
+            # 2. 스트림릿 인증기(Authenticator) 내부 상태 완벽 초기화
+            st.session_state["authentication_status"] = None
+            st.session_state["name"] = None
+            st.session_state["username"] = None
+            st.session_state["logout"] = True  # 공식 로그아웃 시그널
             st.session_state['show_admin_page'] = False
-            st.rerun()
+           
+            # 3. 새로운 쿠키(v2) 강제 파기
+            try:
+                authenticator.cookie_manager.delete('zappa_cookie_v2')
+            except:
+                pass
+
+        # 버튼 클릭 시(on_click) 즉시 위 함수를 실행
+        st.sidebar.button("🚪 Logout", key="logout_final_btn", on_click=process_logout)
 
         # =========================================================
         # 👇👇👇 여기서부터 복사해서 맨 아래에 추가해 주세요 👇👇👇
@@ -1206,34 +1233,34 @@ setInterval(maintainExpanderState, 300);
         else:
             acc_list = {"[ UPbit 거래소 ]": "CRYPTO"}
 
-            
+           
         with col_acc: sel_acc_label = st.selectbox("2️⃣ 세부 계좌 선택", options=list(acc_list.keys()))
-    
+   
         sel_key = acc_list[sel_acc_label]
         is_usa = "USA" in sel_key
         cash_unit = "USD" if is_usa else "KRW"
-    
+   
         st.markdown("---")
         st.markdown("<div class='admin-section-title'>1️⃣ 자산정보 요약</div>", unsafe_allow_html=True)
-    
+   
         sum_data = {
             "현금성자산(예수금)": [safe_float(cfg.get(f"{sel_key}_CASH", 0))],
             "투자원금": [safe_float(cfg.get(f"{sel_key}_PRINCIPAL", 0))]
         }
         df_sum = pd.DataFrame(sum_data)
-    
+   
         sum_cfg = {
             "현금성자산(예수금)": st.column_config.NumberColumn(f"💵 현금성자산 ({cash_unit})", format="%,.4f" if is_usa else "%,.0f", step=0.0001 if is_usa else 1.0),
             "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f", step=1.0)
         }
-    
+   
         edited_sum = st.data_editor(df_sum, use_container_width=True, column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
         new_cash = edited_sum.iloc[0]["현금성자산(예수금)"]
         new_prin = edited_sum.iloc[0]["투자원금"]
-    
+   
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<div class='admin-section-title'>2️⃣ 보유종목 리스트</div>", unsafe_allow_html=True)
-    
+   
         curr_items = cfg.get(sel_key, [])
         df_items = pd.DataFrame(curr_items)
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
@@ -1241,7 +1268,7 @@ setInterval(maintainExpanderState, 300);
         for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
             if col not in df_items.columns: df_items[col] = None
         df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
-    
+   
         if sel_key == "CRYPTO":
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0)
@@ -1253,19 +1280,19 @@ setInterval(maintainExpanderState, 300);
         else:
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0).astype(float)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0).astype(float)
-        
+       
             p_format = "%,.4f" if is_usa else "%,.0f"
             p_step = 0.0001 if is_usa else 1.0
-        
+       
             col_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "종목코드": st.column_config.TextColumn("종목코드"),
                 "보유수량": st.column_config.NumberColumn("보유수량", format=p_format, step=p_step),
                 "매입단가": st.column_config.NumberColumn(f"매입단가 ({cash_unit})", format=p_format, step=p_step)
             }
-        
+       
         edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
-    
+   
         if category == "📂절세계좌":
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("<div class='admin-section-title'>3️⃣ 안전자산 현황</div>", unsafe_allow_html=True)
@@ -1274,7 +1301,7 @@ setInterval(maintainExpanderState, 300);
             df_safe = pd.DataFrame(raw_safe)
             if df_safe.empty: df_safe = pd.DataFrame(columns=["종목명", "투자원금", "연이율(%)", "매입일자"])
             if "매입일자" in df_safe.columns: df_safe["매입일자"] = pd.to_datetime(df_safe["매입일자"], errors='coerce')
-        
+       
             safe_cfg = {
                 "종목명": st.column_config.TextColumn("종목명"),
                 "투자원금": st.column_config.NumberColumn("투자원금 (KRW)", format="%,.0f", step=1.0),
@@ -1282,9 +1309,9 @@ setInterval(maintainExpanderState, 300);
                 "매입일자": st.column_config.DateColumn("매입일자", format="YYYY-MM-DD")
             }
             edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
-        
+       
         st.markdown("<br>", unsafe_allow_html=True)
-    
+   
         @st.dialog("🚀 실시간 데이터 배포 최종 확인")
         def confirm_deploy_dialog(config_to_save, acc_label, cash_val, prin_val):
             st.warning(f"⚠️ **{acc_label}** 데이터를 오라클 서버로 전송하시겠습니까?")
@@ -1294,14 +1321,14 @@ setInterval(maintainExpanderState, 300);
             - **배포 버튼 클릭 시 즉시 데이터 정합성이 업데이트됩니다.**
             """)
             st.write("")
-        
+       
             c1, c2 = st.columns(2)
             with c1:
                 confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
             with c2:
                 if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
                     st.rerun()
-        
+       
             if confirm_btn:
                 try:
                     res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
@@ -1314,15 +1341,15 @@ setInterval(maintainExpanderState, 300);
                         st.error(f"❌ 서버 배포 실패: {res.text}")
                 except Exception as e:
                     st.error(f"❌ 연결 오류:\n{e}")
-                
+               
         if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
             save_df = edited_df.copy()
-        
+       
             if sel_key == "CRYPTO":
                 save_df.rename(columns={"종목명": "name", "종목코드": "ticker", "보유수량": "qty", "매입단가": "avg_price"}, inplace=True)
             else:
                 save_df.rename(columns={"종목명": "종목명", "종목코드": "코드", "보유수량": "수량", "매입단가": "매입가"}, inplace=True)
-            
+           
             clean_records = []
             for _, row in save_df.iterrows():
                 rec = {}
@@ -1332,11 +1359,11 @@ setInterval(maintainExpanderState, 300);
                     elif isinstance(v, (float, np.floating)): rec[k] = float(v)
                     else: rec[k] = str(v)
                 clean_records.append(rec)
-            
+           
             cfg[sel_key] = clean_records
             cfg[f"{sel_key}_CASH"] = float(new_cash) if new_cash else 0.0
             cfg[f"{sel_key}_PRINCIPAL"] = float(new_prin) if new_prin else 0.0
-        
+       
             if category == "📂절세계좌":
                 safe_df = edited_safe.copy().fillna("")
                 safe_records = safe_df.to_dict('records')
@@ -1347,16 +1374,16 @@ setInterval(maintainExpanderState, 300);
                     else:
                         r['매입일자'] = ""
                 cfg[f"{sel_key}_SAFE"] = safe_records
-            
+           
             confirm_deploy_dialog(cfg, sel_acc_label, new_cash, new_prin)
-        
+       
         st.stop()
     # =========================================================
     # 💡 대시보드 화면 (Treemap & Pie Chart)
     # =========================================================
     if st.session_state.current_view == '대시보드':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
-    
+   
         try:
             import pandas as pd
             import numpy as np
@@ -1387,7 +1414,7 @@ setInterval(maintainExpanderState, 300);
 
             all_pension_list = []
             all_gen_list = []
-        
+       
             if isinstance(data, dict):
                 for k in ['DC', 'IRP', 'PENSION', 'ISA']:
                     if k in data and isinstance(data[k], dict):
@@ -1432,7 +1459,7 @@ setInterval(maintainExpanderState, 300);
                     '자산': 'sum', '평가손익': 'sum', '수량': 'sum',
                     '매입가': 'mean', '현재가': 'mean', '전일비': 'mean', '수익률': 'mean'
                 }).reset_index()
-            
+           
                 total_sum = df['자산'].sum()
                 labels, parents, values = ["포트폴리오"], [""], [0]
                 colors, texts, custom_data = ["#1e222d"], [""], [[0,0,0,0,0,0,0]]
@@ -1474,7 +1501,7 @@ setInterval(maintainExpanderState, 300);
                 return fig
 
             c1, c2 = st.columns(2)
-        
+       
             def get_counts(lst):
                 if not lst: return 0, 0
                 df_c = pd.DataFrame(lst)
@@ -1483,7 +1510,7 @@ setInterval(maintainExpanderState, 300);
                 up_c = len(df_c[df_c['전일비'] > 0])
                 dn_c = len(df_c[df_c['전일비'] < 0])
                 return up_c, dn_c
-            
+           
             pen_up, pen_dn = get_counts(all_pension_list)
             gen_up, gen_dn = get_counts(all_gen_list)
 
@@ -1495,11 +1522,11 @@ setInterval(maintainExpanderState, 300);
 하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{pen_dn}</span> 종목
 </div>
 """, unsafe_allow_html=True)
-            
+           
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
                 if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
-            
+           
             with c2:
                 st.markdown(f"""
 <div style='text-align:center; padding:12px; background:#2a2e39; border-radius:10px; color:#e2e8f0; font-size:15px; font-weight:bold; margin-bottom:12px;'>
@@ -1508,7 +1535,7 @@ setInterval(maintainExpanderState, 300);
 하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{gen_dn}</span> 종목
 </div>
 """, unsafe_allow_html=True)
-            
+           
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
                 if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -1517,7 +1544,7 @@ setInterval(maintainExpanderState, 300);
     # 🍩 대시보드 전용: 파이차트 그리기
     # ---------------------------------------------------------
             st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
-        
+       
             def get_detailed_grouped_df(keys, is_usa=False):
                 records = []
                 fx = safe_float(g_data.get('환율', 1443.1)) if is_usa else 1
@@ -1549,18 +1576,18 @@ setInterval(maintainExpanderState, 300);
                 total_asset = df_pie['총자산'].sum()
                 items_js = []
                 list_html = ""
-            
+           
                 for i, row in enumerate(df_pie.to_dict('records')):
                     pct = (row['총자산'] / total_asset) * 100 if total_asset > 0 else 0
                     logo = get_logo_html(row['종목명'])
-                
+               
                     p_class = "#D32F2F" if row['평가손익'] > 0 else ("#1976D2" if row['평가손익'] < 0 else "#9e9e9e")
                     sign = "+" if row['평가손익'] > 0 else ""
                     c_code = donut_colors[i % len(donut_colors)]
                     qty_str = f"{row['수량']:,.2f}".rstrip('0').rstrip('.') if row['수량'] % 1 != 0 else f"{int(row['수량']):,}"
-                
+               
                     items_js.append({"index": i, "name": row['종목명'], "value": float(row['총자산']), "pct": f"{pct:.1f}%", "logo": logo, "asset": fmt(row['총자산']), "profit": f"{sign}{fmt(row['평가손익'])}", "rate": fmt_p(row['수익률']), "p_class": p_class, "color": c_code, "qty": qty_str})
-                
+               
                     list_html += f"""
 <div id='leg-item-{i}' class='legend-item' data-idx='{i}' style='display:flex; justify-content:space-between; align-items:center; padding:12px 10px; border-bottom:1px solid #2a2e39; border-radius:8px; cursor:pointer; margin-bottom:6px; flex-shrink:0;'>
     <div style='display:flex; flex-direction:column; gap:6px;'>
@@ -1584,7 +1611,7 @@ setInterval(maintainExpanderState, 300);
     </div>
 </div>
 """
-                
+               
                 html_code = f"""
 <html><head><script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script><style>
 body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; background:transparent; user-select:none; overflow:hidden; }}
@@ -1635,15 +1662,15 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
 
             df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
             df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
-        
+       
             st.markdown("""
 <style>
 div[data-testid="column"] { padding-bottom: 80px !important; }
 </style>
 """, unsafe_allow_html=True)
-        
+       
             cb1, cb2 = st.columns(2)
-        
+       
             flag_kr = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png"
             flag_us = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png"
 
@@ -3315,12 +3342,12 @@ font-weight: 700 !important;
                     qty_val = safe_float(c.get('qty',0))
                     qty_str = f"{qty_val:.8f}".rstrip('0').rstrip('.') if qty_val % 1 != 0 else f"{int(qty_val):,}"
                     qty_td = f"<td style='text-align:right; padding-right:15px;'>{qty_str}</td>" if qty_val > 0 else "<td style='text-align:center;'>-</td>"
-                    
+                   
                     # 💡 [패치] 매입가 및 현재가 10,000원 미만 시 소수점 1자리 적용
                     raw_avg_p = safe_float(c.get('avg_price',0))
                     avg_p = f"{raw_avg_p:,.1f}" if 0 < raw_avg_p < 10000 else fmt(raw_avg_p)
                     avg_td = f"<td style='text-align:right; padding-right:15px;'>{avg_p}</td>" if raw_avg_p > 0 else "<td style='text-align:center;'>-</td>"
-                    
+                   
                     raw_curr_p = safe_float(c.get('curr_price',0))
                     curr_p_str = f"{raw_curr_p:,.1f}" if 0 < raw_curr_p < 10000 else fmt(raw_curr_p)
                     curr_td = f"<td style='text-align:right; padding-right:15px;'>{curr_p_str}</td>" if raw_curr_p > 0 else "<td style='text-align:center;'>-</td>"
@@ -3328,7 +3355,7 @@ font-weight: 700 !important;
                     code_td = f"<td style='text-align:center;'>{tk}</td>" if st.session_state.show_code else ""
                    
                     if st.session_state.cryp_show_change_rate:
-                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', 0))) 
+                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', 0)))
                         diff_amt = (raw_curr_p - (raw_curr_p / (1 + d_rate / 100))) if raw_curr_p > 0 and d_rate != 0 else 0
                         d_class = col(d_rate)
                         if d_rate != 0 or diff_amt != 0:
