@@ -3420,16 +3420,15 @@ font-weight: 700 !important;
                     code_td = f"<td style='text-align:center;'>{tk}</td>" if st.session_state.show_code else ""
                    
                     if st.session_state.cryp_show_change_rate:
-                        # 💡 [패치] 오프라인 상태에서도 등락률을 최대한 찾아내고 없으면 offline으로 표시합니다.
-                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', c.get('signed_change_rate', c.get('change_rate', 0)))))
+                        # 💡 로봇이 저장하는 'chg_rate'를 1순위로 찾도록 설정
+                        d_rate = safe_float(c.get('chg_rate', c.get('signed_change_rate', c.get('전일비', 0))))
+                        raw_curr_p = safe_float(c.get('curr_price', 0))
                         
-                        # 등락 금액 계산 (현재가가 있을 때만)
-                        if raw_curr_p > 0 and d_rate != 0:
+                        if raw_curr_p > 0 and (d_rate != 0):
                             diff_amt = (raw_curr_p - (raw_curr_p / (1 + d_rate / 100)))
                             d_class = col(d_rate)
                             chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px; font-weight:normal;'>{fmt_p(d_rate)}</div></td>"
                         else:
-                            # 💡 데이터가 아예 없을 때(네트워크 단절 등)의 시각적 피드백
                             chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div style='color:#aaa; font-size:13px;'>-</div><div style='color:#aaa; font-size:11.5px; font-weight:normal;'>offline</div></td>"
                     else:
                         chg_td = ""
