@@ -1677,38 +1677,354 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                         st.info("미국 계좌 데이터가 없습니다.")
                 except: pass
     # =========================================================
-    # 알고리즘 화면
+    # 🧩 알고리즘(Zappa Alpha) 대시보드 프론트엔드 UI
     # =========================================================
     elif st.session_state.current_view == '알고리즘':
-        st.markdown("""
-<div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px;">
-    <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
-    <div>
-        <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Quant Trading <span style="font-size:18px; color:#555; font-weight:normal;">(with ZAPPA Bot)</span></h3>
-        <div style="font-size:14.5px; color:#666; margin-top:5px;">💡 ZAPPA 단기/퀀트 트레이딩 봇의 실시간 매매 현황 및 알고리즘 성과를 모니터링하는 화면입니다.</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+       
+        # 1. 봇 연동 전 UI 렌더링을 위한 가상(Mock) 데이터 셋업
+        mock_algo_seed = 12156000
+        mock_algo_profit = 3450000
+        mock_algo_mdd = -4.2
+        mock_algo_winrate = 64.5
+        mock_algo_trades = 48
+        mock_algo_status = "🟢 ACTIVE (Trading)"
+       
+        mock_active_positions = [
+            {"ticker": "PLTR", "name": "팔란티어", "type": "Long(매수)", "entry": 42.50, "curr": 45.20, "rate": 6.35, "signal": "MACD 골든크로스 & 거래량 급증", "amt": 2500000},
+            {"ticker": "TSLA", "name": "테슬라", "type": "Long(매수)", "entry": 245.10, "curr": 241.50, "rate": -1.46, "signal": "볼린저밴드 하단 터치 (과매도)", "amt": 1800000},
+            {"ticker": "BTC", "name": "비트코인", "type": "Short(매도)", "entry": 92500, "curr": 91200, "rate": 1.40, "signal": "RSI 80 돌파 (단기 과매수)", "amt": 3000000},
+        ]
+       
+        mock_algo_logs = [
+            {"time": "10:15:22", "coin": "NVDA", "type": "청산(Sell)", "reason": "익절 목표가(5%) 도달", "amt": 2000000, "profit": 102000},
+            {"time": "09:30:00", "coin": "BTC", "type": "진입(Short)", "reason": "RSI 80 돌파 (단기 과매수)", "amt": 3000000, "profit": "-"},
+            {"time": "04:12:45", "coin": "IONQ", "type": "청산(Sell)", "reason": "손절 라인(-3%) 이탈", "amt": 1500000, "profit": -45000},
+            {"time": "02:22:10", "coin": "PLTR", "type": "진입(Long)", "reason": "MACD 골든크로스", "amt": 2500000, "profit": "-"},
+        ]
 
-    # =========================================================
-    # 💡 [패치 3] 차익거래 상세 화면 추가 완료
-    # =========================================================
-    elif st.session_state.current_view == 'Zappa Arbi':
-        st.markdown("""
+        # 2. 상단 타이틀
+        st.markdown(f"""
 <div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px; margin-bottom: 25px;">
-    <img src='https://cdn-icons-png.flaticon.com/512/4712/4712139.png' style='width:45px; height:45px;'>
-    <div>
-        <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Zappa Arbi <span style="font-size:18px; color:#555; font-weight:normal;">(Arbitrage Monitor)</span></h3>
-        <div style="font-size:14.5px; color:#666; margin-top:5px;">💡 바이낸스 ↔ 업비트 간의 실시간 김치 프리미엄(Gap) 및 기대 수익을 분석하는 봇 대시보드입니다.</div>
-    </div>
+<img src='{r_src}' style='width:48px; height:48px; object-fit:contain;'>
+<div>
+<h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Zappa Alpha <span style="font-size:18px; color:#555; font-weight:normal;">(Quant Trading Bot)</span></h3>
+<div style="font-size:14.5px; color:#666; margin-top:5px;">💡 감정을 배제하고 사전 정의된 기술적 지표(지수, 거래량, 모멘텀)에 따라 24시간 자동 매매를 수행하는 퀀트 대시보드입니다.</div>
 </div>
-
-<h4 style='margin-bottom:15px; font-weight:bold;'>📊 실시간 갭(Gap) 데이터 대기 중...</h4>
-<div style="background-color:#ffffff; padding:50px 20px; border-radius:12px; border:1px dashed #ccc; text-align:center;">
-    <h5 style="color:#555; margin-bottom:10px;">바이낸스 API 연결 준비 단계입니다.</h5>
-    <p style="color:#888; font-size:14.5px;">계정 가입 완료 후, 이곳에 실시간 차트와 수익 계산 로직이 연동될 예정입니다.</p>
 </div>
 """, unsafe_allow_html=True)
+
+        # 3. 상단 핵심 성과 지표 (Performance Metrics)
+        algo_summary_html = f"""
+<div class='card-main' style='padding: 25px 30px; margin-bottom: 25px;'>
+<div style='display: flex; justify-content: space-between; align-items: stretch;'>
+<div style='flex: 1; border-right: 1px solid #e8dbad; padding-right: 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🎯 알고리즘 누적 성과</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
+<span style='font-size: 14px; color: #555;'>누적 실현 수익금</span>
+<span style='font-size: 24px; font-weight: 800; color: #D32F2F;'>{fmt(mock_algo_profit, True)} <span style='font-size:14px; font-weight:normal;'>KRW</span></span>
+</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline;'>
+<span style='font-size: 14px; color: #555;'>운용 시드머니</span>
+<span style='font-size: 18px; font-weight: 600; color: #111;'>{fmt(mock_algo_seed)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
+</div>
+</div>
+<div style='flex: 1; border-right: 1px solid #e8dbad; padding: 0 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>📊 리스크 및 승률 지표</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
+<span style='font-size: 14px; color: #555;'>승률 (총 {mock_algo_trades}번 거래)</span>
+<span style='font-size: 18px; font-weight: 600; color: #111;'>{mock_algo_winrate}%</span>
+</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline;'>
+<span style='font-size: 14px; color: #555;' title='최대 낙폭 (가장 뼈아팠던 손실 구간)'>최대 낙폭 (MDD) ℹ️</span>
+<span style='font-size: 18px; font-weight: 600; color: #1976D2;'>{mock_algo_mdd}%</span>
+</div>
+</div>
+<div style='flex: 1; padding-left: 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🤖 알파 봇 상태</div>
+<div class='card-inner' style='padding: 12px; text-align: center; margin-bottom: 0;'>
+<div style='font-size: 17px; font-weight: 800; color: #388E3C;'>{mock_algo_status}</div>
+<div style='font-size: 12.5px; color: #777; margin-top: 4px;'>전략 : 복합 모멘텀 돌파 (V1.2)</div>
+</div>
+</div>
+</div>
+</div>
+"""
+        st.markdown(algo_summary_html, unsafe_allow_html=True)
+
+        # 4. 자산 성장 곡선 (Equity Curve) - Plotly 활용
+        st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>📈 자산 성장 곡선 (Equity Curve) & 백테스트 성과</div>", unsafe_allow_html=True)
+       
+        try:
+            # 목업 차트 데이터 생성 (시간 흐름에 따른 시드머니 우상향 시뮬레이션)
+            np.random.seed(42)
+            days = pd.date_range(end=datetime.today(), periods=60)
+            daily_returns = np.random.normal(0.002, 0.015, 60) # 평균 일수익 0.2%, 변동성 1.5%
+            cumulative_returns = np.cumprod(1 + daily_returns)
+            equity_values = mock_algo_seed * (cumulative_returns / cumulative_returns[-1]) # 마지막 값을 현재 시드머니에 맞춤
+           
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=days, y=equity_values,
+                mode='lines',
+                line=dict(color='#D32F2F', width=3),
+                fill='tozeroy',
+                fillcolor='rgba(211, 47, 47, 0.1)',
+                name='자산 평가액'
+            ))
+            fig.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=250,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(248,249,250,0.5)',
+                xaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc'),
+                yaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc', tickformat=",.0f"),
+                hovermode='x unified'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        except:
+            st.info("차트를 렌더링하려면 plotly 라이브러리가 필요합니다.")
+
+        # 5. 중단 영역 (좌측: 현재 포지션 / 우측: 봇 조종석)
+        c1, c_space, c2 = st.columns([6.5, 0.3, 3.2])
+
+        with c1:
+            st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 10px;'>📡 실시간 진입 포지션 (Active Positions)</div>", unsafe_allow_html=True)
+           
+            pos_html = "<table class='main-table'><tr><th style='text-align:center;'>종목명</th><th style='text-align:center;'>포지션</th><th style='text-align:center;'>진입 시그널 (근거)</th><th style='text-align:center;'>진입가</th><th style='text-align:center;'>현재가</th><th style='text-align:center;'>수익률</th></tr>"
+           
+            for p in mock_active_positions:
+                logo = get_logo_html(p['name'])
+                pos_color = "red" if "Long" in p['type'] else "blue"
+                rate_class = col(p['rate'])
+               
+                pos_html += f"""
+<tr>
+<td style='text-align:left; padding-left:15px; font-weight:bold;'>{logo}{p['name']} <span style='font-size:11.5px; color:#888; font-weight:normal;'>({p['ticker']})</span></td>
+<td style='text-align:center; font-weight:bold;' class='{pos_color}'>{p['type']}</td>
+<td style='text-align:left; padding-left:10px; font-size:13.5px; color:#555;'>{p['signal']}</td>
+<td style='text-align:right; padding-right:15px;'>{p['entry']:,.2f}</td>
+<td style='text-align:right; padding-right:15px; font-weight:bold;'>{p['curr']:,.2f}</td>
+<td style='text-align:center; font-weight:bold;' class='{rate_class}'>{fmt_p(p['rate'])}</td>
+</tr>
+"""
+            pos_html += "</table>"
+            st.markdown(pos_html, unsafe_allow_html=True)
+
+        with c2:
+            st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 10px;'>⚙️ 알고리즘 조종석</div>", unsafe_allow_html=True)
+           
+            st.markdown("""
+<div style='background:#ffffff; border:1px solid #dcdcdc; border-radius:12px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);'>
+<div style='font-size:14px; font-weight:bold; color:#444; margin-bottom:8px;'>🧠 매매 전략 (Strategy) 선택</div>
+""", unsafe_allow_html=True)
+            algo_strategy = st.selectbox("Strategy", ["안전제일 (변동성 돌파 + 하락장 방어)", "공격적 추세추종 (모멘텀)", "역추세 단기 반등 (RSI/낙폭과대)"], label_visibility="collapsed")
+           
+            st.markdown(f"""
+<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>🛡️ 기계적 손절 라인 (%)</div>
+""", unsafe_allow_html=True)
+            stop_loss = st.slider("Stop Loss", min_value=-10.0, max_value=-1.0, value=-3.0, step=0.5, label_visibility="collapsed")
+           
+            st.markdown("""
+<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>💵 1회 진입 최대 금액 (KRW)</div>
+""", unsafe_allow_html=True)
+            algo_trade_amt = st.number_input("Algo Trade Amt", min_value=100000, max_value=10000000, value=2500000, step=500000, label_visibility="collapsed")
+           
+            st.markdown("<hr style='margin:20px 0; border:0; border-top:1px dashed #ccc;'>", unsafe_allow_html=True)
+           
+            algo_toggle = st.toggle("🚀 ZAPPA 알파 봇 가동", value=True)
+           
+            if algo_toggle:
+                st.markdown("<div style='font-size:13px; color:#388E3C; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 알고리즘이 시장 데이터를 수집 중입니다.</div></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='font-size:13px; color:#D32F2F; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 모든 매매 로직이 정지되었습니다.</div></div>", unsafe_allow_html=True)
+
+        # 6. 하단 매매 로그 (Trade Logs)
+        st.markdown("<div class='sub-title' style='margin-top: 30px; margin-bottom: 12px;'>📝 알고리즘 체결 로그 (Trade History)</div>", unsafe_allow_html=True)
+       
+        algo_log_html = "<table class='main-table'><tr><th style='text-align:center; width:120px;'>체결 시간</th><th style='text-align:center;'>종목명</th><th style='text-align:center;'>거래 구분</th><th style='text-align:center;'>체결 근거 (Reason)</th><th style='text-align:center;'>거래 금액</th><th style='text-align:center;'>실현 손익</th></tr>"
+       
+        for log in mock_algo_logs:
+            type_color = "red" if "진입" in log['type'] else "blue"
+           
+            if log['profit'] == "-":
+                prof_str = "-"
+                prof_class = "gray"
+            else:
+                prof_str = f"+{fmt(log['profit'])}" if log['profit'] > 0 else f"{fmt(log['profit'])}"
+                prof_class = col(log['profit'])
+           
+            logo = get_logo_html(log['coin'])
+           
+            algo_log_html += f"""
+<tr>
+<td style='text-align:center; color:#666;'>{log['time']}</td>
+<td style='text-align:left; padding-left:20px; font-weight:bold;'>{logo}{log['coin']}</td>
+<td style='text-align:center; font-weight:bold;' class='{type_color}'>{log['type']}</td>
+<td style='text-align:left; padding-left:15px; font-size:13.5px; color:#555;'>{log['reason']}</td>
+<td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td>
+<td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td>
+</tr>
+"""
+        algo_log_html += "</table>"
+        st.markdown(algo_log_html, unsafe_allow_html=True)
+
+    # =========================================================
+    # 💡 [패치] 차익거래 대시보드 프론트엔드 UI (완전체)
+    # =========================================================
+    elif st.session_state.current_view == '차익거래':
+       
+        # 1. 봇 연동 전 UI 렌더링을 위한 가상(Mock) 데이터 셋업
+        mock_fx_rate = 1443.10
+        mock_avg_gap = 2.45
+        mock_total_seed = 8450000
+        mock_total_profit = 325000
+        mock_bot_status = "🟢 ACTIVE (Searching)"
+       
+        mock_coins = [
+            {"ticker": "BTC", "name": "비트코인", "upbit": 135000000, "binance": 91250, "gap": 2.51},
+            {"ticker": "ETH", "name": "이더리움", "upbit": 4850000, "binance": 3280, "gap": 2.48},
+            {"ticker": "SOL", "name": "솔라나", "upbit": 215000, "binance": 145.5, "gap": 2.65},
+            {"ticker": "XRP", "name": "리플", "upbit": 850, "binance": 0.575, "gap": 2.23},
+        ]
+       
+        mock_logs = [
+            {"time": "09:15:22", "coin": "SOL", "type": "진입(Short)", "gap": 2.65, "amt": 500000, "profit": "-"},
+            {"time": "08:42:10", "coin": "XRP", "type": "청산(Cover)", "gap": 1.50, "amt": 500000, "profit": 4250},
+            {"time": "08:11:05", "coin": "XRP", "type": "진입(Short)", "gap": 2.45, "amt": 500000, "profit": "-"},
+        ]
+
+        # 2. 상단 타이틀 (이미 만들어진 r_src 변수를 즉시 활용)
+        st.markdown(f"""
+<div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px; margin-bottom: 25px;">
+<img src='{r_src}' style='width:48px; height:48px; object-fit:contain;'>
+<div>
+<h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Zappa Arbi <span style="font-size:18px; color:#555; font-weight:normal;">(Arbitrage Monitor)</span></h3>
+<div style="font-size:14.5px; color:#666; margin-top:5px;">💡 바이낸스 ↔ 업비트 간의 실시간 김치 프리미엄(Gap) 및 기대 수익을 분석하는 차익거래 봇 대시보드입니다.</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+        # 3. 상단 통합 요약 패널
+        summary_html = f"""
+<div class='card-main' style='padding: 25px 30px; margin-bottom: 25px;'>
+<div style='display: flex; justify-content: space-between; align-items: stretch;'>
+<div style='flex: 1; border-right: 1px solid #e8dbad; padding-right: 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>💱 실시간 시장 지표</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
+<span style='font-size: 14px; color: #555;'>평균 김치 프리미엄</span>
+<span style='font-size: 24px; font-weight: 800; color: #D32F2F;'>+{mock_avg_gap:.2f}%</span>
+</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline;'>
+<span style='font-size: 14px; color: #555;'>적용 환율 (USDT/KRW)</span>
+<span style='font-size: 18px; font-weight: 600; color: #111;'>{mock_fx_rate:,.2f}</span>
+</div>
+</div>
+<div style='flex: 1; border-right: 1px solid #e8dbad; padding: 0 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>💰 차익거래 자산 요약</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
+<span style='font-size: 14px; color: #555;'>할당된 총 시드머니</span>
+<span style='font-size: 18px; font-weight: 600; color: #111;'>{fmt(mock_total_seed)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
+</div>
+<div style='display: flex; justify-content: space-between; align-items: baseline;'>
+<span style='font-size: 14px; color: #555;'>누적 차익 수익</span>
+<span style='font-size: 18px; font-weight: 600; color: #D32F2F;'>{fmt(mock_total_profit, True)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
+</div>
+</div>
+<div style='flex: 1; padding-left: 20px; display: flex; flex-direction: column; justify-content: center;'>
+<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🤖 봇 동작 상태</div>
+<div class='card-inner' style='padding: 12px; text-align: center; margin-bottom: 0;'>
+<div style='font-size: 17px; font-weight: 800; color: #1976D2;'>{mock_bot_status}</div>
+<div style='font-size: 12.5px; color: #777; margin-top: 4px;'>서버와 실시간 소켓 통신 중</div>
+</div>
+</div>
+</div>
+</div>
+"""
+        st.markdown(summary_html, unsafe_allow_html=True)
+
+        # 4. 중단 영역 (좌측: 실시간 갭 테이블 / 우측: 봇 컨트롤 패널)
+        col1, col_gap, col2 = st.columns([6, 0.3, 3.7])
+
+        with col1:
+            st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>🔴🟢 실시간 프리미엄 모니터링</div>", unsafe_allow_html=True)
+           
+            table_html = "<table class='main-table'><tr><th style='text-align:center;'>코인명</th><th style='text-align:center;'>업비트(KRW)</th><th style='text-align:center;'>바이낸스(USD)</th><th style='text-align:center;'>프리미엄(Gap)</th><th style='text-align:center;'>상태</th></tr>"
+           
+            c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple'}
+            for c in mock_coins:
+                icon = f"https://www.google.com/s2/favicons?domain={c_i.get(c['ticker'], 'cryptocompare.com')}.org&sz=64"
+                logo = f"<div style='display:flex; justify-content:flex-start; align-items:center; gap:8px; padding-left:10px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span>{c['name']}({c['ticker']})</span></div>"
+               
+                gap_val = c['gap']
+                gap_class = "red" if gap_val >= 2.5 else "blue" if gap_val <= 1.5 else ""
+                gap_str = f"+{gap_val:.2f}%"
+               
+                status_badge = "<span style='background:#ffebee; color:#c62828; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>진입 포착</span>" if gap_val >= 2.5 else "<span style='background:#f5f5f5; color:#757575; padding:3px 8px; border-radius:4px; font-size:12px;'>대기 중</span>"
+
+                table_html += f"""
+<tr>
+<td style='text-align:center;'>{logo}</td>
+<td style='text-align:right; padding-right:15px; font-weight:600;'>{fmt(c['upbit'])}</td>
+<td style='text-align:right; padding-right:15px; color:#555;'>${c['binance']:,.2f}</td>
+<td style='text-align:center; font-weight:bold;' class='{gap_class}'>{gap_str}</td>
+<td style='text-align:center;'>{status_badge}</td>
+</tr>
+"""
+            table_html += "</table>"
+            st.markdown(table_html, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>⚙️ 봇 컨트롤 패널</div>", unsafe_allow_html=True)
+           
+            st.markdown("""
+<div style='background:#ffffff; border:1px solid #dcdcdc; border-radius:12px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);'>
+<div style='font-size:14px; font-weight:bold; color:#444; margin-bottom:8px;'>🎯 진입 목표 프리미엄 (%)</div>
+""", unsafe_allow_html=True)
+            target_gap = st.slider("Target Gap", min_value=1.0, max_value=5.0, value=2.5, step=0.1, label_visibility="collapsed")
+           
+            st.markdown(f"""
+<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>🎯 청산 목표 프리미엄 (%)</div>
+""", unsafe_allow_html=True)
+            exit_gap = st.slider("Exit Gap", min_value=0.0, max_value=3.0, value=1.0, step=0.1, label_visibility="collapsed")
+           
+            st.markdown("""
+<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>💵 건당 거래 금액 (KRW)</div>
+""", unsafe_allow_html=True)
+            trade_amt = st.number_input("Trade Amt", min_value=100000, max_value=5000000, value=500000, step=100000, label_visibility="collapsed")
+           
+            st.markdown("<hr style='margin:20px 0; border:0; border-top:1px dashed #ccc;'>", unsafe_allow_html=True)
+           
+            # 토글 스위치 (Streamlit Native)
+            bot_toggle = st.toggle("🚀 ZAPPA 차익거래 봇 가동", value=True)
+           
+            if bot_toggle:
+                st.markdown("<div style='font-size:13px; color:#1976D2; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 봇이 백그라운드에서 시장을 감시 중입니다.</div></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='font-size:13px; color:#D32F2F; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 봇 가동이 중지되었습니다.</div></div>", unsafe_allow_html=True)
+
+        # 5. 하단 영역 (최근 매매 로그)
+        st.markdown("<div class='sub-title' style='margin-top: 30px; margin-bottom: 12px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
+       
+        log_html = "<table class='main-table'><tr><th style='text-align:center;'>시간</th><th style='text-align:center;'>코인명</th><th style='text-align:center;'>거래 구분</th><th style='text-align:center;'>체결 Gap</th><th style='text-align:center;'>거래 금액</th><th style='text-align:center;'>실현 손익</th></tr>"
+       
+        for log in mock_logs:
+            type_color = "red" if "진입" in log['type'] else "blue"
+            prof_str = f"+{fmt(log['profit'])}" if isinstance(log['profit'], int) and log['profit'] > 0 else log['profit']
+            prof_class = "red" if isinstance(log['profit'], int) and log['profit'] > 0 else ""
+           
+            log_html += f"""
+<tr>
+<td style='text-align:center; color:#666;'>{log['time']}</td>
+<td style='text-align:center; font-weight:bold;'>{log['coin']}</td>
+<td style='text-align:center; font-weight:bold;' class='{type_color}'>{log['type']}</td>
+<td style='text-align:center;'>{log['gap']:.2f}%</td>
+<td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td>
+<td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td>
+</tr>
+"""
+        log_html += "</table>"
+        st.markdown(log_html, unsafe_allow_html=True)
+
 
     # =========================================================
     # ⏳ 절세계좌 대시보드 상세 페이지
