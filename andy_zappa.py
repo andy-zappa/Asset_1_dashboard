@@ -51,7 +51,8 @@ if not fetched_hashed_pw:
     try:
         fetched_hashed_pw = st.secrets["ZAPPA_HASHED_PW"]
     except:
-        fetched_hashed_pw = stauth.Hasher(['andy1234']).generate()[0]
+        # 💡 [패치] 라이브러리 버전 충돌을 방지하기 위해 bcrypt로 직접 안전하게 해싱합니다.
+        fetched_hashed_pw = bcrypt.hashpw('andy1234'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 credentials = {
     "usernames": {
@@ -2051,7 +2052,71 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 """
         log_html += "</table>"
         st.markdown(log_html, unsafe_allow_html=True)
+    # --- [👇 여기서부터 기존 차익거래 코드 맨 아래에 붙여넣으세요 👇] ---
+    
+        st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 40px 0 25px 0;'>", unsafe_allow_html=True)
+        
+        st.markdown("""
+<div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;'>
+<h4 style='margin: 0; font-weight: 800; color: #333; font-size: 20px; letter-spacing: -0.5px;'><span style='font-size:20px; vertical-align:middle; margin-right:6px;'>📊</span>1 BTC 기준 아비트리지 종합 현황</h4>
+</div>
+""", unsafe_allow_html=True)
 
+        if st.button("🔄 요약 현황 실시간 갱신", key="arbi_summary_refresh_btn"):
+            st.toast("📡 실시간 프리미엄 데이터를 갱신합니다...", icon="⏳")
+        
+        # 아비트리지 가상(Mock) 데이터
+        mock_fx_rate = 1498.0
+        mock_upbit_btc = 105765000
+        mock_binance_btc_krw = 106154348
+        mock_binance_btc_usd = 70865.47
+        mock_kimchi_prem = -0.37
+        mock_actual_rate = -0.52
+        mock_net_profit = -548385
+
+        def get_badge_html(val, is_usd=False, is_currency=False):
+            arrow = "↑" if val > 0 else "↓"
+            val_str = f"${val:,.2f}" if is_usd else (f"{int(val):,}원" if is_currency else f"{val:,.2f}%")
+            return f"<span style='background-color: #eaf5eb; color: #4ca154; padding: 3px 8px; border-radius: 4px; font-size: 12.5px; font-weight: bold;'>{arrow} {val_str}</span>"
+
+        arbi_html = f"""
+<div style="background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 12px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">업비트 BTC</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_upbit_btc:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
+</div>
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">바이낸스 BTC</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_binance_btc_krw:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
+{get_badge_html(mock_binance_btc_usd, is_usd=True)}
+</div>
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">적용 환율</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_fx_rate:,.1f} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
+</div>
+</div>
+<div style="border-bottom: 1px solid #f0f0f0; margin-bottom: 25px;"></div>
+<div style="display: flex; justify-content: space-between; align-items: flex-start;">
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">겉보기 김프</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_kimchi_prem:.2f} <span style="font-size: 15px; font-weight: normal; color: #555;">%</span></div>
+</div>
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">실제 수익률 (수수료 제외)</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_actual_rate:.2f} <span style="font-size: 15px; font-weight: normal; color: #555;">%</span></div>
+{get_badge_html(mock_actual_rate)}
+</div>
+<div style="flex: 1;">
+<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">💰 예상 순수익</div>
+<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_net_profit:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
+{get_badge_html(mock_net_profit, is_currency=True)}
+</div>
+</div>
+</div>
+"""
+        st.markdown(arbi_html, unsafe_allow_html=True)
+        # --- [👆 여기까지 복사해서 붙여넣으세요 👆] ---
 
     # =========================================================
     # ⏳ 절세계좌 대시보드 상세 페이지
@@ -3355,13 +3420,17 @@ font-weight: 700 !important;
                     code_td = f"<td style='text-align:center;'>{tk}</td>" if st.session_state.show_code else ""
                    
                     if st.session_state.cryp_show_change_rate:
-                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', 0)))
-                        diff_amt = (raw_curr_p - (raw_curr_p / (1 + d_rate / 100))) if raw_curr_p > 0 and d_rate != 0 else 0
-                        d_class = col(d_rate)
-                        if d_rate != 0 or diff_amt != 0:
+                        # 💡 [패치] 오프라인 상태에서도 등락률을 최대한 찾아내고 없으면 offline으로 표시합니다.
+                        d_rate = safe_float(c.get('chg_rate', c.get('전일비', c.get('signed_change_rate', c.get('change_rate', 0)))))
+                        
+                        # 등락 금액 계산 (현재가가 있을 때만)
+                        if raw_curr_p > 0 and d_rate != 0:
+                            diff_amt = (raw_curr_p - (raw_curr_p / (1 + d_rate / 100)))
+                            d_class = col(d_rate)
                             chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='{d_class}' style='font-size:13px;'>{fmt(diff_amt, True)}</div><div class='{d_class}' style='font-size:13px; font-weight:normal;'>{fmt_p(d_rate)}</div></td>"
                         else:
-                            chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div class='gray' style='font-size:13px;'>-</div><div class='gray' style='font-size:13px; font-weight:normal;'>0.00%</div></td>"
+                            # 💡 데이터가 아예 없을 때(네트워크 단절 등)의 시각적 피드백
+                            chg_td = f"<td style='padding: 4px; line-height: 1.3;'><div style='color:#aaa; font-size:13px;'>-</div><div style='color:#aaa; font-size:11.5px; font-weight:normal;'>offline</div></td>"
                     else:
                         chg_td = ""
                
