@@ -1212,7 +1212,7 @@ setInterval(maintainExpanderState, 300);
                         cfg["ADMIN_PW"] = "" # 평문 기록은 영구 삭제
                        
                         try:
-                            res = requests.post("http://158.179.172.40:8000/update_config", json=cfg, timeout=5)
+                            res = requests.post("http://158.179.172.40:8000/update_config", json=cfg, timeout=20)
                             if res.status_code == 200:
                                 st.success("✅ 비밀번호가 안전하게 변경되었습니다!")
                             else:
@@ -1332,7 +1332,7 @@ setInterval(maintainExpanderState, 300);
        
             if confirm_btn:
                 try:
-                    res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=5)
+                    res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=20)
                     if res.status_code == 200:
                         st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
                         st.cache_data.clear()
