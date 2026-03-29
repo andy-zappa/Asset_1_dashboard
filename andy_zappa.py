@@ -40,7 +40,7 @@ import bcrypt
 # 1. Oracle 서버에서 최신 해시 암호 가져오기 시도
 fetched_hashed_pw = None
 try:
-    res_cfg_auth = requests.get("http://158.179.172.40:8000/get_config", timeout=2)
+    res_cfg_auth = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
     if res_cfg_auth.status_code == 200:
         fetched_hashed_pw = res_cfg_auth.json().get("ZAPPA_HASHED_PW")
 except:
@@ -368,8 +368,8 @@ setInterval(bindSidebarClicks, 300);
         ts = int(time.time())
    
         try:
-            r_p = requests.get(f"http://158.179.172.40:8000/tax_advantaged?t={ts}", timeout=5)
-            r_g = requests.get(f"http://158.179.172.40:8000/taxable?t={ts}", timeout=5)
+            r_p = requests.get(f"http://168.107.15.252:8000/tax_advantaged?t={ts}", timeout=5)
+            r_g = requests.get(f"http://168.107.15.252:8000/taxable?t={ts}", timeout=5)
        
             if r_p.status_code == 200:
                 temp_p = r_p.json()
@@ -429,7 +429,7 @@ setInterval(bindSidebarClicks, 300);
     @st.cache_data(ttl=None)
     def get_crypto_data():
         ts = int(time.time())
-        url = f"http://158.179.172.40:8000/crypto?t={ts}"
+        url = f"http://168.107.15.252:8000/crypto?t={ts}"
         crypto_d = None
    
         try:
@@ -695,7 +695,7 @@ const interval = setInterval(() => {
         c_rate_sum_actual = (c_prof_pure / c_buy_pure * 100) if c_buy_pure > 0 else 0
 
         try:
-            res_cfg_side = requests.get("http://158.179.172.40:8000/get_config", timeout=2)
+            res_cfg_side = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
             cfg_data_side = res_cfg_side.json() if res_cfg_side.status_code == 200 else {}
         except:
             cfg_data_side = {}
@@ -1175,7 +1175,7 @@ setInterval(maintainExpanderState, 300);
         st.markdown("---")
    
         try:
-            res = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
+            res = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
             cfg = res.json() if res.status_code == 200 else {}
         except:
             cfg = {}
@@ -1212,7 +1212,7 @@ setInterval(maintainExpanderState, 300);
                         cfg["ADMIN_PW"] = "" # 평문 기록은 영구 삭제
                        
                         try:
-                            res = requests.post("http://158.179.172.40:8000/update_config", json=cfg, timeout=20)
+                            res = requests.post("http://168.107.15.252:8000/update_config", json=cfg, timeout=20)
                             if res.status_code == 200:
                                 st.success("✅ 비밀번호가 안전하게 변경되었습니다!")
                             else:
@@ -1332,7 +1332,7 @@ setInterval(maintainExpanderState, 300);
        
             if confirm_btn:
                 try:
-                    res = requests.post("http://158.179.172.40:8000/update_config", json=config_to_save, timeout=20)
+                    res = requests.post("http://168.107.15.252:8000/update_config", json=config_to_save, timeout=20)
                     if res.status_code == 200:
                         st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
                         st.cache_data.clear()
@@ -2128,7 +2128,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
         DATE_TAGS = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
         try:
-            res_cfg = requests.get("http://158.179.172.40:8000/get_config", timeout=5)
+            res_cfg = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
             cfg_data = res_cfg.json() if res_cfg.status_code == 200 else {}
         except:
             cfg_data = {}
