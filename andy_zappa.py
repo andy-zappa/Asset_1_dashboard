@@ -603,7 +603,7 @@ background-image: url('{sea_src2}');
 <div style='position: relative; width: 90px; margin-top: -22px;'>
 <img src="{logo_src}" width="95" style="display: block;">
 <div style='position: absolute; right: 0px; bottom: -28px; font-size: 8px; color: #999; font-weight: 500; letter-spacing: 0.5px; line-height: 1.3; text-align: right; white-space: nowrap;'>
-OCI CHUNCHEON<br>LINUX 9.7 GEN, 24GB
+4 OCPU, 24GB RAM<br>47GB SSD, LINUX 9.7
 </div>
 </div>
 {status_indicator}
