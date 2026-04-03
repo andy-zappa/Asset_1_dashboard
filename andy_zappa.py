@@ -1704,226 +1704,135 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     else:
                         st.info("미국 계좌 데이터가 없습니다.")
                 except: pass
-    # =========================================================
-    # 🧩 알고리즘(Zappa Alpha) 대시보드 프론트엔드 UI
-    # =========================================================
-    elif st.session_state.current_view == '알고리즘':
-       
-        # 1. 봇 연동 전 UI 렌더링을 위한 가상(Mock) 데이터 셋업
-        mock_algo_seed = 12156000
-        mock_algo_profit = 3450000
-        mock_algo_mdd = -4.2
-        mock_algo_winrate = 64.5
-        mock_algo_trades = 48
-        mock_algo_status = "🟢 ACTIVE (Trading)"
-       
-        mock_active_positions = [
-            {"ticker": "PLTR", "name": "팔란티어", "type": "Long(매수)", "entry": 42.50, "curr": 45.20, "rate": 6.35, "signal": "MACD 골든크로스 & 거래량 급증", "amt": 2500000},
-            {"ticker": "TSLA", "name": "테슬라", "type": "Long(매수)", "entry": 245.10, "curr": 241.50, "rate": -1.46, "signal": "볼린저밴드 하단 터치 (과매도)", "amt": 1800000},
-            {"ticker": "BTC", "name": "비트코인", "type": "Short(매도)", "entry": 92500, "curr": 91200, "rate": 1.40, "signal": "RSI 80 돌파 (단기 과매수)", "amt": 3000000},
-        ]
-       
-        mock_algo_logs = [
-            {"time": "10:15:22", "coin": "NVDA", "type": "청산(Sell)", "reason": "익절 목표가(5%) 도달", "amt": 2000000, "profit": 102000},
-            {"time": "09:30:00", "coin": "BTC", "type": "진입(Short)", "reason": "RSI 80 돌파 (단기 과매수)", "amt": 3000000, "profit": "-"},
-            {"time": "04:12:45", "coin": "IONQ", "type": "청산(Sell)", "reason": "손절 라인(-3%) 이탈", "amt": 1500000, "profit": -45000},
-            {"time": "02:22:10", "coin": "PLTR", "type": "진입(Long)", "reason": "MACD 골든크로스", "amt": 2500000, "profit": "-"},
-        ]
-
-        # 2. 상단 타이틀
-        st.markdown(f"""
-<div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px; margin-bottom: 25px;">
-<img src='{r_src}' style='width:48px; height:48px; object-fit:contain;'>
-<div>
-<h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Zappa Alpha <span style="font-size:18px; color:#555; font-weight:normal;">(Quant Trading Bot)</span></h3>
-<div style="font-size:14.5px; color:#666; margin-top:5px;">💡 감정을 배제하고 사전 정의된 기술적 지표(지수, 거래량, 모멘텀)에 따라 24시간 자동 매매를 수행하는 퀀트 대시보드입니다.</div>
-</div>
-</div>
-""", unsafe_allow_html=True)
-
-        # 3. 상단 핵심 성과 지표 (Performance Metrics)
-        algo_summary_html = f"""
-<div class='card-main' style='padding: 25px 30px; margin-bottom: 25px;'>
-<div style='display: flex; justify-content: space-between; align-items: stretch;'>
-<div style='flex: 1; border-right: 1px solid #e8dbad; padding-right: 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🎯 알고리즘 누적 성과</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
-<span style='font-size: 14px; color: #555;'>누적 실현 수익금</span>
-<span style='font-size: 24px; font-weight: 800; color: #D32F2F;'>{fmt(mock_algo_profit, True)} <span style='font-size:14px; font-weight:normal;'>KRW</span></span>
-</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline;'>
-<span style='font-size: 14px; color: #555;'>운용 시드머니</span>
-<span style='font-size: 18px; font-weight: 600; color: #111;'>{fmt(mock_algo_seed)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
-</div>
-</div>
-<div style='flex: 1; border-right: 1px solid #e8dbad; padding: 0 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>📊 리스크 및 승률 지표</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
-<span style='font-size: 14px; color: #555;'>승률 (총 {mock_algo_trades}번 거래)</span>
-<span style='font-size: 18px; font-weight: 600; color: #111;'>{mock_algo_winrate}%</span>
-</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline;'>
-<span style='font-size: 14px; color: #555;' title='최대 낙폭 (가장 뼈아팠던 손실 구간)'>최대 낙폭 (MDD) ℹ️</span>
-<span style='font-size: 18px; font-weight: 600; color: #1976D2;'>{mock_algo_mdd}%</span>
-</div>
-</div>
-<div style='flex: 1; padding-left: 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🤖 알파 봇 상태</div>
-<div class='card-inner' style='padding: 12px; text-align: center; margin-bottom: 0;'>
-<div style='font-size: 17px; font-weight: 800; color: #388E3C;'>{mock_algo_status}</div>
-<div style='font-size: 12.5px; color: #777; margin-top: 4px;'>전략 : 복합 모멘텀 돌파 (V1.2)</div>
-</div>
-</div>
-</div>
-</div>
-"""
-        st.markdown(algo_summary_html, unsafe_allow_html=True)
-
-        # 4. 자산 성장 곡선 (Equity Curve) - Plotly 활용
-        st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>📈 자산 성장 곡선 (Equity Curve) & 백테스트 성과</div>", unsafe_allow_html=True)
-       
-        try:
-            # 목업 차트 데이터 생성 (시간 흐름에 따른 시드머니 우상향 시뮬레이션)
-            np.random.seed(42)
-            days = pd.date_range(end=datetime.today(), periods=60)
-            daily_returns = np.random.normal(0.002, 0.015, 60) # 평균 일수익 0.2%, 변동성 1.5%
-            cumulative_returns = np.cumprod(1 + daily_returns)
-            equity_values = mock_algo_seed * (cumulative_returns / cumulative_returns[-1]) # 마지막 값을 현재 시드머니에 맞춤
-           
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=days, y=equity_values,
-                mode='lines',
-                line=dict(color='#D32F2F', width=3),
-                fill='tozeroy',
-                fillcolor='rgba(211, 47, 47, 0.1)',
-                name='자산 평가액'
-            ))
-            fig.update_layout(
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=250,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(248,249,250,0.5)',
-                xaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc'),
-                yaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc', tickformat=",.0f"),
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        except:
-            st.info("차트를 렌더링하려면 plotly 라이브러리가 필요합니다.")
-
-        # 5. 중단 영역 (좌측: 현재 포지션 / 우측: 봇 조종석)
-        c1, c_space, c2 = st.columns([6.5, 0.3, 3.2])
-
-        with c1:
-            st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 10px;'>📡 실시간 진입 포지션 (Active Positions)</div>", unsafe_allow_html=True)
-           
-            pos_html = "<table class='main-table'><tr><th style='text-align:center;'>종목명</th><th style='text-align:center;'>포지션</th><th style='text-align:center;'>진입 시그널 (근거)</th><th style='text-align:center;'>진입가</th><th style='text-align:center;'>현재가</th><th style='text-align:center;'>수익률</th></tr>"
-           
-            for p in mock_active_positions:
-                logo = get_logo_html(p['name'])
-                pos_color = "red" if "Long" in p['type'] else "blue"
-                rate_class = col(p['rate'])
-               
-                pos_html += f"""
-<tr>
-<td style='text-align:left; padding-left:15px; font-weight:bold;'>{logo}{p['name']} <span style='font-size:11.5px; color:#888; font-weight:normal;'>({p['ticker']})</span></td>
-<td style='text-align:center; font-weight:bold;' class='{pos_color}'>{p['type']}</td>
-<td style='text-align:left; padding-left:10px; font-size:13.5px; color:#555;'>{p['signal']}</td>
-<td style='text-align:right; padding-right:15px;'>{p['entry']:,.2f}</td>
-<td style='text-align:right; padding-right:15px; font-weight:bold;'>{p['curr']:,.2f}</td>
-<td style='text-align:center; font-weight:bold;' class='{rate_class}'>{fmt_p(p['rate'])}</td>
-</tr>
-"""
-            pos_html += "</table>"
-            st.markdown(pos_html, unsafe_allow_html=True)
-
-        with c2:
-            st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 10px;'>⚙️ 알고리즘 조종석</div>", unsafe_allow_html=True)
-           
-            st.markdown("""
-<div style='background:#ffffff; border:1px solid #dcdcdc; border-radius:12px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);'>
-<div style='font-size:14px; font-weight:bold; color:#444; margin-bottom:8px;'>🧠 매매 전략 (Strategy) 선택</div>
-""", unsafe_allow_html=True)
-            algo_strategy = st.selectbox("Strategy", ["안전제일 (변동성 돌파 + 하락장 방어)", "공격적 추세추종 (모멘텀)", "역추세 단기 반등 (RSI/낙폭과대)"], label_visibility="collapsed")
-           
-            st.markdown(f"""
-<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>🛡️ 기계적 손절 라인 (%)</div>
-""", unsafe_allow_html=True)
-            stop_loss = st.slider("Stop Loss", min_value=-10.0, max_value=-1.0, value=-3.0, step=0.5, label_visibility="collapsed")
-           
-            st.markdown("""
-<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>💵 1회 진입 최대 금액 (KRW)</div>
-""", unsafe_allow_html=True)
-            algo_trade_amt = st.number_input("Algo Trade Amt", min_value=100000, max_value=10000000, value=2500000, step=500000, label_visibility="collapsed")
-           
-            st.markdown("<hr style='margin:20px 0; border:0; border-top:1px dashed #ccc;'>", unsafe_allow_html=True)
-           
-            algo_toggle = st.toggle("🚀 ZAPPA 알파 봇 가동", value=True)
-           
-            if algo_toggle:
-                st.markdown("<div style='font-size:13px; color:#388E3C; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 알고리즘이 시장 데이터를 수집 중입니다.</div></div>", unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='font-size:13px; color:#D32F2F; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 모든 매매 로직이 정지되었습니다.</div></div>", unsafe_allow_html=True)
-
-        # 6. 하단 매매 로그 (Trade Logs)
-        st.markdown("<div class='sub-title' style='margin-top: 30px; margin-bottom: 12px;'>📝 알고리즘 체결 로그 (Trade History)</div>", unsafe_allow_html=True)
-       
-        algo_log_html = "<table class='main-table'><tr><th style='text-align:center; width:120px;'>체결 시간</th><th style='text-align:center;'>종목명</th><th style='text-align:center;'>거래 구분</th><th style='text-align:center;'>체결 근거 (Reason)</th><th style='text-align:center;'>거래 금액</th><th style='text-align:center;'>실현 손익</th></tr>"
-       
-        for log in mock_algo_logs:
-            type_color = "red" if "진입" in log['type'] else "blue"
-           
-            if log['profit'] == "-":
-                prof_str = "-"
-                prof_class = "gray"
-            else:
-                prof_str = f"+{fmt(log['profit'])}" if log['profit'] > 0 else f"{fmt(log['profit'])}"
-                prof_class = col(log['profit'])
-           
-            logo = get_logo_html(log['coin'])
-           
-            algo_log_html += f"""
-<tr>
-<td style='text-align:center; color:#666;'>{log['time']}</td>
-<td style='text-align:left; padding-left:20px; font-weight:bold;'>{logo}{log['coin']}</td>
-<td style='text-align:center; font-weight:bold;' class='{type_color}'>{log['type']}</td>
-<td style='text-align:left; padding-left:15px; font-size:13.5px; color:#555;'>{log['reason']}</td>
-<td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td>
-<td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td>
-</tr>
-"""
-        algo_log_html += "</table>"
-        st.markdown(algo_log_html, unsafe_allow_html=True)
-
+    
     # =========================================================
     # 💡 [패치] 차익거래 대시보드 프론트엔드 UI (완전체)
     # =========================================================
     elif st.session_state.current_view == '차익거래':
        
-        # 1. 봇 연동 전 UI 렌더링을 위한 가상(Mock) 데이터 셋업
-        mock_fx_rate = 1443.10
-        mock_avg_gap = 2.45
-        mock_total_seed = 8450000
-        mock_total_profit = 325000
-        mock_bot_status = "🟢 ACTIVE (Searching)"
-       
-        mock_coins = [
-            {"ticker": "BTC", "name": "비트코인", "upbit": 135000000, "binance": 91250, "gap": 2.51},
-            {"ticker": "ETH", "name": "이더리움", "upbit": 4850000, "binance": 3280, "gap": 2.48},
-            {"ticker": "SOL", "name": "솔라나", "upbit": 215000, "binance": 145.5, "gap": 2.65},
-            {"ticker": "XRP", "name": "리플", "upbit": 850, "binance": 0.575, "gap": 2.23},
-        ]
-       
-        mock_logs = [
-            {"time": "09:15:22", "coin": "SOL", "type": "진입(Short)", "gap": 2.65, "amt": 500000, "profit": "-"},
-            {"time": "08:42:10", "coin": "XRP", "type": "청산(Cover)", "gap": 1.50, "amt": 500000, "profit": 4250},
-            {"time": "08:11:05", "coin": "XRP", "type": "진입(Short)", "gap": 2.45, "amt": 500000, "profit": "-"},
-        ]
+        # 1. 봇 컨트롤 패널용 세션 스테이트 초기화 (초기 셋팅값)
+        if 'en_BTC' not in st.session_state:
+            for c, en, ex, am in [('BTC', 2.5, 1.0, 3000000), ('ETH', 2.5, 1.0, 3000000), ('SOL', 3.0, 1.5, 2000000), ('XRP', 2.0, 0.5, 2000000)]:
+                st.session_state[f'en_{c}'] = float(en)
+                st.session_state[f'ex_{c}'] = float(ex)
+                st.session_state[f'amt_{c}'] = int(am)
 
-        # 2. 상단 타이틀 (이미 만들어진 r_src 변수를 즉시 활용)
-        st.markdown(f"""
-<div style="background-color:#f8f9fa; padding:20px; border-radius:12px; margin-top:10px; border:1px solid #eaeaea; display:flex; align-items:center; gap:15px; margin-bottom: 25px;">
+        # 2. 실시간 코인 시세 및 환율 데이터 Fetching (Upbit, Binance, 환율 API)
+        @st.cache_data(ttl=5)
+        def fetch_real_crypto_data():
+            try:
+                import requests
+                u_res = requests.get("https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH,KRW-SOL,KRW-XRP", timeout=3).json()
+                u_dict = {item['market'].split('-')[1]: item for item in u_res}
+               
+                b_res = requests.get('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT"]', timeout=3).json()
+                b_dict = {item['symbol'].replace('USDT', ''): item for item in b_res}
+               
+                fx_res = requests.get("https://open.er-api.com/v6/latest/USD", timeout=3).json()
+                fx = float(fx_res['rates']['KRW'])
+               
+                coins = []
+                for ticker, name in [('BTC', '비트코인'), ('ETH', '이더리움'), ('SOL', '솔라나'), ('XRP', '리플')]:
+                    u_data = u_dict.get(ticker, {})
+                    b_data = b_dict.get(ticker, {})
+                   
+                    upbit_price = float(u_data.get('trade_price', 0))
+                    upbit_chg = float(u_data.get('signed_change_rate', 0)) * 100
+                   
+                    binance_price = float(b_data.get('lastPrice', 0))
+                    binance_chg = float(b_data.get('priceChangePercent', 0))
+                   
+                    gap = ((upbit_price / (binance_price * fx)) - 1) * 100 if binance_price * fx > 0 else 0
+                   
+                    coins.append({
+                        "ticker": ticker, "name": name,
+                        "upbit": upbit_price, "upbit_chg": upbit_chg,
+                        "binance": binance_price, "binance_chg": binance_chg,
+                        "gap": gap
+                    })
+                return coins, fx
+            except:
+                return None, None
+
+        real_coins, real_fx = fetch_real_crypto_data()
+       
+        if real_coins and real_fx:
+            mock_coins = real_coins
+            mock_fx_rate = real_fx
+        else:
+            # API 호출 실패 시 가상 데이터 (Fallback)
+            mock_fx_rate = 1443.10
+            mock_coins = [
+                {"ticker": "BTC", "name": "비트코인", "upbit": 135000000, "upbit_chg": 1.25, "binance": 91250, "binance_chg": 1.10, "gap": 2.51},
+                {"ticker": "ETH", "name": "이더리움", "upbit": 4850000, "upbit_chg": -0.45, "binance": 3280, "binance_chg": -0.60, "gap": 2.48},
+                {"ticker": "SOL", "name": "솔라나", "upbit": 215000, "upbit_chg": 3.10, "binance": 145.5, "binance_chg": 2.85, "gap": 2.65},
+                {"ticker": "XRP", "name": "리플", "upbit": 850, "upbit_chg": -1.20, "binance": 0.575, "binance_chg": -1.35, "gap": 2.23},
+            ]
+
+        mock_total_seed = 23080000
+        mock_total_profit = 5920000
+        mock_total_asset = 29000000
+        mock_total_rate = (mock_total_profit / mock_total_seed) * 100
+        mock_proj_pct = (mock_total_asset / 100000000) * 100
+       
+        mock_logs = []
+        for i in range(1, 31):
+            is_entry = (i % 2 != 0)
+            mock_logs.append({
+                "coin": ["BTC", "ETH", "SOL", "XRP"][i % 4],
+                "entry_date": f"2026-04-{(30 - i//2):02d}",
+                "entry_time": f"{10 + i%10:02d}:{15 + i*2:02d}:{22 + i:02d}",
+                "exit_date": f"2026-04-{(31 - i//2):02d}" if not is_entry else "진행 중",
+                "exit_time": f"14:{30 + i%20:02d}:00" if not is_entry else "-",
+                "entry_gap": round(2.0 + (i * 0.05), 2),
+                "exit_gap": round(1.0 + (i * 0.02), 2) if not is_entry else 0,
+                "amt": 500000 + (i%3)*500000,
+                "profit": 15000 + i*1000 if not is_entry else 0
+            })
+        mock_logs.sort(key=lambda x: (x['entry_date'], x['entry_time']), reverse=True)
+
+        st.markdown("""
+<style>
+div[data-testid="stHorizontalBlock"]:has(#zappa-arbi-header) {
+background-color: #f8f9fa; padding: 15px 25px; border-radius: 12px; border: 1px solid #eaeaea; align-items: center; margin-top: 10px; margin-bottom: 25px;
+}
+div[data-testid="stHorizontalBlock"]:has(#zappa-arbi-header) div[data-testid="column"]:nth-of-type(2) {
+display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+}
+div[data-testid="stNumberInput"] input {
+text-align: right !important; font-weight: bold; font-size: 15.5px; padding-right: 12px; color: #111;
+}
+.sticky-log-wrapper { height: 400px !important; overflow-y: auto !important; border: 1.5px solid #b5b5b5; border-radius: 12px; margin-top: 5px; margin-bottom: 30px; position: relative; display: block; }
+#zappa-trade-log-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+#zappa-trade-log-table th { box-shadow: inset 0 -1.5px 0 #dcdcdc !important; border-bottom: none !important; outline: none !important; }
+
+/* 💡 [패치] 전체 박스 토글 애니메이션 및 디자인 */
+.zappa-arbi-details {
+    background: #ffffff; border: 1px solid #eaeaea; border-radius: 12px;
+    margin-top: 5px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.zappa-arbi-summary {
+    cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;
+    font-weight: 800; color: #111; font-size: 16px; padding: 18px 25px;
+    background: #fcfcfc; border-bottom: 1px solid transparent; border-radius: 12px; transition: all 0.2s;
+}
+.zappa-arbi-details[open] .zappa-arbi-summary {
+    border-bottom: 1px solid #eaeaea; border-radius: 12px 12px 0 0;
+}
+.zappa-arbi-summary::-webkit-details-marker { display: none; }
+.zappa-arbi-summary::after {
+    content: '>'; font-family: monospace; font-weight: 900; font-size: 18px; color: #888;
+    transition: transform 0.2s ease;
+}
+.zappa-arbi-details[open] .zappa-arbi-summary::after { transform: rotate(90deg); }
+</style>
+""", unsafe_allow_html=True)
+
+        c_head1, c_head2 = st.columns([7.5, 2.5])
+        with c_head1:
+            st.markdown(f"""
+<span id='zappa-arbi-header'></span>
+<div style="display:flex; align-items:center; gap:15px; padding: 5px 0;">
 <img src='{r_src}' style='width:48px; height:48px; object-fit:contain;'>
 <div>
 <h3 style="margin:0; padding:0; color:#1a1a1a; letter-spacing:-0.5px;">Zappa Arbi <span style="font-size:18px; color:#555; font-weight:normal;">(Arbitrage Monitor)</span></h3>
@@ -1931,192 +1840,286 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 </div>
 </div>
 """, unsafe_allow_html=True)
-
-        # 3. 상단 통합 요약 패널
-        summary_html = f"""
-<div class='card-main' style='padding: 25px 30px; margin-bottom: 25px;'>
-<div style='display: flex; justify-content: space-between; align-items: stretch;'>
-<div style='flex: 1; border-right: 1px solid #e8dbad; padding-right: 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>💱 실시간 시장 지표</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
-<span style='font-size: 14px; color: #555;'>평균 김치 프리미엄</span>
-<span style='font-size: 24px; font-weight: 800; color: #D32F2F;'>+{mock_avg_gap:.2f}%</span>
-</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline;'>
-<span style='font-size: 14px; color: #555;'>적용 환율 (USDT/KRW)</span>
-<span style='font-size: 18px; font-weight: 600; color: #111;'>{mock_fx_rate:,.2f}</span>
-</div>
-</div>
-<div style='flex: 1; border-right: 1px solid #e8dbad; padding: 0 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>💰 차익거래 자산 요약</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;'>
-<span style='font-size: 14px; color: #555;'>할당된 총 시드머니</span>
-<span style='font-size: 18px; font-weight: 600; color: #111;'>{fmt(mock_total_seed)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
-</div>
-<div style='display: flex; justify-content: space-between; align-items: baseline;'>
-<span style='font-size: 14px; color: #555;'>누적 차익 수익</span>
-<span style='font-size: 18px; font-weight: 600; color: #D32F2F;'>{fmt(mock_total_profit, True)} <span style='font-size:12.5px; font-weight:normal;'>KRW</span></span>
-</div>
-</div>
-<div style='flex: 1; padding-left: 20px; display: flex; flex-direction: column; justify-content: center;'>
-<div style='font-size: 15px; color: #666; font-weight: bold; margin-bottom: 8px;'>🤖 봇 동작 상태</div>
-<div class='card-inner' style='padding: 12px; text-align: center; margin-bottom: 0;'>
-<div style='font-size: 17px; font-weight: 800; color: #1976D2;'>{mock_bot_status}</div>
-<div style='font-size: 12.5px; color: #777; margin-top: 4px;'>서버와 실시간 소켓 통신 중</div>
-</div>
-</div>
-</div>
-</div>
-"""
-        st.markdown(summary_html, unsafe_allow_html=True)
-
-        # 4. 중단 영역 (좌측: 실시간 갭 테이블 / 우측: 봇 컨트롤 패널)
-        col1, col_gap, col2 = st.columns([6, 0.3, 3.7])
-
-        with col1:
-            st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>🔴🟢 실시간 프리미엄 모니터링</div>", unsafe_allow_html=True)
-           
-            table_html = "<table class='main-table'><tr><th style='text-align:center;'>코인명</th><th style='text-align:center;'>업비트(KRW)</th><th style='text-align:center;'>바이낸스(USD)</th><th style='text-align:center;'>프리미엄(Gap)</th><th style='text-align:center;'>상태</th></tr>"
-           
-            c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple'}
-            for c in mock_coins:
-                icon = f"https://www.google.com/s2/favicons?domain={c_i.get(c['ticker'], 'cryptocompare.com')}.org&sz=64"
-                logo = f"<div style='display:flex; justify-content:flex-start; align-items:center; gap:8px; padding-left:10px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span>{c['name']}({c['ticker']})</span></div>"
-               
-                gap_val = c['gap']
-                gap_class = "red" if gap_val >= 2.5 else "blue" if gap_val <= 1.5 else ""
-                gap_str = f"+{gap_val:.2f}%"
-               
-                status_badge = "<span style='background:#ffebee; color:#c62828; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>진입 포착</span>" if gap_val >= 2.5 else "<span style='background:#f5f5f5; color:#757575; padding:3px 8px; border-radius:4px; font-size:12px;'>대기 중</span>"
-
-                table_html += f"""
-<tr>
-<td style='text-align:center;'>{logo}</td>
-<td style='text-align:right; padding-right:15px; font-weight:600;'>{fmt(c['upbit'])}</td>
-<td style='text-align:right; padding-right:15px; color:#555;'>${c['binance']:,.2f}</td>
-<td style='text-align:center; font-weight:bold;' class='{gap_class}'>{gap_str}</td>
-<td style='text-align:center;'>{status_badge}</td>
-</tr>
-"""
-            table_html += "</table>"
-            st.markdown(table_html, unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>⚙️ 봇 컨트롤 패널</div>", unsafe_allow_html=True)
-           
-            st.markdown("""
-<div style='background:#ffffff; border:1px solid #dcdcdc; border-radius:12px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);'>
-<div style='font-size:14px; font-weight:bold; color:#444; margin-bottom:8px;'>🎯 진입 목표 프리미엄 (%)</div>
-""", unsafe_allow_html=True)
-            target_gap = st.slider("Target Gap", min_value=1.0, max_value=5.0, value=2.5, step=0.1, label_visibility="collapsed")
-           
-            st.markdown(f"""
-<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>🎯 청산 목표 프리미엄 (%)</div>
-""", unsafe_allow_html=True)
-            exit_gap = st.slider("Exit Gap", min_value=0.0, max_value=3.0, value=1.0, step=0.1, label_visibility="collapsed")
-           
-            st.markdown("""
-<div style='font-size:14px; font-weight:bold; color:#444; margin-top:15px; margin-bottom:8px;'>💵 건당 거래 금액 (KRW)</div>
-""", unsafe_allow_html=True)
-            trade_amt = st.number_input("Trade Amt", min_value=100000, max_value=5000000, value=500000, step=100000, label_visibility="collapsed")
-           
-            st.markdown("<hr style='margin:20px 0; border:0; border-top:1px dashed #ccc;'>", unsafe_allow_html=True)
-           
-            # 토글 스위치 (Streamlit Native)
-            bot_toggle = st.toggle("🚀 ZAPPA 차익거래 봇 가동", value=True)
-           
+       
+        with c_head2:
+            st.markdown("<div style='display:flex; flex-direction:column; align-items:flex-end; gap:8px; width: 100%;'>", unsafe_allow_html=True)
+            bot_toggle = st.toggle("🚀 ZAPPA 봇 가동", value=True, key="main_bot_toggle")
             if bot_toggle:
-                st.markdown("<div style='font-size:13px; color:#1976D2; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 봇이 백그라운드에서 시장을 감시 중입니다.</div></div>", unsafe_allow_html=True)
+                st.markdown("<div style='width: 170px; padding: 6px 12px; text-align: center; background-color:#fff !important; border: 1px solid #dcdcdc; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);'><div style='font-size: 14.5px; font-weight: 800; color: #1976D2; line-height: 1.1;'>🟢 ACTIVE <span style='font-size:11.5px; font-weight:normal; color:#555;'>(Searching)</span></div></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='font-size:13px; color:#D32F2F; font-weight:bold; text-align:center; margin-top:5px;'>[시스템] 봇 가동이 중지되었습니다.</div></div>", unsafe_allow_html=True)
+                st.markdown("<div style='width: 170px; padding: 6px 12px; text-align: center; background-color:#f5f5f5 !important; border: 1px solid #dcdcdc; border-radius: 8px;'><div style='font-size: 14.5px; font-weight: 800; color: #777; line-height: 1.1;'>🔴 STANDBY <span style='font-size:11.5px; font-weight:normal; color:#888;'>(Offline)</span></div></div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        # 5. 하단 영역 (최근 매매 로그)
-        st.markdown("<div class='sub-title' style='margin-top: 30px; margin-bottom: 12px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>⚖️ [차익거래] 자산 현황 요약</div>", unsafe_allow_html=True)
        
-        log_html = "<table class='main-table'><tr><th style='text-align:center;'>시간</th><th style='text-align:center;'>코인명</th><th style='text-align:center;'>거래 구분</th><th style='text-align:center;'>체결 Gap</th><th style='text-align:center;'>거래 금액</th><th style='text-align:center;'>실현 손익</th></tr>"
+        p_btc_donut, p_eth_donut, p_alts_donut = 61, 9, 30
+        donut_css = f"background: conic-gradient(#ffffff 0% {p_btc_donut}%, #d9d9d9 {p_btc_donut}% {p_btc_donut+p_eth_donut}%, #8c8c8c {p_btc_donut+p_eth_donut}% 100%);"
+        donut_html = f"<div style='position: relative; width: 120px; height: 120px; border-radius: 50%; {donut_css} box-shadow: inset 0 0 8px rgba(0,0,0,0.1); border: 1px solid #d0d0d0; flex-shrink: 0; margin: 0 auto;'><div style='position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; background-color: #fffdf2; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.05);'></div><div style='position: absolute; top: 0%; left: 50%; transform: translateX(-50%); font-size: 12.5px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_btc_donut:.0f}%<br>비트코인</div><div style='position: absolute; top: 55px; right: -15px; font-size: 14px; color: #333; text-align: center; line-height: 1.1; font-weight: bold;'>{p_eth_donut:.0f}%<br>이더리움</div><div style='position: absolute; bottom: 42px; left: -20px; font-size: 14px; color: #fff; font-weight: bold; text-align: center; line-height: 1.1; text-shadow: 0px 0px 3px rgba(0,0,0,0.5);'>{p_alts_donut:.0f}%<br>Alts</div></div>"
+        def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
+        p_btc, p_eth, p_sol, p_xrp = 8500000/29000000*100, 5500000/29000000*100, 2500000/29000000*100, 12500000/29000000*100
+        html_main_left = f"<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div><div class='insight-container'><div class='insight-left'><div class='card-main'><div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'><div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>💡총 자산</div>{donut_html}<div style='font-size: 13.5px; color: #333; font-weight: bold; margin-top: 14px;'><span style='font-size: 12.5px; color: #666;'>시드머니</span> : {fmt(mock_total_seed)}</div></div><div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'><div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'><div style='font-size: 24px; font-weight: 700 !important; color: #111; letter-spacing: normal; line-height: 1; margin-bottom: 6px;'>{fmt(mock_total_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal;'>KRW</span></div><div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='red'>+0</span> / 전주비 <span class='red'>+0</span> ]</div></div><div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(mock_total_asset)}</div><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>대기자금(예수금)</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>0</div><div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 누적수익</div><div style='text-align: right;'><div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(mock_total_profit)}'>{fmt(mock_total_profit, True)}</div><div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(mock_total_rate)}'>{fmt_p(mock_total_rate)}</div></div></div></div></div><div style='margin-top: 20px;'><div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>{render_bar(p_btc, '#b4a7d6')}{render_bar(p_eth, '#f4b183')}{render_bar(p_sol, '#a9d18e')}{render_bar(p_xrp, '#ffd966')}</div><div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>비트코인</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>이더리움</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>솔라나</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>리플</div></div><div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 디지털자산 누적 차익거래 1억 만들기</span><div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{mock_proj_pct:.1f}%</span></div></div><div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'><div style='width: {mock_proj_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div></div></div></div></div></div>"
+
+        cards_data = [
+            {'name': '비트코인(BTC)', 'asset': 8500000, 'profit': 1250000, 'seed': 7250000},
+            {'name': '이더리움(ETH)', 'asset': 5500000, 'profit': 850000, 'seed': 4650000},
+            {'name': '솔라나(SOL)', 'asset': 2500000, 'profit': 570000, 'seed': 1930000},
+            {'name': '리플(XRP)', 'asset': 12500000, 'profit': 3250000, 'seed': 9250000}
+        ]
+
+        cards_html = "<div class='insight-right'><div class='grid-2x2'>"
+        for cd in cards_data:
+            c_rate = (cd['profit'] / cd['seed']) * 100
+            cards_html += f"<div class='card-sub' style='height:100%; justify-content:space-between; cursor:default;'><div><div style='text-align: right; font-size: 13.5px; color: #888; font-weight: normal; margin-bottom: -2px; line-height: 1;'>[ 2026.05 ]</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{cd['name']}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(cd['asset'])}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 누적수익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(cd['profit'])}' style='font-size: 16px; font-weight: normal;'>{fmt(cd['profit'], True)}</div><div class='{col(c_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(c_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>시드머니</span> : {fmt(cd['seed'])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>1</span> 거래</span></div></div>"
+        cards_html += "</div></div></div>"
        
-        for log in mock_logs:
-            type_color = "red" if "진입" in log['type'] else "blue"
-            prof_str = f"+{fmt(log['profit'])}" if isinstance(log['profit'], int) and log['profit'] > 0 else log['profit']
-            prof_class = "red" if isinstance(log['profit'], int) and log['profit'] > 0 else ""
-           
-            log_html += f"""
+        st.markdown(html_main_left + cards_html, unsafe_allow_html=True)
+       
+        import pytz
+        from datetime import datetime
+        now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
+        d_str_clean = f"{now_seoul.month}/{now_seoul.day}"
+        dw_str = ["월", "화", "수", "목", "금", "토", "일"][now_seoul.weekday()]
+       
+        col_mon_title, col_mon_btn = st.columns([7.5, 2.5])
+        with col_mon_title:
+            st.markdown(f"<div class='sub-title' style='margin-bottom:0;'>💻 실시간 Arbitrage 종합 현황</div>", unsafe_allow_html=True)
+        with col_mon_btn:
+            if st.button("🔄 실시간 프리미엄 갱신", key="arbi_mon_refresh_top"):
+                st.toast("📡 실시간 겉보기 김프 데이터를 수집 중입니다...", icon="⏳")
+
+        # 💡 [패치] 전체 박스 토글화 및 좌우 하단 정렬 최적화
+        info_box_html = """
+<details class="zappa-arbi-details">
+    <summary class="zappa-arbi-summary">💡 수익률 계산 공식 및 시뮬레이션 조건</summary>
+    <div style="display: flex; padding: 25px; align-items: stretch;">
+        <div style="flex: 1; padding-right: 25px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
+            <div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
+                <div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">1. 실제 수익률 (%)</div>
+                <div style="font-family: monospace; font-size: 14px; color: #1976D2; margin-bottom: 8px; padding-left: 10px; background: #eaf2f8; padding: 8px; border-radius: 6px;">
+                    R_actual = (G_entry - G_exit) - (F_upbit + F_binance + F_funding + S)
+                </div>
+                <div style="font-size: 12.5px; color: #666; margin-bottom: 18px; padding-left: 10px; line-height: 1.5;">
+                    * G : 프리미엄(%), S : 슬리피지(호가 오차)<br>
+                    * F_funding : 공매도 포지션 유지 비용 (8시간 단위 변동)
+                </div>
+                <div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">2. 예상 순수익 (KRW)</div>
+                <div style="font-family: monospace; font-size: 14px; color: #D32F2F; margin-bottom: 8px; padding-left: 10px; background: #fdeded; padding: 8px; border-radius: 6px;">
+                    P_net = Amount × (R_actual / 100)
+                </div>
+                <div style="font-size: 12.5px; color: #666; padding-left: 10px; line-height: 1.5;">
+                    * Amount : 한쪽 거래소에 투입된 원화 기준 거래금액
+                </div>
+            </div>
+        </div>
+        <div style="flex: 1; padding-left: 25px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <div style="flex: 1; padding-right: 15px;">
+                    <div style="font-weight: 800; color: #1976D2; font-size: 14.5px; margin-bottom: 6px;">[ 조건 세팅 ]</div>
+                    <div style="font-size: 13px; color: #444; line-height: 1.7;">
+                        • 거래 금액 : 3,000,000원<br>
+                        <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(업비트 300만 매수 + 바이낸스 300만 공매도)</span><br>
+                        • 진입 Gap : 2.5%<br>
+                        • 청산 Gap : 1.0%<br>
+                        <span style="font-weight:bold; color:#111;">• 기대 수익률(δ) : 1.5%p</span>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 800; color: #D32F2F; font-size: 14.5px; margin-bottom: 2px;">[ 지불비용 항목 ]</div>
+                    <div style="font-size: 13px; color: #555; font-weight: bold; margin-bottom: 6px;">총 수수료(비용) : 약 0.20%</div>
+                    <div style="font-size: 13px; color: #444; line-height: 1.7;">
+                        • 업비트 수수료 : 왕복 0.10%<br>
+                        <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.05% + 매도 0.05%)</span><br>
+                        • 바이낸스 수수료 : 왕복 0.04%<br>
+                        <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.02% + 매도 0.02%)</span><br>
+                        • 차입/슬리피지 등 : 약 0.06%
+                    </div>
+                </div>
+            </div>
+            <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; border: 1px solid #eee; margin-top: auto;">
+                <div style="font-weight: 800; color: #111; font-size: 14px; margin-bottom: 4px;">[ 최종결과 산출 ]</div>
+                <div style="font-size: 13.5px; color: #333; line-height: 1.5;">
+                    • 실제 수익률 : 1.5% - 0.2% = <b style="color:#1976D2;">1.3%</b><br>
+                    • 예상 순수익 : 3,000,000원 × 1.3% = <b style="color:#D32F2F;">39,000원</b>
+                </div>
+            </div>
+        </div>
+    </div>
+</details>
+"""
+        st.markdown(info_box_html, unsafe_allow_html=True)
+
+        st.markdown(f"<div style='text-align:right; font-size:12.5px; color:#555; font-weight:bold; margin-bottom:8px; margin-top:10px;'>[ {d_str_clean}({dw_str}), 적용환율 1$ = {mock_fx_rate:,.1f}원 ] , 단위 : 원화(KRW)</div>", unsafe_allow_html=True)
+
+        # 💡 [패치] 선 굵기 통일 (모든 테두리를 1px solid #dcdcdc로 강제)
+        table_html = """
+<table class='main-table' style='margin-bottom: 5px; border-collapse: collapse !important; width: 100%;'>
+<thead>
 <tr>
-<td style='text-align:center; color:#666;'>{log['time']}</td>
-<td style='text-align:center; font-weight:bold;'>{log['coin']}</td>
-<td style='text-align:center; font-weight:bold;' class='{type_color}'>{log['type']}</td>
-<td style='text-align:center;'>{log['gap']:.2f}%</td>
-<td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td>
-<td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>코인명</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>업비트</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>바이낸스</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>실시간 Gap</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>상태</th>
+<th colspan='3' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>김치 프리미엄 타겟</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>거래금액</th>
+<th rowspan='2' style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>예상순수익</th>
+</tr>
+<tr>
+<th style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>진입(Entry)</th>
+<th style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>청산(Exit)</th>
+<th style='text-align:center; vertical-align:middle; background-color:#f8f9fa; border:1px solid #dcdcdc !important;'>기대수익(δ)</th>
+</tr>
+</thead>
+<tbody>
+"""
+        c_i = {'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple'}
+       
+        for c in mock_coins:
+            ticker = c['ticker']
+            icon = f"https://www.google.com/s2/favicons?domain={c_i.get(ticker, 'cryptocompare.com')}.org&sz=64"
+            logo = f"<div style='display:flex; justify-content:flex-start; align-items:center; gap:8px; padding-left:10px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span style='font-weight:normal; color:#333;'>{c['name']}({ticker})</span></div>"
+           
+            en_target = st.session_state.get(f'en_{ticker}', 2.5)
+            ex_target = st.session_state.get(f'ex_{ticker}', 1.0)
+            amt = st.session_state.get(f'amt_{ticker}', 3000000)
+           
+            gap_val = c['gap']
+            delta_val = en_target - ex_target
+            net_profit_val = amt * (delta_val - 0.2) / 100
+           
+            # 💡 [패치] 상태 인덱스 번호 추가
+            if gap_val >= en_target:
+                status_badge = "<span style='background:#ffebee; color:#c62828; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>③ 진입포착</span>"
+            elif gap_val >= en_target - 0.1:
+                status_badge = "<span style='background:#fff3e0; color:#e65100; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>② 갭도달</span>"
+            elif gap_val >= ex_target + 0.5:
+                status_badge = "<span style='background:#e8f5e9; color:#2e7d32; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑤ 보유중</span>"
+            elif gap_val > ex_target + 0.1:
+                status_badge = "<span style='background:#e1f5fe; color:#0277bd; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑥ 갭축소</span>"
+            elif gap_val > ex_target:
+                status_badge = "<span style='background:#ede7f6; color:#5e35b1; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑦ 청산포착</span>"
+            else:
+                status_badge = "<span style='background:#f5f5f5; color:#757575; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>① 대기중</span>"
+
+            up_curr, up_d_rate = c['upbit'], c['upbit_chg']
+            up_diff = (up_curr - (up_curr / (1 + up_d_rate / 100))) if up_curr > 0 and up_d_rate != 0 else 0
+           
+            bin_curr, bin_d_rate = c['binance'], c['binance_chg']
+            bin_curr_krw = bin_curr * mock_fx_rate
+            bin_diff_krw = (bin_curr_krw - (bin_curr_krw / (1 + bin_d_rate / 100))) if bin_curr_krw > 0 and bin_d_rate != 0 else 0
+           
+            up_chg_str = f"({fmt(up_diff, True)} / {fmt_p(up_d_rate)})"
+           
+            binance_usd_str = f"${bin_curr:,.3f}" if bin_curr < 10 else f"${bin_curr:,.2f}"
+            bin_chg_str = f"({fmt(bin_diff_krw, True)} / {fmt_p(bin_d_rate)})"
+
+            table_html += f"""
+<tr>
+<td style='text-align:left; border:1px solid #dcdcdc !important;'>{logo}</td>
+<td style='text-align:right; padding-right:15px; border:1px solid #dcdcdc !important; padding-top:8px; padding-bottom:8px;'>
+    <div style='font-weight:bold; font-size:15.5px; color:#111;'>{fmt(up_curr)}</div>
+    <div style='font-size:13px; color:{col(up_d_rate)}; margin-top:3px;'>{up_chg_str}</div>
+</td>
+<td style='text-align:right; padding-right:15px; border:1px solid #dcdcdc !important; padding-top:8px; padding-bottom:8px;'>
+    <div style='font-weight:bold; font-size:15.5px; color:#111;'>{fmt(bin_curr_krw)}</div>
+    <div style='font-size:12.5px; color:#555; margin-top:2px;'>{binance_usd_str}</div>
+    <div style='font-size:13px; color:{col(bin_d_rate)}; margin-top:3px;'>{bin_chg_str}</div>
+</td>
+<td style='text-align:center; font-weight:bold; font-size:15.5px; border:1px solid #dcdcdc !important;' class='{"red" if gap_val > 0 else ""}'>+{gap_val:.2f}%</td>
+<td style='text-align:center; border:1px solid #dcdcdc !important;'>{status_badge}</td>
+<td style='text-align:center; font-weight:bold; font-size:14.5px; color:#111; border:1px solid #dcdcdc !important;'>{en_target:.1f}%</td>
+<td style='text-align:center; font-weight:bold; font-size:14.5px; color:#111; border:1px solid #dcdcdc !important;'>{ex_target:.1f}%</td>
+<td style='text-align:center; font-weight:bold; font-size:14.5px; color:#1976D2; border:1px solid #dcdcdc !important;'>{delta_val:.1f}%p</td>
+<td style='text-align:right; font-weight:bold; font-size:14.5px; color:#111; padding-right:15px; border:1px solid #dcdcdc !important;'>{fmt(amt)}</td>
+<td style='text-align:right; font-weight:bold; font-size:14.5px; color:#D32F2F; padding-right:15px; border:1px solid #dcdcdc !important;'>{fmt(net_profit_val)}</td>
 </tr>
 """
-        log_html += "</table>"
-        st.markdown(log_html, unsafe_allow_html=True)
-    # --- [👇 여기서부터 기존 차익거래 코드 맨 아래에 붙여넣으세요 👇] ---
-    
+        table_html += "</tbody></table>"
+        st.markdown(table_html, unsafe_allow_html=True)
+       
+        st.markdown("<div style='text-align:right; font-size:12.5px; color:#555; font-weight:bold; margin-top:5px; margin-bottom:30px;'>※ 상태 Index : ①대기중 → ②갭도달 → ③진입포착 → ④주문체결 → ⑤보유중 → ⑥갭축소 → ⑦청산포착 → ①대기중</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='sub-title' style='margin-top: 30px; margin-bottom: 12px;'>⚙️ 봇 컨트롤 패널 (종목별 셋팅)</div>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown("<span id='bot-panel-marker'></span>", unsafe_allow_html=True)
+            c_h1, c_h2, gap1, c_h3, gap2, c_h4 = st.columns([1.2, 2.8, 0.4, 2.8, 0.4, 2.4])
+           
+            c_h1.markdown("<div style='font-size:15.5px; font-weight:bold; color:#555; text-align:center;'>코인명</div>", unsafe_allow_html=True)
+            c_h2.markdown("<div style='font-size:15.5px; font-weight:bold; color:#555; text-align:center;'>🎯진입(Entry)</div>", unsafe_allow_html=True)
+            c_h3.markdown("<div style='font-size:15.5px; font-weight:bold; color:#555; text-align:center;'>🎯청산(Exit)</div>", unsafe_allow_html=True)
+            c_h4.markdown("<div style='font-size:15.5px; font-weight:bold; color:#555; text-align:center;'>💵거래금액(KRW)</div>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:12px 0 15px 0; border:0; border-top:1px solid #eee;'>", unsafe_allow_html=True)
+           
+            for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
+                c_b1, c_b2, gap_b1, c_b3, gap_b2, c_b4 = st.columns([1.2, 2.8, 0.4, 2.8, 0.4, 2.4])
+                with c_b1:
+                    icon_url = f"https://www.google.com/s2/favicons?domain={c_i.get(coin, 'cryptocompare.com')}.org&sz=64"
+                    st.markdown(f"<div style='margin-top:4px; font-weight:bold; text-align:center; font-size:15.5px; color:#111;'><img src='{icon_url}' style='width:18px; height:18px; border-radius:50%; vertical-align:middle; margin-right:6px;'>{coin}</div>", unsafe_allow_html=True)
+                with c_b2: st.slider(f"sl_en_{coin}", 1.0, 5.0, st.session_state[f'en_{coin}'], 0.1, key=f"en_{coin}", label_visibility="collapsed")
+                with c_b3: st.slider(f"sl_ex_{coin}", 0.0, 3.0, st.session_state[f'ex_{coin}'], 0.1, key=f"ex_{coin}", label_visibility="collapsed")
+                with c_b4: st.number_input(f"in_amt_{coin}", 100000, 1000000000, st.session_state[f'amt_{coin}'], 100000, format="%d", key=f"amt_{coin}", label_visibility="collapsed")
+
+        components.html("""
+<script>
+const parentDoc = window.parent.document;
+function overrideStreamlitDOM() {
+    const panelMarker = parentDoc.getElementById('bot-panel-marker');
+    if (panelMarker) {
+        const parentBlock = panelMarker.closest('div[data-testid="stVerticalBlock"]');
+        if (parentBlock && !parentBlock.hasAttribute('data-styled')) {
+            parentBlock.setAttribute('data-styled', 'true');
+            parentBlock.style.setProperty('background', '#ffffff', 'important');
+            parentBlock.style.setProperty('border', '1px solid #dcdcdc', 'important');
+            parentBlock.style.setProperty('border-radius', '12px', 'important');
+            parentBlock.style.setProperty('padding', '20px 25px 25px 25px', 'important');
+            parentBlock.style.setProperty('box-shadow', '0 2px 5px rgba(0,0,0,0.03)', 'important');
+            parentBlock.style.setProperty('margin-bottom', '35px', 'important');
+        }
+        if (parentBlock) {
+            const rows = parentBlock.querySelectorAll('div[data-testid="stHorizontalBlock"]');
+            rows.forEach((row, idx) => {
+                if (idx > 0) {
+                    const cols = row.querySelectorAll('div[data-testid="column"]');
+                    if (cols.length >= 4) {
+                        const exitCol = cols[3];
+                        const parts = exitCol.querySelectorAll('[data-testid="stTickBarMin"], [data-testid="stThumbValue"]');
+                        parts.forEach(el => el.style.setProperty('background-color', '#3b82f6', 'important'));
+                        const sliderUI = exitCol.querySelector('[role="slider"]');
+                        if (sliderUI) { sliderUI.style.setProperty('background-color', '#3b82f6', 'important'); sliderUI.style.setProperty('border-color', '#3b82f6', 'important'); }
+                    }
+                }
+            });
+        }
+    }
+    const table = parentDoc.getElementById('zappa-trade-log-table');
+    if (table) {
+        let parentEl = table.parentElement;
+        while (parentEl && parentEl.tagName !== 'BODY') {
+            const style = window.getComputedStyle(parentEl);
+            if (style.overflow === 'hidden' || style.overflowY === 'hidden') { parentEl.style.setProperty('overflow', 'visible', 'important'); }
+            parentEl = parentEl.parentElement;
+        }
+    }
+}
+setInterval(overrideStreamlitDOM, 300);
+</script>
+""", height=0)
+
         st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 40px 0 25px 0;'>", unsafe_allow_html=True)
-        
-        st.markdown("""
-<div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;'>
-<h4 style='margin: 0; font-weight: 800; color: #333; font-size: 20px; letter-spacing: -0.5px;'><span style='font-size:20px; vertical-align:middle; margin-right:6px;'>📊</span>1 BTC 기준 아비트리지 종합 현황</h4>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
+        col_empty, col_date = st.columns([4.0, 2.0])
+        with col_date:
+            from datetime import timedelta
+            st.date_input("🗓️ 조회 기간 설정 (시작일 - 종료일)", value=[datetime.today() - timedelta(days=7), datetime.today()], key="arbi_log_date")
 
-        if st.button("🔄 요약 현황 실시간 갱신", key="arbi_summary_refresh_btn"):
-            st.toast("📡 실시간 프리미엄 데이터를 갱신합니다...", icon="⏳")
-        
-        # 아비트리지 가상(Mock) 데이터
-        mock_fx_rate = 1498.0
-        mock_upbit_btc = 105765000
-        mock_binance_btc_krw = 106154348
-        mock_binance_btc_usd = 70865.47
-        mock_kimchi_prem = -0.37
-        mock_actual_rate = -0.52
-        mock_net_profit = -548385
-
-        def get_badge_html(val, is_usd=False, is_currency=False):
-            arrow = "↑" if val > 0 else "↓"
-            val_str = f"${val:,.2f}" if is_usd else (f"{int(val):,}원" if is_currency else f"{val:,.2f}%")
-            return f"<span style='background-color: #eaf5eb; color: #4ca154; padding: 3px 8px; border-radius: 4px; font-size: 12.5px; font-weight: bold;'>{arrow} {val_str}</span>"
-
-        arbi_html = f"""
-<div style="background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 12px; padding: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
-<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">업비트 BTC</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_upbit_btc:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
-</div>
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">바이낸스 BTC</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_binance_btc_krw:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
-{get_badge_html(mock_binance_btc_usd, is_usd=True)}
-</div>
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">적용 환율</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_fx_rate:,.1f} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
-</div>
-</div>
-<div style="border-bottom: 1px solid #f0f0f0; margin-bottom: 25px;"></div>
-<div style="display: flex; justify-content: space-between; align-items: flex-start;">
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">겉보기 김프</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; line-height: 1;">{mock_kimchi_prem:.2f} <span style="font-size: 15px; font-weight: normal; color: #555;">%</span></div>
-</div>
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">실제 수익률 (수수료 제외)</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_actual_rate:.2f} <span style="font-size: 15px; font-weight: normal; color: #555;">%</span></div>
-{get_badge_html(mock_actual_rate)}
-</div>
-<div style="flex: 1;">
-<div style="font-size: 13.5px; color: #777; font-weight: bold; margin-bottom: 10px;">💰 예상 순수익</div>
-<div style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1;">{mock_net_profit:,} <span style="font-size: 15px; font-weight: normal; color: #555;">원</span></div>
-{get_badge_html(mock_net_profit, is_currency=True)}
-</div>
-</div>
-</div>
-"""
-        st.markdown(arbi_html, unsafe_allow_html=True)
-        # --- [👆 여기까지 복사해서 붙여넣으세요 👆] ---
+        log_html = """<div class='sticky-log-wrapper'><table class='main-table' id='zappa-trade-log-table'><thead style='position: sticky; top: 0px; z-index: 1000;'><tr><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>코인명 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>진입 일자 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>진입 시간 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>청산 일자 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>청산 시간 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>진입 Gap(%) ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>청산 Gap(%) ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>거래 금액 ↕</th><th class='sortable' style='position: sticky; top: 0px; background-color: #f2f2f2; z-index: 1000; text-align:center;'>실현 손익 ↕</th></tr></thead><tbody>"""
+        for log in mock_logs:
+            prof_str = f"+{fmt(log['profit'])}" if log['profit'] > 0 else (fmt(log['profit']) if log['profit'] != 0 else "-")
+            prof_class = "red" if log['profit'] > 0 else ("blue" if log['profit'] < 0 else "gray")
+            exit_gap_str = f"+{log['exit_gap']:.2f}%" if log['exit_gap'] > 0 else "-"
+           
+            log_html += f"<tr><td style='text-align:center; font-weight:bold; font-size:14.5px;'>{log['coin']}</td><td style='text-align:center; color:#666; font-size:13.5px;'>{log['entry_date']}</td><td style='text-align:center; color:#111; font-weight:bold; font-size:13.5px;'>{log['entry_time']}</td><td style='text-align:center; color:#666; font-size:13.5px;'>{log['exit_date']}</td><td style='text-align:center; color:#111; font-weight:bold; font-size:13.5px;'>{log['exit_time']}</td><td style='text-align:center; color:#D32F2F; font-weight:bold;'>+{log['entry_gap']:.2f}%</td><td style='text-align:center; color:#1976D2; font-weight:bold;'>{exit_gap_str}</td><td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td><td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td></tr>"
+        st.markdown(log_html + "</tbody></table></div>", unsafe_allow_html=True)
 
     # =========================================================
     # ⏳ 절세계좌 대시보드 상세 페이지
