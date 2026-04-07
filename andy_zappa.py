@@ -3312,9 +3312,6 @@ font-weight: 700 !important;
     # =========================================================
     # 💡 [패치] 차익거래 대시보드 메인 페이지 (사이드바 데이터 동기화)
     # =========================================================
-     # =========================================================
-    # 💡 [패치] 차익거래 대시보드 메인 페이지 (사이드바 데이터 동기화)
-    # =========================================================
     elif st.session_state.current_view == '차익거래':
        
         # 1. 봇 컨트롤 패널용 세션 스테이트 초기화 (초기 셋팅값)
@@ -3439,9 +3436,29 @@ box-shadow: none !important;
 align-items: center !important;
 }
 
-/* 2. 제목행 밑줄만 유지 */
+/* 2. 제목행 밑줄 (허공에 띄운 가짜 선으로 간격 붕괴 원천 차단) */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:first-of-type {
-border-bottom: 2px solid #eaeaea !important;
+border-bottom: none !important;
+padding-bottom: 0 !important;
+margin-bottom: 0 !important;
+position: relative !important;
+}
+
+/* 👇 허공에 빔을 쏴서 선을 그립니다. */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:first-of-type::after {
+content: "";
+position: absolute;
+left: 0;
+bottom: -12px;
+width: 100%;
+height: 2px;
+background-color: #eaeaea;
+}
+
+/* 💡 맨 아래 나타난 알 수 없는 테두리(가로선) 찌꺼기 완벽 제거 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) > div {
+border-bottom: none !important;
+box-shadow: none !important;
 }
 
 /* 3. 2열(토글) 및 3열(코인명) 정렬 (하단 마스터행 제외) */
@@ -3455,7 +3472,6 @@ div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker
 display: flex !important;
 justify-content: center !important;
 align-items: center !important;
-/* 👇 [레버 1] 코인명 상하 이동 (현재 -4px, 더 올리려면 숫자를 키우세요) */
 transform: translateY(-4px) !important;
 }
 
@@ -3464,65 +3480,71 @@ div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker
 display: none !important;
 }
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stSlider"] {
-/* 👇 [레버 2] 슬라이더 전체 상하 이동 */
 margin-top: 12px !important;
 transform: translateY(-5px) !important;
 }
 
-/* 5. 건당 거래금액 입력창 디자인 (두께 및 글자 중앙 정렬) */
-
-/* 💡 [레버 4] 입력창 전체 상하 위치 조절 (슬라이더 선과 바닥 맞추기) */
+/* 5. 건당 거래금액 입력창 디자인 */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stTextInput"] {
-transform: translateY(0px) !important;
+transform: translateY(1px) !important;
 }
-
-/* 💡 [두께 조절 레버] 회색 겉면 박스 두께 조절 (숫자를 키우면 두꺼워집니다) */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stTextInput"] div[data-baseweb="input"] {
-min-height: 36.5px !important; /* 👈 이 숫자를 슬라이더 두께에 맞게 늘리세요 (예: 34px, 36px) */
-height: 36.5px !important; /* 👈 위와 똑같은 숫자로 맞추세요 */
+min-height: 36.5px !important; 
+height: 36.5px !important; 
 border-radius: 6px !important;
 }
-
-/* 💡 글자 수직 중앙 고정 (겉면 박스 두께와 숫자를 동일하게 맞추세요) */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stTextInput"] input {
 text-align: right !important;
-font-weight: bold !important;
+font-weight: normal !important; 
 padding-top: 0px !important;
 padding-bottom: 0px !important;
-height: 36.5px !important; /* 👈 위 박스 두께와 똑같은 숫자로 맞추세요 */
-line-height: 36.5px !important; /* 👈 위 박스 두께와 똑같은 숫자로 맞추세요 */
+height: 36.5px !important; 
+line-height: 36.5px !important; 
 }
 
-/* 6. 슬라이더 보라색 테마 디자인 (최저값 박스 오류 해결) */
-div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child { height: 16px !important; background-color: #f0f2f6 !important; border-radius: 8px !important; }
-div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child > div:first-child { background-color: #8e44ad !important; }
-div[data-testid="stSlider"] div[role="slider"] { width: 20px !important; height: 20px !important; background-color: #8e44ad !important; border: 2.5px solid #ffffff !important; }
-
-/* 💡 원포인트 핸들 박스 디자인 및 위치 조정 */
-div[data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] > div {
-background-color: #8e44ad !important; color: #ffffff !important; font-weight: bold !important;
-font-size: 13px !important; padding: 2px 6px !important; min-width: 40px !important; border-radius: 6px !important;
-/* 👇 [레버 3] 핸들 위 보라색 박스 개별 높이 조절 */
-transform: translateY(-7px) !important;
-text-align: center !important; display: flex !important; justify-content: center !important; align-items: center !important;
+/* 6. 슬라이더 공통 및 개별 테마 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child { height: 16px !important; background-color: #f0f2f6 !important; border-radius: 8px !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child > div:first-child { background-color: #4b8bff !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stSlider"] div[role="slider"] { width: 20px !important; height: 20px !important; background-color: #4b8bff !important; border: 2.5px solid #ffffff !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] > div {
+background-color: #4b8bff !important; color: #ffffff !important; font-weight: bold !important; font-size: 13px !important; padding: 2px 6px !important; min-width: 40px !important; border-radius: 6px !important; transform: translateY(-7px) !important; text-align: center !important; display: flex !important; justify-content: center !important; align-items: center !important;
 }
 
-/* 💡 최저/최대값 텍스트의 배경을 투명하게 강제 (Andy님의 핵심 요청) */
+/* 💡 표적지(exit-target-marker)가 있는 기둥의 슬라이더만 초록색 강제 변경 */
+div.element-container:has(.exit-target-marker) { display: none !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="column"]:has(.exit-target-marker) div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child > div:first-child { background-color: #00c853 !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="column"]:has(.exit-target-marker) div[data-testid="stSlider"] div[role="slider"] { background-color: #00c853 !important; border-color: #ffffff !important; }
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="column"]:has(.exit-target-marker) div[data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] > div { background-color: #00c853 !important; }
+
+/* 💡 최저/최대값 텍스트의 배경을 투명하게 강제 */
 div[data-testid="stTickBarMin"] > div, div[data-testid="stTickBarMax"] > div {
-background-color: transparent !important; color: #666 !important; font-weight: 600 !important;
-box-shadow: none !important; padding: 0 !important;
+background-color: transparent !important; color: #666 !important; font-weight: 600 !important; box-shadow: none !important; padding: 0 !important;
 }
 
-/* [추가 레버 4] 건당 거래금액 (텍스트 입력창 전체 상하 이동) */
-div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stTextInput"] {
-/* 👇 플러스(+) 숫자로 키우면 아래로 내려가고, 마이너스(-)면 올라갑니다. 슬라이더에 맞춰 내려보세요 */
-transform: translateY(0.47px) !important;
+/* 7. 세로 선 강제 생성 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"] {
+position: relative !important;
+}
+                    
+/* 8. 봇 가동 토글 붉은색 고정 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stCheckbox"] [data-baseweb="checkbox"]:has(input:checked) > div:first-child {
+background-color: #ff4b4b !important;
 }
 
-/* [추가 레버 5] 봇 가동 (토글 상하 이동) */
-div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="column"]:nth-of-type(2) div[data-testid="stCheckbox"] {
-/* 👇 토글 위치를 미세 조정하고 싶을 때 사용하세요 */
-transform: translateY(-8px) !important;
+/* 우측 허공에 선을 그립니다 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"]:nth-child(2)::after,
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"]:nth-child(3)::after,
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"]:nth-child(4)::after,
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"]:nth-child(5)::after,
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"]:not(:has(.bottom-space-cell)) > div[data-testid="column"]:nth-child(6)::after {
+content: "";
+position: absolute;
+right: -10px;        
+top: 25%;            
+height: 50%;         
+width: 1.5px;        
+background-color: #cccccc; 
+z-index: 50;
 }
 /* ==================================================================== */
 
@@ -3535,46 +3557,54 @@ transform: translateY(-8px) !important;
 #zappa-trade-log-table tr th:first-child, #zappa-trade-log-table tr td:first-child { border-left: none !important; }
 
 .zappa-arbi-details { background: #ffffff; border: 1px solid #eaeaea; border-radius: 12px; margin-top: 5px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-.zappa-arbi-summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-weight: 800; color: #111; font-size: 16px; padding: 18px 25px; background: #fcfcfc; border-bottom: 1px solid transparent; border-radius: 12px; transition: all 0.2s; }
+.zappa-arbi-summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #111; font-size: 16px; padding: 18px 25px; background: #fcfcfc; border-bottom: 1px solid transparent; border-radius: 12px; transition: all 0.2s; }
 .zappa-arbi-details[open] .zappa-arbi-summary { border-bottom: 1px solid #eaeaea; border-radius: 12px 12px 0 0; }
 .zappa-arbi-summary::-webkit-details-marker { display: none; }
 .zappa-arbi-summary::after { content: '>'; font-family: monospace; font-weight: 900; font-size: 18px; color: #888; transition: transform 0.2s ease; }
 .zappa-arbi-details[open] .zappa-arbi-summary::after { transform: rotate(90deg); }
 
-div[data-testid="stHorizontalBlock"]:has(.bottom-badge-cell) {
-display: flex !important;
-align-items: center !important;
-justify-content: flex-end !important;
-gap: 0px !important;
-margin-top: 15px !important;
-transform: translateX(-9px) !important;
-z-index: 100 !important;
+/* ---------------------------------------------------------- */
+/* 💡 마스터 컨트롤: 고무줄 팽창 방지 및 우측 끝선 절대 고정 */
+/* ---------------------------------------------------------- */
+
+/* 1. 토글, 로봇, 뱃지를 감싸는 가로줄(Row)을 통째로 우측 끝에 붙입니다 */
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) {
+    display: flex !important;
+    justify-content: flex-end !important; 
+    align-items: center !important;
+    gap: 15px !important; 
+    
+    /* ❌ 범인: margin-top은 지우세요! (표까지 같이 아래로 밀어냅니다) */
+    /* margin-top: 45px !important; */
+
+    /* ✅ 해결책: 물리적 공간은 냅두고 시각적으로만 아래로 끌어내리기 */
+    transform: translateY(30px) !important; /* 👈 숫자를 키울수록 아래로 훅훅 내려갑니다 */
+    position: relative !important;
+    z-index: 99 !important; /* 혹시나 표 뒤로 숨지 않게 층수를 높여줍니다 */
 }
 
-div[data-testid="column"]:has(.bottom-toggle-cell) {
-display: flex !important;
-justify-content: flex-end !important;
-padding-right: 0px !important;
-margin-left: 20px !important;
-align-items: center !important;
+/* 2. 스트림릿의 컬럼(%) 자동 팽창 성질을 파괴 */
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="column"] {
+    flex: 0 0 auto !important; 
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
 }
 
-div[data-testid="column"]:has(.bottom-toggle-cell) div[data-testid="stCheckbox"] {
-transform: scale(1.4) !important;
-transform-origin: right center !important;
-margin-right: -10px !important;
+/* 3. 뱃지 기본 디자인 */
+.master-badge-box {
+    background-color: #202531;
+    color: white;
+    border-radius: 8px;
+    white-space: nowrap;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-div[data-testid="column"]:has(.bottom-robot-cell) {
-display: flex !important;
-justify-content: center !important;
-align-items: center !important;
-padding-left: 0px !important;
-padding-right: 0px !important;
-margin-right: -5px !important;
+/* 4. 토글 스위치 크기 조절 */
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stCheckbox"] {
+    transform: scale(1.3) translateY(2px) !important;
 }
-
-div[data-testid="column"]:has(.bottom-toggle-cell) label { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -3603,39 +3633,91 @@ div[data-testid="column"]:has(.bottom-toggle-cell) label { display: none !import
             c_rate = (cd['profit'] / cd['seed']) * 100
             cards_html += f"<div class='card-sub' style='height:100%; justify-content:space-between; cursor:default;'><div><div style='text-align: right; font-size: 13.5px; color: #888; font-weight: normal; margin-bottom: -2px; line-height: 1;'>[ 2026.05 ]</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{cd['name']}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(cd['asset'])}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 누적수익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(cd['profit'])}' style='font-size: 16px; font-weight: normal;'>{fmt(cd['profit'], True)}</div><div class='{col(c_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(c_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>시드머니</span> : {fmt(cd['seed'])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>1</span> 거래</span></div></div>"
         cards_html += "</div></div></div>"
-       
+        
         st.markdown(html_main_left + cards_html, unsafe_allow_html=True)
-       
-        # 💡 상단 컨트롤 패널 제목 (오직 텍스트만 좌측 배치)
+        
+        # 1. 제목 (단독으로 윗줄에 배치)
         st.markdown("<div class='sub-title' style='margin-top: 50px; margin-bottom: 10px;'>🛠️ 봇 컨트롤 패널 (종목별 셋팅)</div>", unsafe_allow_html=True)
+
+        # 2. 로봇과 뱃지 (제목 아랫줄에 배치, columns 비율로 우측 밀어내기)
+        st.markdown("<div class='master-controls-anchor'>", unsafe_allow_html=True)
+        c_space, c_toggle, c_robot, c_badge = st.columns([8.0, 0.4, 0.7, 2.4])
+        
+        with c_space:
+            pass # 빈 공간
+            
+        with c_toggle:
+            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            st.toggle("run_master", key="main_bot_toggle", label_visibility="collapsed", on_change=sync_main_toggle)
+            
+        with c_robot:
+            st.markdown(f"<div style='display:flex; justify-content:center;'><img src='{r_src}' style='width:55px;'></div>", unsafe_allow_html=True)
+            
+        with c_badge:
+            if st.session_state.get('main_bot_toggle', True):
+                badge_html = """
+<div class='master-badge-box' style='padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; width: max-content; margin: 0;'>
+<div style='display:flex; align-items:center; line-height: 1.1;'>
+<span style='font-size:11px; margin-right:5px;'>🟢</span>
+<span style='font-size:13px; font-weight:900; color:#00c853; letter-spacing:-0.5px;'>ACTIVE</span>
+<span style='font-size:11px; font-weight:500; color:#ffffff; margin-left:5px;'>(SEARCHING)</span>
+</div>
+<div style='display:flex; align-items:center; line-height: 1.1;'>
+<span style='filter: grayscale(100%); opacity: 0.35; font-size:11px; margin-right:5px;'>🔴</span>
+<span style='font-size:13px; font-weight:700; color:#666666; letter-spacing:-0.5px;'>STANDBY</span>
+<span style='font-size:11px; font-weight:500; color:#666666; margin-left:5px;'>(OFFLINE)</span>
+</div>
+</div>
+"""
+            else:
+                badge_html = """
+<div class='master-badge-box' style='padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; width: max-content; margin: 0;'>
+<div style='display:flex; align-items:center; line-height: 1.1;'>
+<span style='filter: grayscale(100%); opacity: 0.35; font-size:11px; margin-right:5px;'>🟢</span>
+<span style='font-size:13px; font-weight:700; color:#666666; letter-spacing:-0.5px;'>ACTIVE</span>
+<span style='font-size:11px; font-weight:500; color:#666666; margin-left:5px;'>(SEARCHING)</span>
+</div>
+<div style='display:flex; align-items:center; line-height: 1.1;'>
+<span style='font-size:11px; margin-right:5px;'>🔴</span>
+<span style='font-size:13px; font-weight:900; color:#ff5252; letter-spacing:-0.5px;'>STANDBY</span>
+<span style='font-size:11px; font-weight:500; color:#666666; margin-left:5px;'>(OFFLINE)</span>
+</div>
+</div>
+"""
+            # 💡 아래처럼 겉에 div 껍질을 하나 씌워줍니다
+            st.markdown(f"<div style='display: flex; justify-content: flex-end;'>{badge_html}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True) 
 
         with st.container():
             st.markdown("<span class='bot-panel-marker'></span>", unsafe_allow_html=True)
-            # 정확한 7열 비율 (봇 가동이 좌측, 코인명이 우측)
-            c_ratio = [0.2, 0.6, 0.7, 0.7, 0.7, 0.6, 0.1]
-           
-            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            
+            c_ratio = [0.15, 0.20, 0.40, 0.67, 1.0, 1.0, 0.7, 0.1]
+            
+            st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
+            
             cols_h = st.columns(c_ratio)
-            h_names = ["", "⚙️봇 가동", "코인명", "🎯 진입목표 [ENTRY]", "🏁 청산목표 [EXIT]", "⚓ 건당 거래금액", ""]
-           
+            h_names = ["", " ", "코인명", "누적거래 / 승률", "🎯 진입목표 [ENTRY]", "🏁 청산목표 [EXIT]", "⚓ 건당 거래금액", ""]
+            
             for h_col, name in zip(cols_h, h_names):
-                if name:
+                if name: 
                     h_col.markdown(f"""
-<div style='text-align:center; transform: translateY(-12px); font-size:16px; font-weight:bold; color:#333;'>{name}</div>
+<div style='text-align:center; transform: translateY(-12px); font-size:14px; font-weight:600; color:#31333F;'>{name}</div>
 """, unsafe_allow_html=True)
-           
-            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
-           
+            
+            st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+            
             for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
-                c_space_l, c_b1, c_b2, c_b3, c_b4, c_b5, c_space_r = st.columns(c_ratio)
-               
-                with c_space_l:
-                    pass
-                   
-                with c_b1: # 2열: 봇 가동
+                c_space_l, c_b1, c_b2, c_new, c_b3, c_b4, c_b5, c_space_r = st.columns(c_ratio)
+                
+                with c_space_l: 
+                    pass 
+                    
+                with c_b1: 
                     coin_active = st.toggle(f"bot_run_{coin}", key=f"bot_toggle_{coin}_sub", label_visibility="collapsed")
-                   
-                with c_b2: # 3열: 코인명
+                    
+                with c_b2: 
                     icon_url = f"https://www.google.com/s2/favicons?domain={c_i.get(coin, 'cryptocompare.com')}.org&sz=64"
                     st.markdown(f"""
 <div style='display:flex; align-items:center; justify-content:center; transform: translateY(-4px);'>
@@ -3643,84 +3725,41 @@ div[data-testid="column"]:has(.bottom-toggle-cell) label { display: none !import
 <span style='font-weight:bold; font-size:16px; color:#111;'>{coin}</span>
 </div>
 """, unsafe_allow_html=True)
-               
+
+                with c_new: 
+                    mock_trades = 234
+                    mock_win_rate = 98.4
+                    
+                    st.markdown(f"""
+<div style='display:flex; align-items:center; justify-content:center; transform: translateY(-4px); font-size:13.5px; color:#555;'>
+[&nbsp;<span style='font-weight:bold; font-size:16.5px; color:#111;'>{mock_trades}</span>&nbsp;]건 &nbsp;/&nbsp; [&nbsp;<span style='font-weight:bold; font-size:16.5px; color:#D32F2F;'>{mock_win_rate}</span>&nbsp;]%
+</div>
+""", unsafe_allow_html=True)
+                
                 main_active = st.session_state.get('main_bot_toggle', True)
                 is_active = coin_active and main_active
-               
-                with c_b3: # 4열: 진입목표
+                
+                with c_b3: 
                     st.slider(f"sl_en_{coin}", min_value=1.0, max_value=5.0, step=0.1, key=f"en_{coin}", label_visibility="collapsed", disabled=not is_active)
-                   
-                with c_b4: # 5열: 청산목표
+                    
+                with c_b4: 
+                    st.markdown("<span class='exit-target-marker'></span>", unsafe_allow_html=True)
                     st.slider(f"sl_ex_{coin}", min_value=0.0, max_value=3.0, step=0.1, key=f"ex_{coin}", label_visibility="collapsed", disabled=not is_active)
-                   
-                with c_b5: # 6열: 거래금액
+                    
+                with c_b5: 
                     curr_amt = st.session_state.get(f"amt_{coin}", 3000000)
                     str_amt = st.text_input(f"in_amt_{coin}", value=f"{curr_amt:,}", key=f"amt_str_{coin}", label_visibility="collapsed", disabled=not is_active)
-                    try:
+                    try: 
                         st.session_state[f"amt_{coin}"] = int(str_amt.replace(",", ""))
-                    except ValueError:
+                    except ValueError: 
                         pass
-               
+                
                 with c_space_r:
                     pass
                
-                # XRP 밑 빈 행 차단
                 if coin != 'XRP':
                     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-        # 컨테이너 밖 마스터 패널 독립
-        c_p_space, c_p_toggle, c_p_robot, c_p_badge = st.columns([6.4, 0.4, 0.6, 1.4])
-       
-        with c_p_space:
-            st.markdown("<span class='bottom-space-cell'></span>", unsafe_allow_html=True)
-           
-        with c_p_toggle:
-            st.markdown("<span class='bottom-toggle-cell'></span>", unsafe_allow_html=True)
-            st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-            st.toggle("run_master", key="main_bot_toggle", label_visibility="collapsed", on_change=sync_main_toggle)
-
-        with c_p_robot:
-            st.markdown("<span class='bottom-robot-cell'></span>", unsafe_allow_html=True)
-            st.markdown(f"""
-<div style='display:flex; justify-content:center; align-items:flex-end; height:68px; padding-bottom: 5px;'>
-<img src='{r_src}' style='width:57px; height:57px; object-fit:contain; transform: translate(-6px, -2px);'>
-</div>
-""", unsafe_allow_html=True)
-
-        with c_p_badge:
-            st.markdown("<span class='bottom-badge-cell'></span>", unsafe_allow_html=True)
-       
-            if st.session_state.main_bot_toggle:
-                badge_html = """
-<div style='background-color: #202531; padding: 10px 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; width: max-content; user-select: text; margin: 0;'>
-<div style='display:flex; align-items:center; line-height: 1.2;'>
-<span style='font-size:12px; margin-right:6px;'>🟢</span>
-<span style='font-size:14px; font-weight:900; color:#00c853; letter-spacing:-0.5px;'>ACTIVE</span>
-<span style='font-size:12.5px; font-weight:500; color:#ffffff; margin-left:6px;'>(SEARCHING)</span>
-</div>
-<div style='display:flex; align-items:center; line-height: 1.2;'>
-<span style='filter: grayscale(100%); opacity: 0.35; font-size:12px; margin-right:6px;'>🔴</span>
-<span style='font-size:14px; font-weight:700; color:#666666; letter-spacing:-0.5px;'>STANDBY</span>
-<span style='font-size:12.5px; font-weight:500; color:#666666; margin-left:6px;'>(OFFLINE)</span>
-</div>
-</div>
-"""
-            else:
-                badge_html = """
-<div style='background-color: #202531; padding: 10px 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; width: max-content; user-select: text; margin: 0;'>
-<div style='display:flex; align-items:center; line-height: 1.2;'>
-<span style='filter: grayscale(100%); opacity: 0.35; font-size:12px; margin-right:6px;'>🟢</span>
-<span style='font-size:14px; font-weight:700; color:#666666; letter-spacing:-0.5px;'>ACTIVE</span>
-<span style='font-size:12.5px; font-weight:500; color:#666666; margin-left:6px;'>(SEARCHING)</span>
-</div>
-<div style='display:flex; align-items:center; line-height: 1.2;'>
-<span style='font-size:12px; margin-right:6px;'>🔴</span>
-<span style='font-size:14px; font-weight:900; color:#ff5252; letter-spacing:-0.5px;'>STANDBY</span>
-<span style='font-size:12.5px; font-weight:500; color:#666666; margin-left:6px;'>(OFFLINE)</span>
-</div>
-</div>
-"""
-            st.markdown(badge_html, unsafe_allow_html=True)
         components.html("""
 <script>
 const parentDoc = window.parent.document;
