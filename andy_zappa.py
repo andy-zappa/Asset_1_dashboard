@@ -14,15 +14,17 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit_authenticator as stauth
 
-# 1. 클라우드 서버에 쌓이는 실시간 데이터 읽어오기
 def get_live_data():
-    path = "/home/opc/data_arbi.json"
-    if os.path.exists(path):
-        try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except:
-            return None
+    # 앤디님의 오라클 서버 IP 주소를 넣으세요 (예: http://123.456.78.9:8000/data_arbi.json)
+    url = "http://[168.107.15.252]:8000/data_arbi.json"
+    
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        print(f"데이터 수신 에러: {e}")
+        return None
     return None
 
 # 2. 대시보드 화면의 가짜 데이터를 실제 서버 데이터로 덮어쓰기
