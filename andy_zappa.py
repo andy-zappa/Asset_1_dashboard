@@ -3313,11 +3313,11 @@ font-weight: 700 !important;
     # 💡 [패치] 차익거래 대시보드 메인 페이지 (사이드바 데이터 동기화)
     # =========================================================
     elif st.session_state.current_view == '차익거래':
-       
+        
         # 1. 봇 컨트롤 패널용 세션 스테이트 초기화 (초기 셋팅값)
         if 'main_bot_toggle' not in st.session_state:
             st.session_state.main_bot_toggle = True
-           
+            
         for c, en, ex, am in [('BTC', 2.5, 1.0, 3000000), ('ETH', 2.5, 1.0, 3000000), ('SOL', 3.0, 1.5, 2000000), ('XRP', 2.0, 0.5, 2000000)]:
             if f'bot_toggle_{c}_sub' not in st.session_state:
                 st.session_state[f'bot_toggle_{c}_sub'] = True
@@ -3332,64 +3332,59 @@ font-weight: 700 !important;
             for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
                 st.session_state[f'bot_toggle_{coin}_sub'] = master_state
 
-        # 2. 실시간 코인 시세 및 환율 데이터 Fetching
-        @st.cache_data(ttl=5)
-        def fetch_real_crypto_data():
+        # 2. 📡 [연동] 백그라운드 로봇(andy_arbi_v1.py)의 실시간 JSON 읽어오기
+        def load_robot_data():
+            import os, json
+            # 현재 이 파이썬 파일이 있는 폴더를 기준으로 경로 설정
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(current_dir, 'data_arbi.json')
+            
+            # 1단계: 파일 존재 여부 검사
+            if not os.path.exists(path):
+                st.error(f"🚨 [경로 에러] 파일을 찾을 수 없습니다: {path}")
+                return None
+                
+            # 2단계: JSON 파싱 시도
             try:
-                import requests
-                u_res = requests.get("https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH,KRW-SOL,KRW-XRP", timeout=3).json()
-                u_dict = {item['market'].split('-')[1]: item for item in u_res}
-               
-                b_url = 'https://api.binance.com/api/v3/ticker/24hr?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22XRPUSDT%22%5D'
-                b_res = requests.get(b_url, timeout=3).json()
-                b_dict = {item['symbol'].replace('USDT', ''): item for item in b_res}
-               
-                fx_res = requests.get("https://open.er-api.com/v6/latest/USD", timeout=3).json()
-                fx = float(fx_res['rates']['KRW'])
-               
-                coins = []
-                for ticker, name in [('BTC', '비트코인'), ('ETH', '이더리움'), ('SOL', '솔라나'), ('XRP', '리플')]:
-                    u_data = u_dict.get(ticker, {})
-                    b_data = b_dict.get(ticker, {})
-                   
-                    upbit_price = float(u_data.get('trade_price', 0))
-                    upbit_chg = float(u_data.get('signed_change_rate', 0)) * 100
-                   
-                    binance_price = float(b_data.get('lastPrice', 0))
-                    binance_chg = float(b_data.get('priceChangePercent', 0))
-                   
-                    gap = ((upbit_price / (binance_price * fx)) - 1) * 100 if binance_price * fx > 0 else 0
-                   
-                    coins.append({
-                        "ticker": ticker, "name": name,
-                        "upbit": upbit_price, "upbit_chg": upbit_chg,
-                        "binance": binance_price, "binance_chg": binance_chg,
-                        "gap": gap
-                    })
-                return coins, fx
-            except:
-                return None, None
+                with open(path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                st.error(f"🚨 [파일 에러] 내용을 읽을 수 없습니다: {e}")
+                return None
 
-        real_coins, real_fx = fetch_real_crypto_data()
-       
-        if real_coins and real_fx:
-            mock_coins = real_coins
-            mock_fx_rate = real_fx
+        # 데이터를 불러옵니다.
+        robot_data = load_robot_data()
+        
+        # 3. 🔗 [연결] 불러온 데이터를 대시보드 UI 변수에 매핑
+        if robot_data and "items" in robot_data:
+            # 로봇이 준 실제 데이터 사용
+            mock_coins = robot_data["items"]
+            mock_fx_rate = robot_data.get("fx", 1450.0)
+            
+            # UI 호환성을 위한 이름 매핑 (한글명 추가)
+            name_map = {'BTC': '비트코인', 'ETH': '이더리움', 'SOL': '솔라나', 'XRP': '리플'}
+            for c in mock_coins:
+                c['name'] = name_map.get(c['ticker'], c['ticker'])
+                # 로봇이 보내주는 진짜 등락률 데이터를 받아옵니다. (없을 때만 0.0 처리)
+                c['upbit_chg'] = c.get('upbit_chg', 0.0)
+                c['binance_chg'] = c.get('binance_chg', 0.0)
         else:
-            mock_fx_rate = 1443.10
+            # 로봇 데이터가 없을 때의 방어용 기본값
+            mock_fx_rate = 1450.0
             mock_coins = [
-                {"ticker": "BTC", "name": "비트코인", "upbit": 135000000, "upbit_chg": 1.25, "binance": 91250, "binance_chg": 1.10, "gap": 2.51},
-                {"ticker": "ETH", "name": "이더리움", "upbit": 4850000, "upbit_chg": -0.45, "binance": 3280, "binance_chg": -0.60, "gap": 2.48},
-                {"ticker": "SOL", "name": "솔라나", "upbit": 215000, "upbit_chg": 3.10, "binance": 145.5, "binance_chg": 2.85, "gap": 2.65},
-                {"ticker": "XRP", "name": "리플", "upbit": 850, "upbit_chg": -1.20, "binance": 0.575, "binance_chg": -1.35, "gap": 2.23},
+                {"ticker": "BTC", "name": "비트코인", "upbit": 0, "binance": 0, "gap": 0, "state": "🚨 로봇 연결 대기중"},
+                {"ticker": "ETH", "name": "이더리움", "upbit": 0, "binance": 0, "gap": 0, "state": "🚨 로봇 연결 대기중"},
+                {"ticker": "SOL", "name": "솔라나", "upbit": 0, "binance": 0, "gap": 0, "state": "🚨 로봇 연결 대기중"},
+                {"ticker": "XRP", "name": "리플", "upbit": 0, "binance": 0, "gap": 0, "state": "🚨 로봇 연결 대기중"}
             ]
 
+        # 4. 기존 통계 변수 및 더미 로그 유지 (추후 DB 연동 시 교체할 부분)
         mock_total_seed = arbi_total_seed
         mock_total_profit = arbi_total_profit
         mock_total_asset = arbi_total_asset
         mock_total_rate = arbi_total_rate
         mock_proj_pct = (mock_total_asset / 100000000) * 100
-       
+        
         mock_logs = []
         for i in range(1, 31):
             is_entry = (i % 2 != 0)
@@ -3823,64 +3818,92 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
 """, unsafe_allow_html=True)
         if st.button("HIDDEN_PREM_UPD", key="hidden_prem_upd"):
             st.toast("📡 실시간 프리미엄 데이터를 갱신합니다.", icon="⏳")
-            fetch_real_crypto_data.clear()
+            # 이제 파일만 바로 읽어오면 되므로 캐시 삭제가 필요 없습니다!
             st.rerun()
 
         info_box_html = """
-<details class="zappa-arbi-details">
+<details class="zappa-arbi-details" style="margin-bottom: 10px;">
 <summary class="zappa-arbi-summary">💡 수익률 계산 공식 및 시뮬레이션 조건</summary>
 <div style="display: flex; padding: 25px; align-items: stretch;">
-    <div style="flex: 1; padding-right: 25px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
-        <div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
-            <div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">1. 실제 수익률 (%)</div>
-            <div style="font-family: monospace; font-size: 14px; color: #1976D2; margin-bottom: 8px; padding-left: 10px; background: #eaf2f8; padding: 8px; border-radius: 6px;">
-                R_actual = (G_entry - G_exit) - (F_upbit + F_binance + F_funding + S)
-            </div>
-            <div style="font-size: 12.5px; color: #666; margin-bottom: 18px; padding-left: 10px; line-height: 1.5;">
-                * G : 프리미엄(%), S : 슬리피지(호가 오차)<br>
-                * F_funding : 공매도 포지션 유지 비용 (8시간 단위 변동)
-            </div>
-            <div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">2. 예상 순수익 (KRW)</div>
-            <div style="font-family: monospace; font-size: 14px; color: #D32F2F; margin-bottom: 8px; padding-left: 10px; background: #fdeded; padding: 8px; border-radius: 6px;">
-                P_net = Amount × (R_actual / 100)
-            </div>
-            <div style="font-size: 12.5px; color: #666; padding-left: 10px; line-height: 1.5;">
-                * Amount : 한쪽 거래소에 투입된 원화 기준 거래금액
-            </div>
-        </div>
-    </div>
-    <div style="flex: 1; padding-left: 25px; display: flex; flex-direction: column; justify-content: space-between;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-            <div style="flex: 1; padding-right: 15px;">
-                <div style="font-weight: 800; color: #1976D2; font-size: 14.5px; margin-bottom: 6px;">[ 조건 세팅 ]</div>
-                <div style="font-size: 13px; color: #444; line-height: 1.7;">
-                    • 거래 금액 : 3,000,000원<br>
-                    <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(업비트 300만 매수 + 바이낸스 300만 공매도)</span><br>
-                    • 진입 Gap : 2.5%<br>
-                    • 청산 Gap : 1.0%<br>
-                    <span style="font-weight:bold; color:#111;">• 기대 수익률(δ) : 1.5%p</span>
-                </div>
-            </div>
-            <div style="flex: 1;">
-                <div style="font-weight: 800; color: #D32F2F; font-size: 14.5px; margin-bottom: 2px;">[ 지불비용 항목 ]</div>
-                <div style="font-size: 13px; color: #555; font-weight: bold; margin-bottom: 6px;">총 수수료(비용) : 약 0.20%</div>
-                <div style="font-size: 13px; color: #444; line-height: 1.7;">
-                    • 업비트 수수료 : 왕복 0.10%<br>
-                    <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.05% + 매도 0.05%)</span><br>
-                    • 바이낸스 수수료 : 왕복 0.04%<br>
-                    <span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.02% + 매도 0.02%)</span><br>
-                    • 차입/슬리피지 등 : 약 0.06%
-                </div>
-            </div>
-        </div>
-        <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; border: 1px solid #eee; margin-top: auto;">
-            <div style="font-weight: 800; color: #111; font-size: 14px; margin-bottom: 4px;">[ 최종결과 산출 ]</div>
-            <div style="font-size: 13.5px; color: #333; line-height: 1.5;">
-                • 실제 수익률 : 1.5% - 0.2% = <b style="color:#1976D2;">1.3%</b><br>
-                • 예상 순수익 : 3,000,000원 × 1.3% = <b style="color:#D32F2F;">39,000원</b>
-            </div>
-        </div>
-    </div>
+<div style="flex: 1; padding-right: 25px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
+<div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">1. 실제 수익률 (%)</div>
+<div style="font-family: monospace; font-size: 14px; color: #1976D2; margin-bottom: 8px; padding-left: 10px; background: #eaf2f8; padding: 8px; border-radius: 6px;">
+R_actual = (G_entry - G_exit) - (F_upbit + F_binance + F_funding + S)
+</div>
+<div style="font-size: 12.5px; color: #666; margin-bottom: 18px; padding-left: 10px; line-height: 1.5;">
+* G : 프리미엄(%), S : 슬리피지(호가 오차)<br>
+* F_funding : 공매도 포지션 유지 비용 (8시간 단위 변동)
+</div>
+<div style="font-size: 13.5px; color: #333; margin-bottom: 6px; font-weight: bold;">2. 예상 순수익 (KRW)</div>
+<div style="font-family: monospace; font-size: 14px; color: #D32F2F; margin-bottom: 8px; padding-left: 10px; background: #fdeded; padding: 8px; border-radius: 6px;">
+P_net = Amount × (R_actual / 100)
+</div>
+<div style="font-size: 12.5px; color: #666; padding-left: 10px; line-height: 1.5;">
+* Amount : 한쪽 거래소에 투입된 원화 기준 거래금액
+</div>
+</div>
+</div>
+<div style="flex: 1; padding-left: 25px; display: flex; flex-direction: column; justify-content: space-between;">
+<div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+<div style="flex: 1; padding-right: 15px;">
+<div style="font-weight: 800; color: #1976D2; font-size: 14.5px; margin-bottom: 6px;">[ 조건 세팅 ]</div>
+<div style="font-size: 13px; color: #444; line-height: 1.7;">
+• 거래 금액 : 3,000,000원<br>
+<span style="color:#888; font-size: 11.5px; padding-left: 10px;">(업비트 300만 매수 + 바이낸스 300만 공매도)</span><br>
+• 진입 Gap : 2.5%<br>
+• 청산 Gap : 1.0%<br>
+<span style="font-weight:bold; color:#111;">• 기대 수익률(δ) : 1.5%p</span>
+</div>
+</div>
+<div style="flex: 1;">
+<div style="font-weight: 800; color: #D32F2F; font-size: 14.5px; margin-bottom: 2px;">[ 지불비용 항목 ]</div>
+<div style="font-size: 13px; color: #555; font-weight: bold; margin-bottom: 6px;">총 수수료(비용) : 약 0.20%</div>
+<div style="font-size: 13px; color: #444; line-height: 1.7;">
+• 업비트 수수료 : 왕복 0.10%<br>
+<span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.05% + 매도 0.05%)</span><br>
+• 바이낸스 수수료 : 왕복 0.04%<br>
+<span style="color:#888; font-size: 11.5px; padding-left: 10px;">(매수 0.02% + 매도 0.02%)</span><br>
+• 차입/슬리피지 등 : 약 0.06%
+</div>
+</div>
+</div>
+<div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; border: 1px solid #eee; margin-top: auto;">
+<div style="font-weight: 800; color: #111; font-size: 14px; margin-bottom: 4px;">[ 최종결과 산출 ]</div>
+<div style="font-size: 13.5px; color: #333; line-height: 1.5;">
+• 실제 수익률 : 1.5% - 0.2% = <b style="color:#1976D2;">1.3%</b><br>
+• 예상 순수익 : 3,000,000원 × 1.3% = <b style="color:#D32F2F;">39,000원</b>
+</div>
+</div>
+</div>
+</div>
+</details>
+
+<details class="zappa-arbi-details" style="margin-top: 0; margin-bottom: 25px;">
+<summary class="zappa-arbi-summary">💡 Zappa Bot 진행 단계 : ① 대기중 → ② 갭도달 → ③ 진입포착 → ④ 주문체결 → ⑤ 보유중 → ⑥ 갭축소 → ⑦ 청산포착 → ⑧ 대기중</summary>
+<div style="display: flex; padding: 25px; align-items: stretch;">
+<div style="flex: 1; padding-right: 25px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
+<div style="font-size: 14.5px; color: #D32F2F; margin-bottom: 12px; font-weight: 800;">A. 진입타겟 (예: 2.5%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 미보유 상태 ]</span></div>
+<div style="font-size: 13.5px; color: #444; line-height: 1.8; padding-left: 5px;">
+<span style="font-weight:bold; color:#757575;">① 대기중:</span> 갭이 타겟보다 한참 모자랄 때 (평상시)<br>
+<span style="font-weight:bold; color:#e65100;">② 갭도달:</span> 갭이 진입 타겟에 근접했을 때 (타겟 - 0.1% 이내 진입 시)<br>
+<span style="font-weight:bold; color:#c62828;">③ 진입포착:</span> 갭이 2.5%를 돌파했을 때 (매수 주문 발사 직전)<br>
+<span style="font-weight:bold; color:#5e35b1;">④ 주문체결:</span> 거래소 API로 매수/공매도가 확정된 찰나의 순간
+</div>
+</div>
+</div>
+<div style="flex: 1; padding-left: 25px; display: flex; flex-direction: column;">
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
+<div style="font-size: 14.5px; color: #1976D2; margin-bottom: 12px; font-weight: 800;">B. 청산타겟 (예: 1.0%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 보유중 상태 ]</span></div>
+<div style="font-size: 13.5px; color: #444; line-height: 1.8; padding-left: 5px;">
+<span style="font-weight:bold; color:#2e7d32;">⑤ 보유중:</span> 진입 후 갭이 아직 넉넉할 때 (평상시)<br>
+<span style="font-weight:bold; color:#0277bd;">⑥ 갭축소:</span> 갭이 청산 타겟에 근접했을 때 (타겟 + 0.1% 이내 진입 시)<br>
+<span style="font-weight:bold; color:#5e35b1;">⑦ 청산포착:</span> 갭이 1.0% 이하로 떨어졌을 때 (매도/상환 주문 발사 직전)<br>
+<span style="font-weight:bold; color:#111;">⑧ 청산완료:</span> 거래소 API로 최종 포지션이 closed 되고 수익이 확정된 상태
+</div>
+</div>
+</div>
 </div>
 </details>
 """
@@ -3924,6 +3947,10 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
             delta_val = en_target - ex_target
             net_profit_val = amt * (delta_val - 0.2) / 100
            
+            # 💡 [패치] Gap(%) 양수/음수 기호 및 색상 분리 처리
+            gap_str = f"+{gap_val:.2f}%" if gap_val > 0 else f"{gap_val:.2f}%"
+            gap_color = "red" if gap_val > 0 else ("blue" if gap_val < 0 else "")
+           
             if gap_val >= en_target:
                 status_badge = "<span style='background:#ffebee; color:#c62828; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>③ 진입포착</span>"
             elif gap_val >= en_target - 0.1:
@@ -3937,10 +3964,10 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
             else:
                 status_badge = "<span style='background:#f5f5f5; color:#757575; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>① 대기중</span>"
 
-            up_curr, up_d_rate = c['upbit'], c['upbit_chg']
+            up_curr, up_d_rate = c.get('upbit', 0), c.get('upbit_chg', 0)
             up_diff = (up_curr - (up_curr / (1 + up_d_rate / 100))) if up_curr > 0 and up_d_rate != 0 else 0
            
-            bin_curr, bin_d_rate = c['binance'], c['binance_chg']
+            bin_curr, bin_d_rate = c.get('binance', 0), c.get('binance_chg', 0)
             bin_curr_krw = bin_curr * mock_fx_rate
             bin_diff_krw = (bin_curr_krw - (bin_curr_krw / (1 + bin_d_rate / 100))) if bin_curr_krw > 0 and bin_d_rate != 0 else 0
            
@@ -3961,7 +3988,7 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
 <div style='font-size:13px; color:{col(bin_d_rate)}; margin-top:3px;'>{bin_chg_str}</div>
 <div style='font-size:11.5px; color:#888; margin-top:2px;'>{binance_usd_str}</div>
 </td>
-<td style='text-align:center; font-weight:bold; font-size:15.5px;' class='{"red" if gap_val > 0 else ""}'>+{gap_val:.2f}%</td>
+<td style='text-align:center; font-weight:bold; font-size:15.5px;' class='{gap_color}'>{gap_str}</td>
 <td style='text-align:center;'>{status_badge}</td>
 <td style='text-align:center; font-weight:bold; font-size:14.5px; color:#111;'>{en_target:.1f}%</td>
 <td style='text-align:center; font-weight:bold; font-size:14.5px; color:#111;'>{ex_target:.1f}%</td>
@@ -3973,8 +4000,6 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
         table_html += "</tbody></table></div>"
        
         st.markdown(table_html, unsafe_allow_html=True)
-       
-        st.markdown("<div style='text-align:right; font-size:12.5px; color:#555; font-weight:bold; margin-top:5px; margin-bottom:30px;'>※ 상태 Index : ①대기중 → ②갭도달 → ③진입포착 → ④주문체결 → ⑤보유중 → ⑥갭축소 → ⑦청산포착 → ①대기중</div>", unsafe_allow_html=True)
 
         st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 40px 0 0px 0;'>", unsafe_allow_html=True)
 
