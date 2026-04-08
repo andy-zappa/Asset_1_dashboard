@@ -1,0 +1,39 @@
+# --- 보안 필수 (API 키 등) ---
+zappa.key
+encrypted_keys.json
+kis_token.json
+master_config.json
+
+# --- 데이터 및 로그 ---
+data_*.json
+history_db.json
+*.log
+watchdog.log
+
+# --- 파이썬 임시 파일 ---
+__pycache__/
+*.py[cod]
+.env
+venv/
+
+# --- 시스템 및 환경 파일 (청소 대상) ---
+.local/
+.cache/
+.ssh/
+.viminfo
+.streamlit/
+*.ttc
+*.ttf
+
+# --- 기존 보안 목록 유지 ---
+zappa.key
+encrypted_keys.json
+kis_token.json
+master_config.json
+data_*.json
+history_db.json
+*.log
+
+# --- 폰트 및 기타 ---
+*.ttc
+*.ttf
