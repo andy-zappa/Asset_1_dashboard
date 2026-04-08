@@ -14,6 +14,22 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit_authenticator as stauth
 
+# 1. 클라우드 서버에 쌓이는 실시간 데이터 읽어오기
+def get_live_data():
+    path = "/home/opc/data_arbi.json"
+    if os.path.exists(path):
+        try:
+            with open(path, 'r') as f:
+                return json.load(f)
+        except:
+            return None
+    return None
+
+# 2. 대시보드 화면의 가짜 데이터를 실제 서버 데이터로 덮어쓰기
+live_data = get_live_data()
+if live_data and 'BTC' in live_data:
+    st.session_state.current_gap = live_data['BTC']['gap']
+
 st.markdown("""
 <style>
 /* 모든 Primary 버튼(붉은색)을 딥파스텔 블루로 변경 */
