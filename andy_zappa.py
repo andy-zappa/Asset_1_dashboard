@@ -16,7 +16,7 @@ import streamlit_authenticator as stauth
 
 def get_live_data():
     # 앤디님의 오라클 서버 IP 주소를 넣으세요 (예: http://123.456.78.9:8000/data_arbi.json)
-    url = "http://[168.107.15.252]:8000/data_arbi.json"
+    url = "http://168.107.15.252:8000/data_arbi.json"
     
     try:
         response = requests.get(url, timeout=5)
