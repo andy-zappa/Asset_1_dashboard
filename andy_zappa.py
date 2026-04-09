@@ -3334,19 +3334,64 @@ font-weight: 700 !important;
     # =========================================================
     elif st.session_state.current_view == '차익거래':
         
-        # 1. 봇 컨트롤 패널용 세션 스테이트 초기화 (초기 셋팅값)
+        import json
+        import os
+
+        # 1. 봇 컨트롤 패널용 세션 초기화 및 로컬 영구저장 연동
         if 'main_bot_toggle' not in st.session_state:
             st.session_state.main_bot_toggle = True
             
-        for c, en, ex, am in [('BTC', 2.5, 1.0, 3000000), ('ETH', 2.5, 1.0, 3000000), ('SOL', 3.0, 1.5, 2000000), ('XRP', 2.0, 0.5, 2000000)]:
+        # 💡 [핵심 패치] 환경설정 파일 경로 설정
+        SETTINGS_FILE = "zappa_settings.json"
+
+        # 디폴트 셋팅값 (파일이 없을 때 최초 1회만 사용됨)
+        default_settings = {
+            'BTC': {'en': 2.5, 'ex': 1.0, 'amt': 3000000},
+            'ETH': {'en': 2.5, 'ex': 1.0, 'amt': 3000000},
+            'SOL': {'en': 3.0, 'ex': 1.5, 'amt': 2000000},
+            'XRP': {'en': 2.0, 'ex': 0.5, 'amt': 2000000}
+        }
+
+        # 💡 [핵심 패치] 서버에 저장된 셋팅 파일이 있으면 우선적으로 불러와 덮어씀
+        if os.path.exists(SETTINGS_FILE):
+            try:
+                with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                    saved_settings = json.load(f)
+                    for k, v in saved_settings.items():
+                        if k in default_settings:
+                            default_settings[k].update(v)
+            except: pass
+
+        # 불러온 설정값으로 화면(세션) 세팅
+        for c in ['BTC', 'ETH', 'SOL', 'XRP']:
             if f'bot_toggle_{c}_sub' not in st.session_state:
                 st.session_state[f'bot_toggle_{c}_sub'] = True
             if f'en_{c}' not in st.session_state:
-                st.session_state[f'en_{c}'] = float(en)
-                st.session_state[f'ex_{c}'] = float(ex)
-                st.session_state[f'amt_{c}'] = int(am)
+                st.session_state[f'en_{c}'] = float(default_settings[c]['en'])
+                st.session_state[f'ex_{c}'] = float(default_settings[c]['ex'])
+                st.session_state[f'amt_{c}'] = int(default_settings[c]['amt'])
 
-        # 💡 [핵심 로직] 마스터 토글 변경 시 하위 4개 토글 일괄 동기화
+        # 💡 [핵심 로직] 슬라이더 조작 시 백그라운드에서 파일에 자동 저장하는 콜백 함수
+        def save_bot_settings():
+            new_settings = {}
+            for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
+                try:
+                    str_val = st.session_state.get(f'amt_str_{coin}', str(default_settings[coin]['amt']))
+                    parsed_amt = int(str_val.replace(",", ""))
+                except:
+                    parsed_amt = default_settings[coin]['amt']
+                
+                new_settings[coin] = {
+                    'en': st.session_state.get(f'en_{coin}', default_settings[coin]['en']),
+                    'ex': st.session_state.get(f'ex_{coin}', default_settings[coin]['ex']),
+                    'amt': parsed_amt
+                }
+            try:
+                with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(new_settings, f, indent=4)
+            except: pass
+
+        # 마스터 토글 변경 시 하위 4개 토글 일괄 동기화
         def sync_main_toggle():
             master_state = st.session_state.main_bot_toggle
             for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
@@ -3638,6 +3683,69 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stChec
         # 1. 제목 (단독으로 윗줄에 배치)
         st.markdown("<div class='sub-title' style='margin-top: 50px; margin-bottom: 10px;'>🛠️ 봇 컨트롤 패널 (종목별 셋팅)</div>", unsafe_allow_html=True)
 
+        # 💡 [추가] 실시간 데이터 기반 '장세 판단' 다이내믹 로직
+        max_chg = 0
+        max_diff = 0
+        for c in mock_coins:
+            u_chg = c.get('upbit_chg', 0)
+            b_chg = c.get('binance_chg', 0)
+            max_chg = max(max_chg, abs(u_chg), abs(b_chg))
+            max_diff = max(max_diff, abs(u_chg - b_chg))
+
+        if max_diff >= 2.0:
+            mood_badge, mood_rec = "🔴 ALERT(급등락/패닉장)", "진입 2.5% / 청산 1.0%"
+            mood_color, mood_bg, mood_border = "#c62828", "#ffebee", "#ffcdd2"
+        elif max_chg >= 4.0:
+            mood_badge, mood_rec = "🟡 VOLATILE(변동성 감지장)", "진입 1.5% / 청산 0.8%"
+            mood_color, mood_bg, mood_border = "#e65100", "#fff3e0", "#ffe0b2"
+        else:
+            mood_badge, mood_rec = "🟢 STABLE(안정/횡보장)", "진입 0.8% / 청산 0.3%"
+            mood_color, mood_bg, mood_border = "#2e7d32", "#e8f5e9", "#c8e6c9"
+
+        # f-string 적용으로 파이썬 변수가 HTML 안에 실시간 반영됩니다.
+        market_mood_html = f"""
+<details class="zappa-arbi-details" style="margin-top: 15px; margin-bottom: 25px;">
+<summary class="zappa-arbi-summary">💡 ZAPPA Bot 장세 판단 기준 및 추천 타겟<span style="float: right; font-size: 13px; font-weight: 800; color: {mood_color}; background: {mood_bg}; padding: 3px 12px; border-radius: 6px; border: 1px solid {mood_border}; margin-top: -2px;">[현재] {mood_badge} <span style="color:#888; font-weight:normal; margin: 0 4px;">→</span> 🎯 [추천] {mood_rec}</span></summary>
+<div style="display: flex; padding: 25px; align-items: stretch;">
+
+<div style="flex: 1; padding-right: 20px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
+<div style="font-size: 15px; color: #2e7d32; margin-bottom: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px;">🟢 STABLE <span style="font-size: 13px; color: #666; font-weight: 600;">(안정/횡보장)</span></div>
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e8f5e9; height: 100%; display: flex; flex-direction: column;">
+<div style="font-size: 13px; color: #444; margin-bottom: 10px; line-height: 1.6;"><b style="color:#111;">판단 기준:</b> 업비트와 바이낸스의 24시간 등락률이 모두 <b style="color:#2e7d32;">±2% 이내</b></div>
+<div style="font-size: 13px; color: #444; margin-bottom: 15px; line-height: 1.6;"><b style="color:#111;">시장 상황:</b> 시세가 잔잔하게 흘러가며 김프 변동폭이 좁은 상태</div>
+<div style="font-size: 13px; color: #444; line-height: 1.6; margin-top: auto;"><b style="color:#111;">추천 대응:</b> 목표 Gap을 낮춰서 봇의 사냥 횟수를 늘리는 '박리다매' 전략<br>
+<span style="background:#e8f5e9; color:#2e7d32; padding:4px 8px; border-radius:4px; font-weight:bold; display:inline-block; margin-top:8px; font-size:12.5px;">🎯 추천: 진입 0.8% / 청산 0.3%</span>
+</div>
+</div>
+</div>
+
+<div style="flex: 1; padding-left: 20px; padding-right: 20px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
+<div style="font-size: 15px; color: #e65100; margin-bottom: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px;">🟡 VOLATILE <span style="font-size: 13px; color: #666; font-weight: 600;">(변동성 감지장)</span></div>
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #fff3e0; height: 100%; display: flex; flex-direction: column;">
+<div style="font-size: 13px; color: #444; margin-bottom: 10px; line-height: 1.6;"><b style="color:#111;">판단 기준:</b> 어느 한쪽 거래소라도 24시간 등락률이 <b style="color:#e65100;">±4% 이상</b> 급변할 때</div>
+<div style="font-size: 13px; color: #444; margin-bottom: 15px; line-height: 1.6;"><b style="color:#111;">시장 상황:</b> 방향성이 터지기 시작하여 호가창 움직임이 빨라지는 상태</div>
+<div style="font-size: 13px; color: #444; line-height: 1.6; margin-top: auto;"><b style="color:#111;">추천 대응:</b> 주문 체결 시 슬리피지(호가 오차) 확률 상승, 이를 상쇄 위해 목표 Gap 상향<br>
+<span style="background:#fff3e0; color:#e65100; padding:4px 8px; border-radius:4px; font-weight:bold; display:inline-block; margin-top:8px; font-size:12.5px;">🎯 추천: 진입 1.5% / 청산 0.8%</span>
+</div>
+</div>
+</div>
+
+<div style="flex: 1; padding-left: 20px; display: flex; flex-direction: column;">
+<div style="font-size: 15px; color: #c62828; margin-bottom: 12px; font-weight: 800; display: flex; align-items: center; gap: 6px;">🔴 ALERT <span style="font-size: 13px; color: #666; font-weight: 600;">(급등락/패닉장)</span></div>
+<div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #ffebee; height: 100%; display: flex; flex-direction: column;">
+<div style="font-size: 13px; color: #444; margin-bottom: 10px; line-height: 1.6;"><b style="color:#111;">판단 기준:</b> 두 거래소 간의 24시간 등락률 차이가 <b style="color:#c62828;">2%p 이상</b> 벌어질 때</div>
+<div style="font-size: 13px; color: #444; margin-bottom: 15px; line-height: 1.6;"><b style="color:#111;">시장 상황:</b> 한쪽 시장만 요동치며 김프가 비정상적으로 벌어지거나 수축하는 상태</div>
+<div style="font-size: 13px; color: #444; line-height: 1.6; margin-top: auto;"><b style="color:#111;">추천 대응:</b> 가장 보수적으로 접근, 비용 공제 후에도 확실히 큰 수익이 날 때만 진입<br>
+<span style="background:#ffebee; color:#c62828; padding:4px 8px; border-radius:4px; font-weight:bold; display:inline-block; margin-top:8px; font-size:12.5px;">🎯 추천: 진입 2.5% / 청산 1.0%</span>
+</div>
+</div>
+</div>
+
+</div>
+</details>
+"""
+        st.markdown(market_mood_html, unsafe_allow_html=True)
+
         # 2. 로봇과 뱃지 (제목 아랫줄에 배치, columns 비율로 우측 밀어내기)
         st.markdown("<div class='master-controls-anchor'>", unsafe_allow_html=True)
         c_space, c_toggle, c_robot, c_badge = st.columns([8.0, 0.4, 0.7, 2.4])
@@ -3739,15 +3847,15 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stChec
                 is_active = coin_active and main_active
                 
                 with c_b3: 
-                    st.slider(f"sl_en_{coin}", min_value=1.0, max_value=5.0, step=0.1, key=f"en_{coin}", label_visibility="collapsed", disabled=not is_active)
+                    st.slider(f"sl_en_{coin}", min_value=0.0, max_value=3.0, step=0.1, key=f"en_{coin}", label_visibility="collapsed", disabled=not is_active, on_change=save_bot_settings)
                     
                 with c_b4: 
                     st.markdown("<span class='exit-target-marker'></span>", unsafe_allow_html=True)
-                    st.slider(f"sl_ex_{coin}", min_value=0.0, max_value=3.0, step=0.1, key=f"ex_{coin}", label_visibility="collapsed", disabled=not is_active)
+                    st.slider(f"sl_ex_{coin}", min_value=0.0, max_value=2.0, step=0.1, key=f"ex_{coin}", label_visibility="collapsed", disabled=not is_active, on_change=save_bot_settings)
                     
                 with c_b5: 
                     curr_amt = st.session_state.get(f"amt_{coin}", 3000000)
-                    str_amt = st.text_input(f"in_amt_{coin}", value=f"{curr_amt:,}", key=f"amt_str_{coin}", label_visibility="collapsed", disabled=not is_active)
+                    str_amt = st.text_input(f"in_amt_{coin}", value=f"{curr_amt:,}", key=f"amt_str_{coin}", label_visibility="collapsed", disabled=not is_active, on_change=save_bot_settings)
                     try: 
                         st.session_state[f"amt_{coin}"] = int(str_amt.replace(",", ""))
                     except ValueError: 
@@ -3799,7 +3907,26 @@ setInterval(overrideStreamlitDOM, 300);
 
         st.markdown(f"<div class='sub-title' style='margin-top:10px; margin-bottom:15px;'>💻 실시간 Arbitrage 종합 현황</div>", unsafe_allow_html=True)
 
-        info_box_html = """
+        # 💡 [패치] 장세 판단 후, 8단계 상태 UI에 띄워줄 동적 변수 할당
+        max_chg = 0
+        max_diff = 0
+        for c in mock_coins:
+            u_chg = c.get('upbit_chg', 0)
+            b_chg = c.get('binance_chg', 0)
+            max_chg = max(max_chg, abs(u_chg), abs(b_chg))
+            max_diff = max(max_diff, abs(u_chg - b_chg))
+
+        if max_diff >= 1.5:
+            cur_en, cur_ex, cur_buf = 2.5, 1.0, 0.15
+            mood_badge = "🔴 ALERT(급등락/패닉장)"
+        elif max_chg >= 5.0:
+            cur_en, cur_ex, cur_buf = 1.5, 0.8, 0.10
+            mood_badge = "🟡 VOLATILE(변동성 감지장)"
+        else:
+            cur_en, cur_ex, cur_buf = 0.8, 0.3, 0.05
+            mood_badge = "🟢 STABLE(안정/횡보장)"
+
+        info_box_html = f"""
 <details class="zappa-arbi-details" style="margin-bottom: 10px;">
 <summary class="zappa-arbi-summary">💡 수익률 계산 공식 및 시뮬레이션 조건</summary>
 <div style="display: flex; padding: 25px; align-items: stretch;">
@@ -3858,26 +3985,26 @@ P_net = Amount × (R_actual / 100)
 </details>
 
 <details class="zappa-arbi-details" style="margin-top: 0; margin-bottom: 25px;">
-<summary class="zappa-arbi-summary">💡 Zappa Bot 진행 단계 : ① 대기중 → ② 갭도달 → ③ 진입포착 → ④ 주문체결 → ⑤ 보유중 → ⑥ 갭축소 → ⑦ 청산포착 → ⑧ 대기중</summary>
+<summary class="zappa-arbi-summary">💡 Zappa Bot 진행 단계 ▶ 현재 장세 [ {mood_badge} ]의 진입 Target {cur_en:.1f}% 기준 동적 8단계</summary>
 <div style="display: flex; padding: 25px; align-items: stretch;">
 <div style="flex: 1; padding-right: 25px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
 <div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
-<div style="font-size: 14.5px; color: #D32F2F; margin-bottom: 12px; font-weight: 800;">A. 진입타겟 (예: 2.5%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 미보유 상태 ]</span></div>
+<div style="font-size: 14.5px; color: #D32F2F; margin-bottom: 12px; font-weight: 800;">A. 진입타겟 ({cur_en:.1f}%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 미보유 상태 ]</span></div>
 <div style="font-size: 13.5px; color: #444; line-height: 1.8; padding-left: 5px;">
 <span style="font-weight:bold; color:#757575;">① 대기중:</span> 갭이 타겟보다 한참 모자랄 때 (평상시)<br>
-<span style="font-weight:bold; color:#e65100;">② 갭도달:</span> 갭이 진입 타겟에 근접했을 때 (타겟 - 0.1% 이내 진입 시)<br>
-<span style="font-weight:bold; color:#c62828;">③ 진입포착:</span> 갭이 2.5%를 돌파했을 때 (매수 주문 발사 직전)<br>
+<span style="font-weight:bold; color:#e65100;">② 갭도달:</span> 갭이 진입 타겟에 근접했을 때 (<b style="color:#e65100;">{cur_en - cur_buf:.2f}%</b> 돌파 시 감지)<br>
+<span style="font-weight:bold; color:#c62828;">③ 진입포착:</span> 갭이 <b style="color:#c62828;">{cur_en:.1f}%</b>를 돌파했을 때 (매수 주문 발사 직전)<br>
 <span style="font-weight:bold; color:#5e35b1;">④ 주문체결:</span> 거래소 API로 매수/공매도가 확정된 찰나의 순간
 </div>
 </div>
 </div>
 <div style="flex: 1; padding-left: 25px; display: flex; flex-direction: column;">
 <div style="background: #fdfdfd; padding: 18px; border-radius: 10px; border: 1px solid #e0e0e0; height: 100%;">
-<div style="font-size: 14.5px; color: #1976D2; margin-bottom: 12px; font-weight: 800;">B. 청산타겟 (예: 1.0%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 보유중 상태 ]</span></div>
+<div style="font-size: 14.5px; color: #1976D2; margin-bottom: 12px; font-weight: 800;">B. 청산타겟 ({cur_ex:.1f}%)을 노리는 그룹 <span style="font-weight:normal; font-size:13px; color:#666;">[ 보유중 상태 ]</span></div>
 <div style="font-size: 13.5px; color: #444; line-height: 1.8; padding-left: 5px;">
 <span style="font-weight:bold; color:#2e7d32;">⑤ 보유중:</span> 진입 후 갭이 아직 넉넉할 때 (평상시)<br>
-<span style="font-weight:bold; color:#0277bd;">⑥ 갭축소:</span> 갭이 청산 타겟에 근접했을 때 (타겟 + 0.1% 이내 진입 시)<br>
-<span style="font-weight:bold; color:#5e35b1;">⑦ 청산포착:</span> 갭이 1.0% 이하로 떨어졌을 때 (매도/상환 주문 발사 직전)<br>
+<span style="font-weight:bold; color:#0277bd;">⑥ 갭축소:</span> 갭이 청산 타겟에 근접했을 때 (<b style="color:#0277bd;">{cur_ex + cur_buf:.2f}%</b> 이하 시 감지)<br>
+<span style="font-weight:bold; color:#5e35b1;">⑦ 청산포착:</span> 갭이 <b style="color:#5e35b1;">{cur_ex:.1f}%</b> 이하로 떨어졌을 때 (매도/상환 발사 직전)<br>
 <span style="font-weight:bold; color:#111;">⑧ 청산완료:</span> 거래소 API로 최종 포지션이 closed 되고 수익이 확정된 상태
 </div>
 </div>
@@ -3886,7 +4013,6 @@ P_net = Amount × (R_actual / 100)
 </details>
 """
         st.markdown(info_box_html, unsafe_allow_html=True)
-
         update_time_str = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
 
         # 💡 [패치] 테이블 바로 위: 좌측(버튼)과 우측(환율)을 동일한 선상에 배치
