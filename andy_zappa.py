@@ -3352,28 +3352,12 @@ font-weight: 700 !important;
             for coin in ['BTC', 'ETH', 'SOL', 'XRP']:
                 st.session_state[f'bot_toggle_{coin}_sub'] = master_state
 
-        # 2. 📡 [연동] 백그라운드 로봇(andy_arbi_v1.py)의 실시간 JSON 읽어오기
-        def load_robot_data():
-            import os, json
-            # 현재 이 파이썬 파일이 있는 폴더를 기준으로 경로 설정
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            path = os.path.join(current_dir, 'data_arbi.json')
-            
-            # 1단계: 파일 존재 여부 검사
-            if not os.path.exists(path):
-                st.error(f"🚨 [경로 에러] 파일을 찾을 수 없습니다: {path}")
-                return None
-                
-            # 2단계: JSON 파싱 시도
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                st.error(f"🚨 [파일 에러] 내용을 읽을 수 없습니다: {e}")
-                return None
-
-        # 데이터를 불러옵니다.
-        robot_data = load_robot_data()
+        # 2. 📡 [연동] 오라클 서버의 실시간 JSON 읽어오기
+        # 상단에 이미 정의해둔 URL 통신 함수(get_live_data)를 재사용합니다.
+        robot_data = get_live_data()
+        
+        if robot_data is None:
+            st.error("🚨 [데이터 에러] 오라클 서버에서 데이터를 불러올 수 없습니다.")
         
         # 3. 🔗 [연결] 불러온 데이터를 대시보드 UI 변수에 매핑
         if robot_data and "items" in robot_data:
