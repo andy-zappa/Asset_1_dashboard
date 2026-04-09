@@ -3955,18 +3955,21 @@ P_net = Amount × (R_actual / 100)
             gap_str = f"+{gap_val:.2f}%" if gap_val > 0 else f"{gap_val:.2f}%"
             gap_color = "red" if gap_val > 0 else ("blue" if gap_val < 0 else "")
            
-            if gap_val >= en_target:
-                status_badge = "<span style='background:#ffebee; color:#c62828; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>③ 진입포착</span>"
-            elif gap_val >= en_target - 0.1:
-                status_badge = "<span style='background:#fff3e0; color:#e65100; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>② 갭도달</span>"
-            elif gap_val >= ex_target + 0.5:
-                status_badge = "<span style='background:#e8f5e9; color:#2e7d32; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑤ 보유중</span>"
-            elif gap_val > ex_target + 0.1:
-                status_badge = "<span style='background:#e1f5fe; color:#0277bd; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑥ 갭축소</span>"
-            elif gap_val > ex_target:
-                status_badge = "<span style='background:#ede7f6; color:#5e35b1; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>⑦ 청산포착</span>"
+            # [수정된 부분] 대시보드가 임의로 판단하지 않고, 로봇이 판별한 진짜 상태값을 그대로 가져옵니다.
+            real_state = c.get('state', '① 대기중')
+            
+            if '③ 진입' in real_state or '④ 진입' in real_state:
+                status_badge = f"<span style='background:#ffebee; color:#c62828; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
+            elif '② 갭도달' in real_state:
+                status_badge = f"<span style='background:#fff3e0; color:#e65100; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
+            elif '⑤ 보유중' in real_state:
+                status_badge = f"<span style='background:#e8f5e9; color:#2e7d32; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
+            elif '⑥ 갭축소' in real_state:
+                status_badge = f"<span style='background:#e1f5fe; color:#0277bd; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
+            elif '⑦ 청산' in real_state or '⑧ 청산' in real_state:
+                status_badge = f"<span style='background:#ede7f6; color:#5e35b1; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
             else:
-                status_badge = "<span style='background:#f5f5f5; color:#757575; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>① 대기중</span>"
+                status_badge = f"<span style='background:#f5f5f5; color:#757575; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;'>{real_state}</span>"
 
             up_curr, up_d_rate = c.get('upbit', 0), c.get('upbit_chg', 0)
             up_diff = (up_curr - (up_curr / (1 + up_d_rate / 100))) if up_curr > 0 and up_d_rate != 0 else 0
