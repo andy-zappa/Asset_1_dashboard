@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 import streamlit_authenticator as stauth
 
 def get_live_data():
-    url = "http://168.107.15.252:8000/data_arbi.json"
+    url = "http://168.107.15.252:8888/data_arbi.json"
     
     try:
         response = requests.get(url, timeout=5)
