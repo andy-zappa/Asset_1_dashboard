@@ -4018,7 +4018,7 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
             
         with col_date:
             st.markdown("<span class='log-date-marker'></span>", unsafe_allow_html=True)
-            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-bottom:-35px; margin-right:2px;'>🗓️ 조회 기간 설정 (시작일 - 종료일)</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-bottom:-35px; margin-right:2px;'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
             from datetime import timedelta
             st.date_input("date_input_hidden_label", value=[datetime.today() - timedelta(days=7), datetime.today()], key="arbi_log_date", label_visibility="hidden")
 
