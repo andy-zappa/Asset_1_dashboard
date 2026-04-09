@@ -3790,40 +3790,14 @@ setInterval(overrideStreamlitDOM, 300);
 """, height=0)
 
         st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 30px 0 25px 0;'>", unsafe_allow_html=True)
-       
+        
         import pytz
         from datetime import datetime
         now_seoul = datetime.now(pytz.timezone('Asia/Seoul'))
         d_str_clean = f"{now_seoul.month:02d}/{now_seoul.day:02d}"
         dw_str = ["월", "화", "수", "목", "금", "토", "일"][now_seoul.weekday()]
 
-        col_mon_title, col_mon_btn = st.columns([7.5, 2.5])
-        with col_mon_title:
-            st.markdown(f"<div class='sub-title' style='margin-top:10px; margin-bottom:0;'>💻 실시간 Arbitrage 종합 현황</div>", unsafe_allow_html=True)
-        with col_mon_btn:
-            update_time_str = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
-            st.markdown(f"""
-<div style='display: flex; justify-content: flex-end; margin-top: 0px;'>
-<div id='premium-update-btn' style='cursor: pointer; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 8px; padding: 10px 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: background-color 0.2s; width: max-content;'>
-    <div style='display:flex; align-items:center; justify-content:center; gap:1.5px; font-size: 13.5px; font-weight: 800; color: #111; margin-bottom: -2px;'>
-        <span style='font-size:13px; color:#4a90e2;'>🔄</span>KimChi PREMIUM
-    </div>
-    <div style='font-size: 11.5px; font-weight: 500; color: #666; text-align: right; padding-right: 1px;'>{update_time_str}</div>
-</div>
-</div>
-""", unsafe_allow_html=True)
-
-        st.markdown("""
-<style>
-div.element-container:has(.hidden-btn-marker) { display: none !important; }
-div.element-container:has(.hidden-btn-marker) + div.element-container { display: none !important; }
-</style>
-<span class='hidden-btn-marker'></span>
-""", unsafe_allow_html=True)
-        if st.button("HIDDEN_PREM_UPD", key="hidden_prem_upd"):
-            st.toast("📡 실시간 프리미엄 데이터를 갱신합니다.", icon="⏳")
-            # 이제 파일만 바로 읽어오면 되므로 캐시 삭제가 필요 없습니다!
-            st.rerun()
+        st.markdown(f"<div class='sub-title' style='margin-top:10px; margin-bottom:15px;'>💻 실시간 Arbitrage 종합 현황</div>", unsafe_allow_html=True)
 
         info_box_html = """
 <details class="zappa-arbi-details" style="margin-bottom: 10px;">
@@ -3913,7 +3887,34 @@ P_net = Amount × (R_actual / 100)
 """
         st.markdown(info_box_html, unsafe_allow_html=True)
 
-        st.markdown(f"<div style='text-align:right; font-size:12.5px; color:#555; font-weight:bold; margin-bottom:8px; margin-top:10px;'>[ {update_time_str[2:-2]} ], 적용환율 1$ = {mock_fx_rate:,.1f}원 ] , 단위 : 원화(KRW)</div>", unsafe_allow_html=True)
+        update_time_str = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
+
+        # 💡 [패치] 테이블 바로 위: 좌측(버튼)과 우측(환율)을 동일한 선상에 배치
+        st.markdown(f"""
+<div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; margin-top: 10px;'>
+<div id='premium-update-btn' style='cursor: pointer; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 8px; padding: 10px 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: background-color 0.2s; width: max-content;'>
+<div style='display:flex; align-items:center; justify-content:center; gap:1.5px; font-size: 13.5px; font-weight: 800; color: #111; margin-bottom: -2px;'>
+<span style='font-size:13px; color:#4a90e2;'>🔄</span>KimChi PREMIUM
+</div>
+<div style='font-size: 11.5px; font-weight: 500; color: #666; text-align: center;'>{update_time_str}</div>
+</div>
+<div style='font-size:12.5px; color:#555; font-weight:bold; padding-bottom: 5px;'>
+[ {update_time_str[2:-2]} ], 적용환율 1$ = {mock_fx_rate:,.1f}원 ] , 단위 : 원화(KRW)
+</div>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("""
+<style>
+div.element-container:has(.hidden-btn-marker) { display: none !important; }
+div.element-container:has(.hidden-btn-marker) + div.element-container { display: none !important; }
+</style>
+<span class='hidden-btn-marker'></span>
+""", unsafe_allow_html=True)
+
+        if st.button("HIDDEN_PREM_UPD", key="hidden_prem_upd"):
+            st.toast("📡 실시간 프리미엄 데이터를 갱신합니다.", icon="⏳")
+            st.rerun()
 
         table_html = """
 <div class='table-rounded-wrapper'>
@@ -3937,24 +3938,24 @@ P_net = Amount × (R_actual / 100)
 </thead>
 <tbody>
 """
-       
+        
         for c in mock_coins:
             ticker = c['ticker']
             icon = f"https://www.google.com/s2/favicons?domain={c_i.get(ticker, 'cryptocompare.com')}.org&sz=64"
             logo = f"<div style='display:flex; justify-content:flex-start; align-items:center; gap:8px; padding-left:10px;'><img src='{icon}' style='width:20px; height:20px; border-radius:50%;'><span style='font-weight:normal; color:#333;'>{c['name']}({ticker})</span></div>"
-           
+            
             en_target = st.session_state.get(f'en_{ticker}', 2.5)
             ex_target = st.session_state.get(f'ex_{ticker}', 1.0)
             amt = st.session_state.get(f'amt_{ticker}', 3000000)
-           
+            
             gap_val = c['gap']
             delta_val = en_target - ex_target
             net_profit_val = amt * (delta_val - 0.2) / 100
-           
+            
             # 💡 [패치] Gap(%) 양수/음수 기호 및 색상 분리 처리
             gap_str = f"+{gap_val:.2f}%" if gap_val > 0 else f"{gap_val:.2f}%"
             gap_color = "red" if gap_val > 0 else ("blue" if gap_val < 0 else "")
-           
+            
             # [수정된 부분] 대시보드가 임의로 판단하지 않고, 로봇이 판별한 진짜 상태값을 그대로 가져옵니다.
             real_state = c.get('state', '① 대기중')
             
@@ -3973,13 +3974,13 @@ P_net = Amount × (R_actual / 100)
 
             up_curr, up_d_rate = c.get('upbit', 0), c.get('upbit_chg', 0)
             up_diff = (up_curr - (up_curr / (1 + up_d_rate / 100))) if up_curr > 0 and up_d_rate != 0 else 0
-           
+            
             bin_curr, bin_d_rate = c.get('binance', 0), c.get('binance_chg', 0)
             bin_curr_krw = bin_curr * mock_fx_rate
             bin_diff_krw = (bin_curr_krw - (bin_curr_krw / (1 + bin_d_rate / 100))) if bin_curr_krw > 0 and bin_d_rate != 0 else 0
-           
+            
             up_chg_str = f"({fmt(up_diff, True)} / {fmt_p(up_d_rate)})"
-           
+            
             binance_usd_str = f"${bin_curr:,.3f}" if bin_curr < 10 else f"${bin_curr:,.2f}"
             bin_chg_str = f"({fmt(bin_diff_krw, True)} / {fmt_p(bin_d_rate)})"
 
@@ -4005,16 +4006,16 @@ P_net = Amount × (R_actual / 100)
 </tr>
 """
         table_html += "</tbody></table></div>"
-       
+        
         st.markdown(table_html, unsafe_allow_html=True)
 
         st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 40px 0 0px 0;'>", unsafe_allow_html=True)
 
         col_log_title, col_date = st.columns([7.85, 2.15])
-       
+        
         with col_log_title:
             st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 20px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
-           
+            
         with col_date:
             st.markdown("<span class='log-date-marker'></span>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-bottom:-35px; margin-right:2px;'>🗓️ 조회 기간 설정 (시작일 - 종료일)</div>", unsafe_allow_html=True)
@@ -4026,6 +4027,6 @@ P_net = Amount × (R_actual / 100)
             prof_str = f"+{fmt(log['profit'])}" if log['profit'] > 0 else (fmt(log['profit']) if log['profit'] != 0 else "-")
             prof_class = "red" if log['profit'] > 0 else ("blue" if log['profit'] < 0 else "gray")
             exit_gap_str = f"+{log['exit_gap']:.2f}%" if log['exit_gap'] > 0 else "-"
-           
+            
             log_html += f"<tr><td style='text-align:center; font-weight:bold; font-size:14.5px;'>{log['coin']}</td><td style='text-align:center; color:#666; font-size:13.5px;'>{log['entry_date']}</td><td style='text-align:center; color:#111; font-weight:bold; font-size:13.5px;'>{log['entry_time']}</td><td style='text-align:center; color:#666; font-size:13.5px;'>{log['exit_date']}</td><td style='text-align:center; color:#111; font-weight:bold; font-size:13.5px;'>{log['exit_time']}</td><td style='text-align:center; color:#D32F2F; font-weight:bold;'>+{log['entry_gap']:.2f}%</td><td style='text-align:center; color:#1976D2; font-weight:bold;'>{exit_gap_str}</td><td style='text-align:right; padding-right:20px;'>{fmt(log['amt'])}</td><td style='text-align:right; padding-right:20px; font-weight:bold;' class='{prof_class}'>{prof_str}</td></tr>"
         st.markdown(log_html + "</tbody></table></div>", unsafe_allow_html=True)
