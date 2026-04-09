@@ -15,7 +15,6 @@ import plotly.graph_objects as go
 import streamlit_authenticator as stauth
 
 def get_live_data():
-    # 앤디님의 오라클 서버 IP 주소를 넣으세요 (예: http://123.456.78.9:8000/data_arbi.json)
     url = "http://168.107.15.252:8000/data_arbi.json"
     
     try:
@@ -27,10 +26,13 @@ def get_live_data():
         return None
     return None
 
-# 2. 대시보드 화면의 가짜 데이터를 실제 서버 데이터로 덮어쓰기
+# 2. 대시보드 화면의 데이터를 실제 서버 데이터로 덮어쓰기 (JSON 구조 변경 반영)
 live_data = get_live_data()
-if live_data and 'BTC' in live_data:
-    st.session_state.current_gap = live_data['BTC']['gap']
+if live_data and 'items' in live_data:
+    for item in live_data['items']:
+        if item.get('ticker') == 'BTC':
+            st.session_state.current_gap = item.get('gap')
+            break
 
 st.markdown("""
 <style>
