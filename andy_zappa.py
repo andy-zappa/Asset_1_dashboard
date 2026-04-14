@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 import streamlit_authenticator as stauth
 
 def get_live_data():
-    url = "http://168.107.15.252:8888/data_arbi.json"
+    url = "http://168.107.15.252:8000/arbi"
     
     try:
         response = requests.get(url, timeout=5)
@@ -3404,7 +3404,7 @@ font-weight: 700 !important;
         if robot_data is None:
             st.error("🚨 [데이터 에러] 오라클 서버에서 데이터를 불러올 수 없습니다.")
         
-        # 3. 🔗 [연결] 불러온 데이터를 대시보드 UI 변수에 매핑
+        # 3. 🔗 [연결] 불러온 데이터를 대시보드 UI 변 매핑
         if robot_data and "items" in robot_data:
             # 로봇이 준 실제 데이터 사용
             mock_coins = robot_data["items"]
@@ -3683,24 +3683,27 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stChec
         # 1. 제목 (단독으로 윗줄에 배치)
         st.markdown("<div class='sub-title' style='margin-top: 50px; margin-bottom: 10px;'>🛠️ 봇 컨트롤 패널 (종목별 셋팅)</div>", unsafe_allow_html=True)
 
-        # 💡 [추가] 실시간 데이터 기반 '장세 판단' 다이내믹 로직
-        max_chg = 0
-        max_diff = 0
+        # 💡 [하이브리드 패치] 실시간 Gap 기회를 1순위, 시장 괴리를 2순위로 판단
+        max_chg, max_diff, max_gap = 0, 0, 0
         for c in mock_coins:
-            u_chg = c.get('upbit_chg', 0)
-            b_chg = c.get('binance_chg', 0)
+            u_chg, b_chg = c.get('upbit_chg', 0), c.get('binance_chg', 0)
+            gap = abs(c.get('gap', 0))
             max_chg = max(max_chg, abs(u_chg), abs(b_chg))
             max_diff = max(max_diff, abs(u_chg - b_chg))
+            max_gap = max(max_gap, gap)
 
-        if max_diff >= 2.0:
-            mood_badge, mood_rec = "🔴 ALERT(급등락/패닉장)", "진입 2.5% / 청산 1.0%"
+        if max_gap >= 2.0 or max_diff >= 3.0:
+            mood_badge, mood_rec = "🔴 ALERT(기회/급등락장)", "진입 2.5% / 청산 1.0%"
             mood_color, mood_bg, mood_border = "#c62828", "#ffebee", "#ffcdd2"
-        elif max_chg >= 4.0:
+            cur_en, cur_ex, cur_buf = 2.5, 1.0, 0.15
+        elif max_gap >= 1.0 or max_chg >= 5.0 or max_diff >= 1.5:
             mood_badge, mood_rec = "🟡 VOLATILE(변동성 감지장)", "진입 1.5% / 청산 0.8%"
             mood_color, mood_bg, mood_border = "#e65100", "#fff3e0", "#ffe0b2"
+            cur_en, cur_ex, cur_buf = 1.5, 0.8, 0.10
         else:
             mood_badge, mood_rec = "🟢 STABLE(안정/횡보장)", "진입 0.8% / 청산 0.3%"
             mood_color, mood_bg, mood_border = "#2e7d32", "#e8f5e9", "#c8e6c9"
+            cur_en, cur_ex, cur_buf = 0.8, 0.3, 0.05
 
         # f-string 적용으로 파이썬 변수가 HTML 안에 실시간 반영됩니다.
         market_mood_html = f"""
@@ -3907,24 +3910,27 @@ setInterval(overrideStreamlitDOM, 300);
 
         st.markdown(f"<div class='sub-title' style='margin-top:10px; margin-bottom:15px;'>💻 실시간 Arbitrage 종합 현황</div>", unsafe_allow_html=True)
 
-        # 💡 [패치] 장세 판단 후, 8단계 상태 UI에 띄워줄 동적 변수 할당
-        max_chg = 0
-        max_diff = 0
+        # 💡 [하이브리드 패치] 실시간 Gap 기회를 1순위, 시장 괴리를 2순위로 판단
+        max_chg, max_diff, max_gap = 0, 0, 0
         for c in mock_coins:
-            u_chg = c.get('upbit_chg', 0)
-            b_chg = c.get('binance_chg', 0)
+            u_chg, b_chg = c.get('upbit_chg', 0), c.get('binance_chg', 0)
+            gap = abs(c.get('gap', 0))
             max_chg = max(max_chg, abs(u_chg), abs(b_chg))
             max_diff = max(max_diff, abs(u_chg - b_chg))
+            max_gap = max(max_gap, gap)
 
-        if max_diff >= 1.5:
+        if max_gap >= 2.0 or max_diff >= 3.0:
+            mood_badge, mood_rec = "🔴 ALERT(기회/급등락장)", "진입 2.5% / 청산 1.0%"
+            mood_color, mood_bg, mood_border = "#c62828", "#ffebee", "#ffcdd2"
             cur_en, cur_ex, cur_buf = 2.5, 1.0, 0.15
-            mood_badge = "🔴 ALERT(급등락/패닉장)"
-        elif max_chg >= 5.0:
+        elif max_gap >= 1.0 or max_chg >= 5.0 or max_diff >= 1.5:
+            mood_badge, mood_rec = "🟡 VOLATILE(변동성 감지장)", "진입 1.5% / 청산 0.8%"
+            mood_color, mood_bg, mood_border = "#e65100", "#fff3e0", "#ffe0b2"
             cur_en, cur_ex, cur_buf = 1.5, 0.8, 0.10
-            mood_badge = "🟡 VOLATILE(변동성 감지장)"
         else:
+            mood_badge, mood_rec = "🟢 STABLE(안정/횡보장)", "진입 0.8% / 청산 0.3%"
+            mood_color, mood_bg, mood_border = "#2e7d32", "#e8f5e9", "#c8e6c9"
             cur_en, cur_ex, cur_buf = 0.8, 0.3, 0.05
-            mood_badge = "🟢 STABLE(안정/횡보장)"
 
         info_box_html = f"""
 <details class="zappa-arbi-details" style="margin-bottom: 10px;">
