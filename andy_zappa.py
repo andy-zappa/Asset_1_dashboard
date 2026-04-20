@@ -1754,7 +1754,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
     elif st.session_state.current_view == '절세계좌':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
         FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
-        P_MAP = {'DC': '퇴직연금(DC)계좌', 'IRP': '퇴직연금(IRP)계좌', 'PENSION': '연금저축(CMA)계좌', 'ISA': 'ISA(중개형)계좌'}
+        P_MAP = {'DC': '퇴직연금(DC) - β', 'IRP': '통합연금(IRP) - δ', 'PENSION': '연금저축(CMA) - α', 'ISA': '종합자산(ISA) - γ'}
         DATE_TAGS = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
         try:
