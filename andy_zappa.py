@@ -512,7 +512,19 @@ setInterval(bindSidebarClicks, 300);
     p_ovs_pct = (p_ovs_tot / p_asset_all * 100) if p_asset_all > 0 else 0
 
     GEN_ACC_ORDER_Q = ['DOM1', 'DOM2', 'USA1', 'USA2']
-    g_principals_q = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+    # [수정1] 사이드바 일반계좌 투자원금을 서버에서 동적으로 가져오도록 변경
+    try:
+        res_cfg_global = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
+        cfg_global = res_cfg_global.json() if res_cfg_global.status_code == 200 else {}
+    except:
+        cfg_global = {}
+
+    g_principals_q = {
+        "DOM1": safe_float(cfg_global.get("DOM1_PRINCIPAL", 110963075)),
+        "DOM2": safe_float(cfg_global.get("DOM2_PRINCIPAL", 5208948)),
+        "USA1": safe_float(cfg_global.get("USA1_PRINCIPAL", 257915999)),
+        "USA2": safe_float(cfg_global.get("USA2_PRINCIPAL", 7457930))
+    }
     g_orig_all = sum(g_principals_q.values())
 
     g_asset_all = 0
@@ -2305,9 +2317,22 @@ font-weight: 700 !important;
             st.warning("데이터가 올바르지 않습니다. 좌측 사이드바의 업데이트 버튼을 눌러주세요.")
             st.stop()
 
+        # [수정2] 일반계좌 상세페이지 내 투자원금 오라클 서버 동적 연동
+        try:
+            res_cfg_gen = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
+            cfg_data_gen = res_cfg_gen.json() if res_cfg_gen.status_code == 200 else {}
+        except:
+            cfg_data_gen = {}
+
         nm_table = {'DOM1': '키움증권(국내Ⅰ)', 'DOM2': '삼성증권(국내Ⅱ)', 'USA1': '키움증권(해외Ⅰ)', 'USA2': '키움증권(해외Ⅱ)'}
         nm_table_expander = {'DOM1': '키움증권(국내Ⅰ) : 6312-5329', 'DOM2': '삼성증권(국내Ⅱ) : 7162669785-01', 'USA1': '키움증권(해외Ⅰ) : 6312-5329', 'USA2': '키움증권(해외Ⅱ) : 6443-5993'}
-        principals = {"DOM1": 110963075, "DOM2": 5208948, "USA1": 257915999, "USA2": 7457930}
+       
+        principals = {
+            "DOM1": safe_float(cfg_data_gen.get("DOM1_PRINCIPAL", 110963075)),
+            "DOM2": safe_float(cfg_data_gen.get("DOM2_PRINCIPAL", 5208948)),
+            "USA1": safe_float(cfg_data_gen.get("USA1_PRINCIPAL", 257915999)),
+            "USA2": safe_float(cfg_data_gen.get("USA2_PRINCIPAL", 7457930))
+        }
         GEN_ACC_ORDER = ['DOM1', 'DOM2', 'USA1', 'USA2']
        
         t_asset = sum(safe_float(g_data[k].get("총자산_KRW", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
