@@ -2056,7 +2056,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 
             st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
-            h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전비</th><th class='th-week'>15일전비</th><th class='th-week'>30일전비</th></tr>"
+            h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
             h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td><td class='{col(t_diff_pr_7)}'>{fmt(t_diff_pr_7, True)}</td><td class='{col(t_diff_pr_15)}'>{fmt(t_diff_pr_15, True)}</td><td class='{col(t_diff_pr_30)}'>{fmt(t_diff_pr_30, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
             for k in sorted_tax_order:
@@ -2678,9 +2678,9 @@ font-weight: 700 !important;
 <th rowspan='2'>투자원금</th>
 </tr>
 <tr>
-<th class='th-week'>7일전비</th>
-<th class='th-week'>15일전비</th>
-<th class='th-week'>30일전비</th>
+<th class='th-week'>7일전</th>
+<th class='th-week'>15일전</th>
+<th class='th-week'>30일전</th>
 </tr>
 """
         h1 = [unit_html, h1_table, f"""
