@@ -360,7 +360,7 @@ setInterval(bindSidebarClicks, 300);
             val = float(v)
             # 💡 삼각형 크기 110% (1.1em) 적용
             tri = "<span style='font-size:1.1em; vertical-align:baseline;'>▲</span>" if val > 0 else "<span style='font-size:1.1em; vertical-align:baseline;'>▼</span>"
-            return f"{tri} {abs(val):.2f}%" if val != 0 else "0.00%"
+            return f"{tri} {abs(val):,.2f}%" if val != 0 else "0.00%"
         except: return str(v)
 
     def fmt_p1(v):
@@ -1818,10 +1818,6 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             
             past_asset_30 = t_asset - t_prof_actual + t_prof_30ago
             t_prof_pr_30ago = past_asset_30 - t_principal
-            
-            t_diff_pr_7 = t_prof_principal - t_prof_pr_7ago
-            t_diff_pr_15 = t_prof_principal - t_prof_pr_15ago
-            t_diff_pr_30 = t_prof_principal - t_prof_pr_30ago
        
             # 💡 [패치 2] 매입금액 기준 계산 로직
             t_prof_buy = t_prof_actual
@@ -2057,7 +2053,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
-            h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td><td class='{col(t_diff_pr_7)}'>{fmt(t_diff_pr_7, True)}</td><td class='{col(t_diff_pr_15)}'>{fmt(t_diff_pr_15, True)}</td><td class='{col(t_diff_pr_30)}'>{fmt(t_diff_pr_30, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
+            h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
             for k in sorted_tax_order:
                 if k in data and isinstance(data[k], dict):
@@ -2074,15 +2070,16 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     a_prof_30ago = safe_float(a.get('평가손익(30일전)', 0))
                     
                     a_past_asset_7 = a_tot - a_prof + a_prof_7ago
-                    a_diff_pr_7 = a_prof_pr - (a_past_asset_7 - a_prin)
+                    a_prof_pr_7ago = a_past_asset_7 - a_prin
                     
                     a_past_asset_15 = a_tot - a_prof + a_prof_15ago
-                    a_diff_pr_15 = a_prof_pr - (a_past_asset_15 - a_prin)
+                    a_prof_pr_15ago = a_past_asset_15 - a_prin
                     
                     a_past_asset_30 = a_tot - a_prof + a_prof_30ago
-                    a_diff_pr_30 = a_prof_pr - (a_past_asset_30 - a_prin)
+                    a_prof_pr_30ago = a_past_asset_30 - a_prin
 
-                    h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td><td class='{col(a_diff_pr_7)}'>{fmt(a_diff_pr_7, True)}</td><td class='{col(a_diff_pr_15)}'>{fmt(a_diff_pr_15, True)}</td><td class='{col(a_diff_pr_30)}'>{fmt(a_diff_pr_30, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
+                    h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td><td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td><td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td><td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
+
             h1.append("</table>")
             st.markdown("".join(h1), unsafe_allow_html=True)
        
@@ -2356,10 +2353,6 @@ font-weight: 700 !important;
         
         past_asset_30 = t_asset - t_profit + t_prof_30ago
         t_prof_pr_30ago = past_asset_30 - t_original_sum
-        
-        t_diff_pr_7 = t_prof_principal - t_prof_pr_7ago
-        t_diff_pr_15 = t_prof_principal - t_prof_pr_15ago
-        t_diff_pr_30 = t_prof_principal - t_prof_pr_30ago
 
         # 💡 [매입금액 기준 비교 지표 계산]
         t_diff_7 = t_profit - t_prof_7ago; t_diff_15 = t_profit - t_prof_15ago; t_diff_30 = t_profit - t_prof_30ago
@@ -2688,9 +2681,9 @@ font-weight: 700 !important;
 <td>[ 합  계 ]</td>
 <td>{fmt(t_asset)}</td>
 <td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td>
-<td class='{col(t_diff_pr_7)}'>{fmt(t_diff_pr_7, True)}</td>
-<td class='{col(t_diff_pr_15)}'>{fmt(t_diff_pr_15, True)}</td>
-<td class='{col(t_diff_pr_30)}'>{fmt(t_diff_pr_30, True)}</td>
+<td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td>
+<td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td>
+<td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td>
 <td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td>
 <td>{fmt(t_original_sum)}</td>
 </tr>
@@ -2708,24 +2701,24 @@ font-weight: 700 !important;
                 a_prof_7ago = safe_float(a.get('평가손익(7일전)', 0))
                 a_prof_15ago = safe_float(a.get('평가손익(15일전)', 0))
                 a_prof_30ago = safe_float(a.get('평가손익(30일전)', 0))
-                
+
                 a_past_asset_7 = a_tot - a_prof + a_prof_7ago
-                a_diff_pr_7 = a_prof_pr - (a_past_asset_7 - a_prin)
+                a_prof_pr_7ago = a_past_asset_7 - a_prin
                 
                 a_past_asset_15 = a_tot - a_prof + a_prof_15ago
-                a_diff_pr_15 = a_prof_pr - (a_past_asset_15 - a_prin)
+                a_prof_pr_15ago = a_past_asset_15 - a_prin
                 
                 a_past_asset_30 = a_tot - a_prof + a_prof_30ago
-                a_diff_pr_30 = a_prof_pr - (a_past_asset_30 - a_prin)
+                a_prof_pr_30ago = a_past_asset_30 - a_prin
 
                 h1.append(f"""
 <tr>
 <td>{nm_table[k]}</td>
 <td>{fmt(a_tot)}</td>
 <td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td>
-<td class='{col(a_diff_pr_7)}'>{fmt(a_diff_pr_7, True)}</td>
-<td class='{col(a_diff_pr_15)}'>{fmt(a_diff_pr_15, True)}</td>
-<td class='{col(a_diff_pr_30)}'>{fmt(a_diff_pr_30, True)}</td>
+<td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td>
+<td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td>
+<td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td>
 <td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td>
 <td>{fmt(a_prin)}</td>
 </tr>
