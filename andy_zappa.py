@@ -692,6 +692,34 @@ const interval = setInterval(() => {
 </script>
 """, height=0)
 
+        # 💡 [패치] 잔액숨김 토글 세션 상태 초기화
+        if 'hide_balance' not in st.session_state:
+            st.session_state.hide_balance = False
+
+        # 💡 잔액숨김 토글: 네이티브 st.toggle 라벨을 토글 왼쪽에 붙여 한 줄 우측 정렬 (앵커 + 인접형제 선택자, admin-btn-anchor 패턴과 동일)
+        st.markdown("""
+<style>
+div.element-container:has(#balance-toggle-anchor) { display: none !important; }
+/* 토글 위젯 컨테이너 자체를 flex로 잡아 내용 폭과 무관하게 항상 우측 끝으로 밀착 */
+/* margin-top 음수값을 조절하여 위쪽 Oracle 화이트 박스와의 간격 미세 조정 */
+div.element-container:has(#balance-toggle-anchor) + div.element-container { display: flex !important; justify-content: flex-end !important; width: 100% !important; max-width: 100% !important; margin: -10px 0 0 0 !important; padding: 0 0 4px 0 !important; }
+div.element-container:has(#balance-toggle-anchor) + div.element-container div[data-testid="stCheckbox"] { margin: 0 !important; min-height: 0 !important; width: auto !important; }
+div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"] { display: flex !important; flex-direction: row-reverse !important; align-items: center !important; gap: 8px !important; width: auto !important; margin: 0 !important; padding: 0 !important; }
+/* 라벨 래퍼(트랙 div 다음 형제): 여백 제거 + 토글 중심선에 맞춰 3px 하향 (숫자를 조절하여 높낮이 미세 조정) */
+div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"] > div:not(:first-child) { display: flex !important; align-items: center !important; margin: 0 !important; padding: 0 !important; transform: translateY(3px) !important; }
+/* 글씨: 절세계좌/일반계좌/암호화폐 카드 제목(.zappa-summary)과 동일 스타일 */
+div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"] p { font-size: 13px !important; font-weight: bold !important; color: #777 !important; margin: 0 !important; line-height: 1 !important; white-space: nowrap !important; }
+/* 활성화(ON) 트랙 색상: 기본 빨강 -> 딥파스텔 블루. 봇 가동 토글(#ff4b4b 고정)과 동일 패턴 */
+div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"]:has(input:checked) > div:first-child { background-color: #7fb5e9 !important; }
+</style>
+<span id='balance-toggle-anchor'></span>
+""", unsafe_allow_html=True)
+        # 💡 토글 상태별 라벨 전환: 켜짐(잔액 숨김) = 🔒 닫힌 자물쇠 / 꺼짐(잔액 보임) = 🔓 열린 자물쇠
+        #    위젯 키 값을 먼저 읽어 클릭 직후 리런에서 라벨이 한 번 늦게 바뀌는 현상을 방지
+        #    자물쇠 뒤 ️(VS16)는 흑백 글리프 대신 컬러(노란 입체) 이모지 표현을 강제 — Admin 버튼과 동일 패턴
+        _hb_now = bool(st.session_state.get('balance_hide_toggle', st.session_state.hide_balance))
+        st.session_state.hide_balance = st.toggle("🔒️ 잔액숨김" if _hb_now else "🔓️ 잔액보임", value=_hb_now, key="balance_hide_toggle")
+
         st.markdown('<style>div.element-container:has(div[role="radiogroup"]) { margin-top: -55px !important; position: relative; z-index: 50; }</style>', unsafe_allow_html=True)
 
         # 💡 [패치 1] Zappa Arbi 라디오 메뉴 추가 완료
@@ -878,7 +906,14 @@ transition: transform 0.2s ease; display: inline-block;
         total_rate_principal = (total_prof_principal / total_principal_all) * 100 if total_principal_all > 0 else 0
         # =========================================================
 
-        # 💡 [패치 2] 사이드바 카드 렌더링 (전체 메뉴 디자인 통일 및 데이터 동기화)
+        # 💡 [패치 2] 사이드바 카드 렌더링 (잔액숨김 기능 추가 완료)
+        hide_bal = st.session_state.get('hide_balance', False)
+
+        total_asset_display = "<div style='font-size:24px; font-weight:600; color:#fff; text-align:right;'>********** <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>" if hide_bal else f"<div style='font-size:24px; color:#fff; text-align:right;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>"
+        p_asset_display = "<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>********** <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>" if hide_bal else f"<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>"
+        g_asset_display = "<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>********** <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>" if hide_bal else f"<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>"
+        c_asset_display = "<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>********** <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>" if hide_bal else f"<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>"
+
         st.sidebar.markdown(f"""
 <details id='zappa-exp-total' class='zappa-expander zappa-expander-dark' {open_aum} style='margin-top: -16px;'>
 
@@ -887,16 +922,16 @@ transition: transform 0.2s ease; display: inline-block;
 </summary>
 <div id='card-total' class='zappa-content'>
 <div style='text-align: right;'>
-<div style='font-size:24px; font-weight:450; letter-spacing:-0.5px; line-height: 1.1; color:#fff;'>{fmt(total_asset)} <span style='font-size:13px; font-weight:normal; color:#ddd;'>KRW</span></div>
+{total_asset_display}
 <div style='font-size:17px; margin-top:2px; color:#ff4b4b;'><span class='{col(total_prof_principal)}' style='font-weight:600;'>{fmt(total_prof_principal, True)}</span> <span style='font-size:13.5px; font-weight:normal; color:#ddd;'>({fmt_p1(total_rate_principal)})</span></div>
 </div>
 <div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;'>
 <span style='font-size: 12px; color: #888; font-weight: normal;'>🎯 총 투자자산 <span style='font-size: 13px;'>30</span>억 로드맵</span>
-<span style='font-size: 13.5px; font-weight: normal; color: #e8c368;'>{(total_asset / 3000000000 * 100):.1f}%</span>
+<span style='font-size: 13.5px; font-weight: normal; color: #e8c368;'>{"0.0" if hide_bal else f"{(total_asset / 3000000000 * 100):.1f}"}%</span>
 </div>
 <div style='width: 100%; height: 6px; background-color: #444; border-radius: 3px; overflow: hidden;'>
-<div style='width: {(total_asset / 3000000000 * 100)}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
+<div style='width: {"0" if hide_bal else f"{(total_asset / 3000000000 * 100)}"}%; height: 100%; background: linear-gradient(90deg, #bfa054, #fceabb);'></div>
 </div>
 </div>
 </div>
@@ -908,7 +943,7 @@ transition: transform 0.2s ease; display: inline-block;
 </summary>
 <div id='card-pension' class='zappa-content'>
 <div style='text-align: right; padding-bottom: 2px;'>
-<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(p_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+{p_asset_display}
 <div style='font-size:16px; margin-top:3px; color:#555;'><span class='{col(p_prof_principal)}' style='font-weight:bold;'>{fmt(p_prof_principal, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(p_rate_principal)})</span></div>
 </div>
 <div style='width: 100%; height: 1px; background-color: #eee; margin-top: 8px; margin-bottom: 8px;'></div>
@@ -924,7 +959,7 @@ transition: transform 0.2s ease; display: inline-block;
 </summary>
 <div id='card-general' class='zappa-content'>
 <div style='text-align: right; padding-bottom: 2px;'>
-<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(g_asset_all)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+{g_asset_display}
 <div style='font-size:16px; margin-top:3px; color:#555;'><span class='{col(g_prof_principal)}' style='font-weight:bold;'>{fmt(g_prof_principal, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(g_rate_principal)})</span></div>
 </div>
 <div style='width: 100%; height: 1px; background-color: #eee; margin-top: 8px; margin-bottom: 8px;'></div>
@@ -940,7 +975,7 @@ transition: transform 0.2s ease; display: inline-block;
 </summary>
 <div id='card-crypto' class='zappa-content'>
 <div style='text-align: right; padding-bottom: 2px;'>
-<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(c_tot_sum)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+{c_asset_display}
 <div style='font-size:16px; margin-top:3px; color:#555;'><span class='{col(c_prof_sum)}' style='font-weight:bold;'>{fmt(c_prof_sum, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(c_rate_sum_actual)})</span></div>
 </div>
 <div style='width: 100%; height: 1px; background-color: #eee; margin-top: 8px; margin-bottom: 8px;'></div>
@@ -966,6 +1001,8 @@ transition: transform 0.2s ease; display: inline-block;
         algo_win_rate = 89.0
         algo_total_trades = 112
 
+        algo_asset_display = "<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>********** <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>" if hide_bal else f"<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt(algo_total_asset)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>"
+
         quant_card_html = f"""
 <details id='zappa-exp-quant' class='zappa-expander' {open_quant}>
 <summary class='zappa-summary'>
@@ -977,9 +1014,11 @@ transition: transform 0.2s ease; display: inline-block;
 <td style='width: 62px; padding: 10; vertical-align: bottom; background: transparent; border: none;'>
 <img src='{robot_img_src}' style='width:45px; height:45px; object-fit:contain; display: block;'>
 </td>
-<td style='padding: 0; padding-bottom: 2px; vertical-align: bottom; text-align: right; background: transparent; border: none;'>
-<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(algo_total_asset)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<td style='padding: 0; padding-bottom: 2px; vertical-align: bottom; background: transparent; border: none;'>
+<div style='display: flex; flex-direction: column; align-items: flex-end;'>
+<div style='font-size:17px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{algo_asset_display}</div>
 <div style='font-size:16px; margin-top:3px; color:#555;'><span class='{col(algo_total_profit)}' style='font-weight:bold;'>{fmt(algo_total_profit, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(algo_total_rate)})</span></div>
+</div>
 </td>
 </tr>
 </table>
@@ -1007,6 +1046,8 @@ transition: transform 0.2s ease; display: inline-block;
         arbi_win_rate = 89.0
         arbi_total_trades = 112
 
+        arbi_asset_display = "<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>********** <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>" if hide_bal else f"<div style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt(arbi_total_asset)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>"
+
         arbi_card_html = f"""
 <details id='zappa-exp-arbi' class='zappa-expander' {open_arbi}>
 <summary class='zappa-summary'>
@@ -1018,9 +1059,11 @@ transition: transform 0.2s ease; display: inline-block;
 <td style='width: 62px; padding: 10; vertical-align: bottom; background: transparent; border: none;'>
 <img src='{robot_img_src}' style='width:45px; height:45px; object-fit:contain; display: block;'>
 </td>
-<td style='padding: 0; padding-bottom: 2px; vertical-align: bottom; text-align: right; background: transparent; border: none;'>
-<div style='font-size:21px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{fmt(arbi_total_asset)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<td style='padding: 0; padding-bottom: 2px; vertical-align: bottom; background: transparent; border: none;'>
+<div style='display: flex; flex-direction: column; align-items: flex-end;'>
+<div style='font-size:17px; font-weight:600; color:#111; letter-spacing:-0.5px; line-height: 1.1;'>{arbi_asset_display}</div>
 <div style='font-size:16px; margin-top:3px; color:#555;'><span class='{col(arbi_total_profit)}' style='font-weight:bold;'>{fmt(arbi_total_profit, True)}</span> <span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(arbi_total_rate)})</span></div>
+</div>
 </td>
 </tr>
 </table>
@@ -1130,7 +1173,7 @@ border-color: #bbbbbb !important;
 
         # 💡 ADMIN 버튼
         st.sidebar.markdown("<div id='admin-btn-anchor'></div>", unsafe_allow_html=True)
-        if st.sidebar.button("🔒\uFE0F Admin", key="admin_final_btn"):
+        if st.sidebar.button("🛠\uFE0F \u00A0Admin", key="admin_final_btn"):
             st.session_state['show_admin_page'] = True
             st.rerun()
 
@@ -1239,7 +1282,7 @@ setInterval(maintainExpanderState, 300);
     # =========================================================
     if st.session_state.get('show_admin_page', False):
         # 👇 자물쇠 컬러 강제 적용 및 복귀 버튼 복원
-        st.markdown("<h3 style='margin-top: 5px;'><span style='font-family: \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Noto Color Emoji\", sans-serif;'>🔒</span> Andy-Zappa Admin</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: 5px;'><span style='font-family: \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Noto Color Emoji\", sans-serif;'>🛠\uFE0F</span> Andy-Zappa Admin</h3>", unsafe_allow_html=True)
        
         if st.button("⬅️ Back to Dashboard"):
             st.session_state['show_admin_page'] = False
@@ -1261,7 +1304,7 @@ setInterval(maintainExpanderState, 300);
             with col_old: old_pw = st.text_input("현재 비밀번호", type="password", key="pw_change_old")
             with col_new: new_pw = st.text_input("새로운 비밀번호", type="password", key="pw_change_new")
        
-            if st.button("비밀번호 변경 실행", use_container_width=True):
+            if st.button("비밀번호 변경 실행", width='stretch'):
                 if not old_pw or not new_pw:
                     st.warning("비밀번호를 모두 입력해주세요.")
                 else:
@@ -1329,7 +1372,7 @@ setInterval(maintainExpanderState, 300);
             "투자원금": st.column_config.NumberColumn("💰 투자원금 (KRW)", format="%,.0f", step=1.0)
         }
    
-        edited_sum = st.data_editor(df_sum, use_container_width=True, column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
+        edited_sum = st.data_editor(df_sum, width='stretch', column_config=sum_cfg, key=f"sum_editor_{sel_key}", hide_index=True)
         new_cash = edited_sum.iloc[0]["현금성자산(예수금)"]
         new_prin = edited_sum.iloc[0]["투자원금"]
    
@@ -1366,7 +1409,7 @@ setInterval(maintainExpanderState, 300);
                 "매입단가": st.column_config.NumberColumn(f"매입단가 ({cash_unit})", format=p_format, step=p_step)
             }
        
-        edited_df = st.data_editor(df_items, num_rows="dynamic", use_container_width=True, column_config=col_cfg, key=f"editor_{sel_key}")
+        edited_df = st.data_editor(df_items, num_rows="dynamic", width='stretch', column_config=col_cfg, key=f"editor_{sel_key}")
    
         if category == "📂절세계좌":
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1383,7 +1426,7 @@ setInterval(maintainExpanderState, 300);
                 "연이율(%)": st.column_config.NumberColumn("연이율(%)", format="%.2f", step=0.01),
                 "매입일자": st.column_config.DateColumn("매입일자", format="YYYY-MM-DD")
             }
-            edited_safe = st.data_editor(df_safe, num_rows="dynamic", use_container_width=True, column_config=safe_cfg, key=f"safe_{sel_key}")
+            edited_safe = st.data_editor(df_safe, num_rows="dynamic", width='stretch', column_config=safe_cfg, key=f"safe_{sel_key}")
        
         st.markdown("<br>", unsafe_allow_html=True)
    
@@ -1399,9 +1442,9 @@ setInterval(maintainExpanderState, 300);
        
             c1, c2 = st.columns(2)
             with c1:
-                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", use_container_width=True)
+                confirm_btn = st.button("✅ 배포 진행 (Confirm)", type="primary", key="btn_confirm_deploy", width='stretch')
             with c2:
-                if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", use_container_width=True):
+                if st.button("❌ 취소 (Cancel)", key="btn_cancel_deploy", width='stretch'):
                     st.rerun()
        
             if confirm_btn:
@@ -1417,7 +1460,7 @@ setInterval(maintainExpanderState, 300);
                 except Exception as e:
                     st.error(f"❌ 연결 오류:\n{e}")
                
-        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", use_container_width=True):
+        if st.button(f"🚀 실시간 데이터 배포 (Deploy to Oracle)", type="primary", width='stretch'):
             save_df = edited_df.copy()
        
             if sel_key == "CRYPTO":
@@ -1599,7 +1642,7 @@ setInterval(maintainExpanderState, 300);
 """, unsafe_allow_html=True)
            
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-                if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), use_container_width=True)
+                if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), width='stretch')
                 st.markdown("</div>", unsafe_allow_html=True)
            
             with c2:
@@ -1612,7 +1655,7 @@ setInterval(maintainExpanderState, 300);
 """, unsafe_allow_html=True)
            
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-                if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), use_container_width=True)
+                if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), width='stretch')
                 st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
@@ -1872,13 +1915,13 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
 <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>
-<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
+<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
+<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
 </div>
@@ -2471,13 +2514,13 @@ font-weight: 700 !important;
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
 <div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>
-<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
+<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
+<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
 </div>
@@ -3073,15 +3116,15 @@ font-weight: 700 !important;
 <span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt(ce)}</span>
 </div>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
-<span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>현금성(예수금)</span>
-<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt(ck)}</span>
-</div>
-<div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>총 손익</span>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(cp)}'>{fmt(cp, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 4px; line-height: 1;' class='{col(cr)}'>{fmt_p(cr)}</div>
 </div>
+</div>
+<div style='display:flex; justify-content:space-between; align-items:baseline;'>
+<span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>현금성(예수금)</span>
+<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt(ck)}</span>
 </div>
 </div>
 </div>
@@ -3391,7 +3434,7 @@ font-weight: 700 !important;
                 yaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc', tickformat=",.0f"),
                 hovermode='x unified'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         except:
             st.info("차트를 렌더링하려면 plotly 라이브러리가 필요합니다.")
 
@@ -3720,9 +3763,9 @@ div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker
 position: relative !important;
 }
                     
-/* 8. 봇 가동 토글 붉은색 고정 */
+/* 8. 코인별 봇 가동 토글(BTC/ETH/SOL/XRP) 활성화 색상: 딥파스텔 블루 고정 (마스터 토글/잔액숨김과 동일) */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stCheckbox"] [data-baseweb="checkbox"]:has(input:checked) > div:first-child {
-background-color: #ff4b4b !important;
+background-color: #7fb5e9 !important;
 }
 
 /* 우측 허공에 선을 그립니다 */
@@ -3761,13 +3804,12 @@ z-index: 50;
 /* 💡 마스터 컨트롤: 고무줄 팽창 방지 및 우측 끝선 절대 고정 */
 /* ---------------------------------------------------------- */
 
-/* 1. 토글, 로봇, 뱃지를 감싸는 가로줄(Row)을 통째로 우측 끝에 붙입니다 */
+/* 1. 마스터 행: 컬럼 비율은 코인 행(c_ratio)과 동일하게 살려두고 세로 위치만 조정
+      ⚠️ justify-content / gap 을 지정하면 안 됨 — 코인 행의 기본 gap과 달라져 토글 시작점이 어긋난다 */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) {
     display: flex !important;
-    justify-content: flex-end !important; 
     align-items: center !important;
-    gap: 15px !important; 
-    
+
     /* ❌ 범인: margin-top은 지우세요! (표까지 같이 아래로 밀어냅니다) */
     /* margin-top: 45px !important; */
 
@@ -3777,12 +3819,17 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) {
     z-index: 99 !important; /* 혹시나 표 뒤로 숨지 않게 층수를 높여줍니다 */
 }
 
-/* 2. 스트림릿의 컬럼(%) 자동 팽창 성질을 파괴 */
+/* 2. 컬럼 안쪽 여백만 제거 (폭은 c_ratio 비율 그대로 유지해야 코인 행과 정렬됨) */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="column"] {
-    flex: 0 0 auto !important; 
-    width: auto !important;
     min-width: 0 !important;
     padding: 0 !important;
+}
+
+/* 2-1. 뱃지는 마지막 컬럼에서 우측 끝 정렬 (컬럼보다 넓으면 왼쪽 빈 컬럼 위로 넘쳐 표시) */
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="column"]:last-child {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
 }
 
 /* 3. 뱃지 기본 디자인 */
@@ -3798,6 +3845,11 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="c
 /* 4. 토글 스위치 크기 조절 */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stCheckbox"] {
     transform: scale(1.3) translateY(2px) !important;
+}
+
+/* 5. 활성화(ON) 트랙 색상: 기본 빨강 -> 딥파스텔 블루 (잔액숨김 토글과 동일) */
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="checkbox"]:has(input:checked) > div:first-child {
+    background-color: #7fb5e9 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -3899,20 +3951,24 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stChec
 """
         st.markdown(market_mood_html, unsafe_allow_html=True)
 
-        # 2. 로봇과 뱃지 (제목 아랫줄에 배치, columns 비율로 우측 밀어내기)
+        # 2. 마스터 토글 / 로봇 / 뱃지
+        # 💡 아래 코인 행과 '같은 개수·같은 비율'의 컬럼을 써야 토글 시작점이 화면 폭과 무관하게 항상 일치한다.
+        #    컬럼 개수가 다르면 컬럼 사이 gap 총량이 달라져, 비율이 같아도 위치가 어긋난다.
+        #    → c_ratio는 여기서 한 번만 정의하고 코인 행에서 재사용 (두 곳에 따로 쓰면 값이 어긋날 수 있음)
+        c_ratio = [0.15, 0.20, 0.40, 0.67, 1.0, 1.0, 0.7, 0.1]
+
         st.markdown("<div class='master-controls-anchor'>", unsafe_allow_html=True)
-        c_space, c_toggle, c_robot, c_badge = st.columns([8.0, 0.4, 0.7, 2.4])
-        
-        with c_space:
-            pass # 빈 공간
-            
+        m_cols = st.columns(c_ratio)
+        c_toggle, c_robot, c_badge = m_cols[1], m_cols[2], m_cols[7]
+
         with c_toggle:
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             st.toggle("run_master", key="main_bot_toggle", label_visibility="collapsed", on_change=sync_main_toggle)
-            
+
         with c_robot:
-            st.markdown(f"<div style='display:flex; justify-content:center;'><img src='{r_src}' style='width:55px;'></div>", unsafe_allow_html=True)
-            
+            # margin-left 음수값을 키울수록 로봇이 토글 쪽으로 더 붙는다 (여백 미세 조정용)
+            st.markdown(f"<div style='display:flex; justify-content:flex-start; margin-left:-50px;'><img src='{r_src}' style='width:55px;'></div>", unsafe_allow_html=True)
+
         with c_badge:
             if st.session_state.get('main_bot_toggle', True):
                 badge_html = """
@@ -3953,8 +4009,8 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stChec
         with st.container():
             st.markdown("<span class='bot-panel-marker'></span>", unsafe_allow_html=True)
             
-            c_ratio = [0.15, 0.20, 0.40, 0.67, 1.0, 1.0, 0.7, 0.1]
-            
+            # c_ratio는 마스터 토글 행에서 이미 정의됨 (같은 값을 공유해야 토글 열이 정렬됨)
+
             st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
             
             cols_h = st.columns(c_ratio)
