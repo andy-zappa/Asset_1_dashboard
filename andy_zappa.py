@@ -128,14 +128,24 @@ section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; m
 .block-container { padding-top: 0rem !important; padding-bottom: 7rem !important; }
 h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; padding-bottom: 0px; }
 .sub-title { font-size: 22px !important; font-weight: bold; margin: 12px 0 10px; }
-.main-table { width: 100%; border-collapse: separate !important; border-spacing: 0; border: 1.5px solid #b5b5b5 !important; border-radius: 12px; overflow: hidden; font-size: 15px; text-align: center; margin-bottom: 10px; }
-.main-table th { background-color: #f2f2f2; padding: 10px; border-bottom: 1px solid #dcdcdc !important; border-right: 1px solid #dcdcdc !important; font-weight: bold !important; vertical-align: middle; }
-.main-table td { padding: 8px; border-bottom: 1px solid #dcdcdc !important; border-right: 1px solid #dcdcdc !important; vertical-align: middle; }
-.main-table tr th:last-child, .main-table tr td:last-child { border-right: none !important; }
-.main-table tr:last-child th, .main-table tr:last-child td { border-bottom: none !important; }
-.main-table th.th-eval { border-right: none !important; }
-.main-table th.th-blank { border-bottom: none !important; border-right: none !important; padding: 0 !important; }
-.main-table th.th-week { border-left: 1px solid #dcdcdc !important; border-top: 1px solid #dcdcdc !important; font-size: 13.5px; }
+/* 표 격자선 두께 통일 (CRITICAL)
+   기존에는 border-collapse:separate 였는데, 이 모드는 테두리를 '각 셀 박스 안쪽'에 그린다.
+   열 폭이 내용에 따라 소수점으로 잡히므로 어떤 경계는 정수 픽셀(1px 또렷), 어떤 경계는
+   소수점 픽셀(2px 흐릿)로 렌더되어 선 두께가 제각각으로 보였다.
+   병합 셀(rowspan/colspan)이 있으면 경계마다 선을 그리는 주체가 달라져 증상이 더 심해진다.
+   -> border-collapse:collapse 로 변경. 인접 테두리를 하나로 합쳐 표 격자선 위에 그리므로
+      모든 내부 선이 항상 1px #dcdcdc 로 균일하게 렌더된다.
+   단, collapse + border-radius 조합에서는 table 자신의 border 가 잘려 사라지므로
+   바깥 프레임(#b5b5b5)은 outline 으로 그린다.
+   inset box-shadow 는 표 배경 위에만 칠해져서 배경색이 있는 행(헤더 #f2f2f2, 합계 #fff9e6)에
+   셀 배경이 그 위를 덮어버려 그 행들만 프레임이 얇아 보였다.
+   outline 은 자식 배경보다 위에 그려지므로 모든 행에서 같은 두께로 보인다.
+   (outline-offset:-2px 로 기존 border 와 같은 위치에 안쪽으로 붙인다) */
+.main-table { width: 100%; border-collapse: collapse !important; border: none !important; border-radius: 12px; overflow: hidden; outline: 2px solid #b5b5b5; outline-offset: -2px; font-size: 15px; text-align: center; margin-bottom: 10px; }
+.main-table th { background-color: #f2f2f2; padding: 10px; border: 1px solid #dcdcdc !important; font-weight: bold !important; vertical-align: middle; }
+.main-table td { padding: 8px; border: 1px solid #dcdcdc !important; vertical-align: middle; }
+.main-table th.th-blank { padding: 0 !important; }
+.main-table th.th-week { font-size: 13.5px; }
 .sum-row td { background-color: #fff9e6; font-weight: bold !important; }
 .red { color: #D32F2F !important; }
 .blue { color: #1976D2 !important; }
@@ -353,6 +363,25 @@ setInterval(bindSidebarClicks, 300);
             val_str = f"{f_val:,.{decimal}f}" if decimal > 0 else f"{int(round(f_val)):,}"
             return f"+{val_str}" if sign and f_val > 0 else val_str
         except: return str(v)
+
+    # 💡 [패치] 잔액숨김 전용 금액 포맷터 - 토글 ON이면 금액 대신 ********** 로 마스킹
+    #    [폭 고정] 원래 금액이 차지하던 가로 폭을 그대로 유지해, 표 컬럼 너비가 흔들리지 않게 한다.
+    #     - 숨김 스페이서(visibility:hidden)가 원래 자릿수만큼 폭을 잡아준다 (숫자는 전부 0으로 치환하여 실제 값 미노출)
+    #     - ********** 는 position:absolute 라 레이아웃에 영향을 주지 않는다
+    #     - 마스크 위치는 text-align 상속에 맡기지 않고 직접 고정한다.
+    #       (상속에 맡기면 금액이 짧은 행(예: 현금성자산)에서 스페이서가 좁아 마스크가 한쪽으로 쏠린다)
+    #       align='center' (기본) : 가운데 정렬 셀용 - 원래 금액의 정중앙. 현재 모든 호출부가 이 값을 쓴다.
+    #       align='right'         : 셀에 text-align:right 가 걸린 경우용 - 금액 오른쪽 끝에 맞춤
+    def fmt_h(v, sign=False, decimal=0, align='center'):
+        if v == '-': return '-'
+        s = fmt(v, sign, decimal)
+        if not st.session_state.get('hide_balance', False): return s
+        spacer = re.sub(r'\d', '0', s)
+        pos = "right:0;" if align == 'right' else "left:50%; transform:translateX(-50%);"
+        return (f"<span style='position:relative; display:inline-block; white-space:nowrap;'>"
+                f"<span style='visibility:hidden;'>{spacer}</span>"
+                f"<span style='position:absolute; {pos} top:0; white-space:nowrap;'>**********</span>"
+                f"</span>")
 
     def fmt_p(v):
         if v == '-' or v is None: return '-'
@@ -703,7 +732,11 @@ div.element-container:has(#balance-toggle-anchor) { display: none !important; }
 /* 토글 위젯 컨테이너 자체를 flex로 잡아 내용 폭과 무관하게 항상 우측 끝으로 밀착 */
 /* margin-top 음수값을 조절하여 위쪽 Oracle 화이트 박스와의 간격 미세 조정 */
 div.element-container:has(#balance-toggle-anchor) + div.element-container { display: flex !important; justify-content: flex-end !important; width: 100% !important; max-width: 100% !important; margin: -10px 0 0 0 !important; padding: 0 0 4px 0 !important; }
-div.element-container:has(#balance-toggle-anchor) + div.element-container div[data-testid="stCheckbox"] { margin: 0 !important; min-height: 0 !important; width: auto !important; }
+/* 🔑 잔액보임 토글 가로 위치 - 이 숫자 하나만 바꾸면 '자물쇠+글씨+스위치' 전체가 통째로 움직인다.
+   음수 = 왼쪽(ORACLE 쪽) / 양수 = 오른쪽.
+   ⚠️ 이 위젯은 컨테이너의 padding/margin 으로는 위치가 바뀌지 않는다(반응 없음).
+      transform 은 레이아웃 계산과 무관하게 항상 적용되므로 확실하다. */
+div.element-container:has(#balance-toggle-anchor) + div.element-container div[data-testid="stCheckbox"] { margin: 0 !important; min-height: 0 !important; width: auto !important; transform: translateX(-12px) !important; }
 div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"] { display: flex !important; flex-direction: row-reverse !important; align-items: center !important; gap: 8px !important; width: auto !important; margin: 0 !important; padding: 0 !important; }
 /* 라벨 래퍼(트랙 div 다음 형제): 여백 제거 + 토글 중심선에 맞춰 3px 하향 (숫자를 조절하여 높낮이 미세 조정) */
 div.element-container:has(#balance-toggle-anchor) + div.element-container [data-baseweb="checkbox"] > div:not(:first-child) { display: flex !important; align-items: center !important; margin: 0 !important; padding: 0 !important; transform: translateY(3px) !important; }
@@ -1906,7 +1939,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>
 <div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'>
 <div style='font-size: 21px; font-weight: 800 !important; color: #111; text-shadow: 0.3px 0px 0px #111, -0.3px 0px 0px #111; letter-spacing: 0.2px; line-height: 1; margin-bottom: 6px;'>
-{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
+{fmt_h(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
 </div>
 <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>
 [ 전일비 <span class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]
@@ -1914,7 +1947,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 </div>
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</div>
@@ -1938,10 +1971,10 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 <div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
 <span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 절세계좌 (ETF/ELS) 15억 만들기</span>
-<div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{tax_proj_pct:.1f}%</span></div>
+<div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{"0.0" if st.session_state.get('hide_balance', False) else f"{tax_proj_pct:.1f}"}%</span></div>
 </div>
 <div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'>
-<div style='width: {tax_proj_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div>
+<div style='width: {"0" if st.session_state.get('hide_balance', False) else f"{tax_proj_pct}"}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div>
 </div>
 </div>
 </div>
@@ -1979,7 +2012,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 <div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div>
 <div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'>
 <span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span>
-<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(a_tot)}</span>
+<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt_h(a_tot)}</span>
 </div>
 <div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'>
 <span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span>
@@ -2094,9 +2127,9 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                 sorted_tax_order.sort(key=tax_rate_for_sort, reverse=True)
 
             st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
-            h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
+            h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
             for k in sorted_tax_order:
                 if k in data and isinstance(data[k], dict):
@@ -2121,15 +2154,15 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     a_past_asset_30 = a_tot - a_prof + a_prof_30ago
                     a_prof_pr_30ago = a_past_asset_30 - a_prin
 
-                    h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td><td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td><td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td><td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
+                    h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt_h(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td><td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td><td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td><td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
 
             h1.append("</table>")
             st.markdown("".join(h1), unsafe_allow_html=True)
        
             st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_buy)}'>{fmt(t_prof_buy, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_buy)}'>{fmt(t_prof_buy, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
             h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>평가손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
-            h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
+            h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
        
             for k in sorted_tax_order:
                 if k in data and isinstance(data[k], dict):
@@ -2143,7 +2176,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     diff_7_acc = a_prof - safe_float(a.get('평가손익(7일전)', 0))
                     diff_30_acc = a_prof - safe_float(a.get('평가손익(30일전)', 0))
                
-                    h2.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt(a_tot)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(diff_1_acc)}'>{fmt(diff_1_acc, True)}</td><td class='{col(diff_7_acc)}'>{fmt(diff_7_acc, True)}</td><td class='{col(diff_30_acc)}'>{fmt(diff_30_acc, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(a_buy)}</td></tr>")
+                    h2.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt_h(a_tot)}</td><td class='{col(a_prof)}'>{fmt(a_prof, True)}</td><td class='{col(diff_1_acc)}'>{fmt(diff_1_acc, True)}</td><td class='{col(diff_7_acc)}'>{fmt(diff_7_acc, True)}</td><td class='{col(diff_30_acc)}'>{fmt(diff_30_acc, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(a_buy)}</td></tr>")
             h2.append("</table>")
             st.markdown("".join(h2), unsafe_allow_html=True)
        
@@ -2285,7 +2318,7 @@ font-weight: 700 !important;
                     st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;'>
 <div class='summary-text' style='margin-bottom:0; display:flex; align-items:flex-start;'>
-<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
 <div style='white-space:nowrap; line-height:1.2;'>
 <div style='margin-bottom:2px;'>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> : <span class='summary-val {col(acc_prof_pr)}'>{fmt(acc_prof_pr, True)}</span> <span class='{col(acc_prof_pr)}' style='font-size:16px;'>({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span></div>
 <div><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> : <span class='summary-val {col(acc_prof_buy)}'>{fmt(acc_prof_buy, True)}</span> <span class='{col(acc_prof_buy)}' style='font-size:16px;'>({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span></div>
@@ -2343,7 +2376,7 @@ font-weight: 700 !important;
                         else:
                             td_chg = ""
 
-                        h3.append(f"<tr {row_cls}>{nm_td}{td_code}<td>{i.get('비중',0):.1f}%</td><td>{fmt(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td>{td_chg}</tr>")
+                        h3.append(f"<tr {row_cls}>{nm_td}{td_code}<td>{i.get('비중',0):.1f}%</td><td>{fmt_h(i.get('총 자산',0))}</td><td class='{col(i.get('평가손익',0))}'>{fmt(i.get('평가손익',0), True)}</td><td class='{col(i.get('수익률(%)',0))}'>{fmt_p(i.get('수익률(%)',0))}</td><td>{fmt(i.get('수량','-'))}</td><td>{fmt(i.get('매입가','-'))}</td><td>{fmt(i.get('현재가','-'))}</td>{td_chg}</tr>")
                     h3.append("</table>")
                     st.markdown("".join(h3), unsafe_allow_html=True)
 
@@ -2505,7 +2538,7 @@ font-weight: 700 !important;
 <div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'>
 <div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'>
 <div style='font-size: 21px; font-weight: 800 !important; color: #111; text-shadow: 0.3px 0px 0px #111, -0.3px 0px 0px #111; letter-spacing: 0.2px; line-height: 1; margin-bottom: 6px;'>
-{fmt(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
+{fmt_h(t_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
 </div>
 <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>
 [ 전일비 <span class='{col(t_diff)}'>{fmt(t_diff, True)}</span> / 전주비 <span class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</span> ]
@@ -2513,7 +2546,7 @@ font-weight: 700 !important;
 </div>
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(t_asset - cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</div>
@@ -2537,10 +2570,10 @@ font-weight: 700 !important;
 <div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
 <span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 주식투자 자산 15억 프로젝트</span>
-<div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{progress_pct:.1f}%</span></div>
+<div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{"0.0" if st.session_state.get('hide_balance', False) else f"{progress_pct:.1f}"}%</span></div>
 </div>
 <div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'>
-<div style='width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div>
+<div style='width: {"0" if st.session_state.get('hide_balance', False) else f"{progress_pct}"}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div>
 </div>
 </div>
 </div>
@@ -2580,7 +2613,7 @@ font-weight: 700 !important;
 <div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div>
 <div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'>
 <span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span>
-<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(a_tot)}</span>
+<span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt_h(a_tot)}</span>
 </div>
 <div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'>
 <span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 손익</span>
@@ -2701,7 +2734,7 @@ font-weight: 700 !important;
 
         # 💡 [신규 오더 패치] 투자원금 대비 자산 현황 (계산된 t_prof_principal 및 차이값 반영)
         st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
 
         h1_table = """
 <table class='main-table'>
@@ -2722,7 +2755,7 @@ font-weight: 700 !important;
         h1 = [unit_html, h1_table, f"""
 <tr class='sum-row'>
 <td>[ 합  계 ]</td>
-<td>{fmt(t_asset)}</td>
+<td>{fmt_h(t_asset)}</td>
 <td class='{col(t_prof_principal)}'>{fmt(t_prof_principal, True)}</td>
 <td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td>
 <td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td>
@@ -2757,7 +2790,7 @@ font-weight: 700 !important;
                 h1.append(f"""
 <tr>
 <td>{nm_table[k]}</td>
-<td>{fmt(a_tot)}</td>
+<td>{fmt_h(a_tot)}</td>
 <td class='{col(a_prof_pr)}'>{fmt(a_prof_pr, True)}</td>
 <td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td>
 <td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td>
@@ -2770,7 +2803,7 @@ font-weight: 700 !important;
         st.markdown("".join(h1), unsafe_allow_html=True)
 
         st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt(t_profit, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
 
         h2_table = """
 <table class='main-table'>
@@ -2791,7 +2824,7 @@ font-weight: 700 !important;
         h2 = [unit_html, h2_table, f"""
 <tr class='sum-row'>
 <td>[ 합  계 ]</td>
-<td>{fmt(t_asset)}</td>
+<td>{fmt_h(t_asset)}</td>
 <td class='{col(t_profit)}'>{fmt(t_profit, True)}</td>
 <td class='{col(t_diff)}'>{fmt(t_diff, True)}</td>
 <td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td>
@@ -2813,7 +2846,7 @@ font-weight: 700 !important;
                 h2.append(f"""
 <tr>
 <td>{nm_table[k]}</td>
-<td>{fmt(safe_float(a.get('총자산_KRW',0)))}</td>
+<td>{fmt_h(safe_float(a.get('총자산_KRW',0)))}</td>
 <td class='{col(a_prof)}'>{fmt(a_prof, True)}</td>
 <td class='{col(acc_1d_diff.get(k, 0))}'>{fmt(acc_1d_diff.get(k, 0), True)}</td>
 <td class='{col(diff_7_acc)}'>{fmt(diff_7_acc, True)}</td>
@@ -2929,7 +2962,7 @@ font-weight: 700 !important;
                     st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;'>
 <div class='summary-text' style='margin-bottom:0; display:flex; align-items:flex-start;'>
-<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
 <div style='white-space:nowrap; line-height:1.2;'>
 <div style='margin-bottom:2px;'>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> : <span class='summary-val {col(acc_prof_pr)}'>{fmt(acc_prof_pr, True)}</span> <span class='{col(acc_prof_pr)}' style='font-size:16px;'>({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span></div>
 <div><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> : <span class='summary-val {col(acc_prof_buy)}'>{fmt(acc_prof_buy, True)}</span> <span class='{col(acc_prof_buy)}' style='font-size:16px;'>({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span></div>
@@ -2965,6 +2998,16 @@ font-weight: 700 !important;
                         elif currency_mode == "[달러(USD)]": return s_usd
                         else: return s_krw
 
+                    # 💡 [잔액숨김] 총 자산 열 전용 - fmt_dual 과 동일 구조에 fmt_h 만 적용 (원화/달러 두 줄 모두 마스킹)
+                    def fmt_dual_h(val_raw, sign=False):
+                        if val_raw == '-': return '-'
+                        if not is_usa: return fmt_h(val_raw, sign)
+                        val_krw = safe_float(val_raw) * rate_val
+                        s_krw = fmt_h(val_krw, sign); s_usd = fmt_h(safe_float(val_raw), sign, decimal=4)
+                        if currency_mode == "[원화/달러]": return f"{s_krw}<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({s_usd})</span>"
+                        elif currency_mode == "[달러(USD)]": return s_usd
+                        else: return s_krw
+
                     for i in ([s_data] + items + [cash_item]):
                         if not i: continue
                         if i.get('종목명') == "예수금" and safe_float(i.get('총자산', 0)) == 0 and k != 'USA2' and safe_float(s_data.get('총자산', 0)) > 0:
@@ -2984,7 +3027,7 @@ font-weight: 700 !important;
                        
                         if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>"
                        
-                        ia = fmt_dual(i.get('총자산', 0)); ip = fmt_dual(i.get('평가손익', 0), True)
+                        ia = fmt_dual_h(i.get('총자산', 0)); ip = fmt_dual(i.get('평가손익', 0), True)
                         ibuy = fmt_dual(i.get('매입가', '-')); icurr = fmt_dual(i.get('현재가', '-'))
                         s_tot = safe_float(s_data.get('총자산', 1))
                         pct = (safe_float(i.get('총자산', 0)) / s_tot * 100) if s_tot > 0 else 0
@@ -3104,7 +3147,7 @@ font-weight: 700 !important;
 <div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 12px; text-align: left;'>💡 총 보유자산</div>
 <div class='card-inner' style='padding: 10px 12px; margin-bottom: 15px; text-align: right;'>
 <div style='font-size: 21px; font-weight: 800 !important; color: #111; text-shadow: 0.3px 0px 0px #111, -0.3px 0px 0px #111; letter-spacing: 0.2px; line-height: 1; margin-bottom: 6px;'>
-{fmt(ca)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
+{fmt_h(ca)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
 </div>
 <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>
 [ 총 손익 <span class='{col(cp)}'>{fmt(cp, True)}</span> / 손익률 <span class='{col(cr)}'>{fmt_p(cr)}</span> ]
@@ -3113,7 +3156,7 @@ font-weight: 700 !important;
 <div style='background:#f9f9f9; padding:18px 20px; border-radius:10px; display:flex; flex-direction:column; gap:14px;'>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>평가금액</span>
-<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt(ce)}</span>
+<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt_h(ce)}</span>
 </div>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>총 손익</span>
@@ -3146,7 +3189,7 @@ font-weight: 700 !important;
 <div id='cryp_detail_section' style='padding-top: 20px; margin-top: -20px;'></div>
 <h4 style='margin-bottom:10px; font-weight:bold;'>📂 보유 코인 목록</h4>
 <div style='margin-bottom:15px;'>
-<div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div>
+<div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(ca)}</span> KRW / 총 손익 : <span class='summary-val {col(cp)}'>{fmt(cp, True)} ({fmt_p(cr)})</span></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -3192,9 +3235,9 @@ font-weight: 700 !important;
 <td style='text-align:center;'>[ 합  계 ]</td>
 {sum_code_td}
 <td style='text-align:center;'>-</td>
-<td style='text-align:right; padding-right:15px;'>{fmt(ca)}</td>
-<td style='text-align:right; padding-right:15px;' class='{col(cp)}'>{fmt(cp, True)}</td>
-<td style='text-align:right; padding-right:15px;' class='{col(cr)}'>{fmt_p(cr)}</td>
+<td style='text-align:center;'>{fmt_h(ca)}</td>
+<td style='text-align:center;' class='{col(cp)}'>{fmt(cp, True)}</td>
+<td style='text-align:center;' class='{col(cr)}'>{fmt_p(cr)}</td>
 <td style='text-align:center;'>-</td>
 <td style='text-align:center;'>-</td>
 <td style='text-align:center;'>-</td>
@@ -3260,10 +3303,10 @@ font-weight: 700 !important;
 <tr>
 <td style='text-align:center;'>{logo}</td>
 {code_td}
-<td style='text-align:right; padding-right:15px;'>{c_pct:.1f}%</td>
-<td style='text-align:right; padding-right:15px;'>{fmt(c.get('eval',0))}</td>
-<td style='text-align:right; padding-right:15px;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td>
-<td style='text-align:right; padding-right:15px;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td>
+<td style='text-align:center;'>{c_pct:.1f}%</td>
+<td style='text-align:center;'>{fmt_h(c.get('eval',0))}</td>
+<td style='text-align:center;' class='{col(c.get('profit',0))}'>{fmt(c.get('profit',0), True)}</td>
+<td style='text-align:center;' class='{col(c.get('rate',0))}'>{fmt_p(c.get('rate',0))}</td>
 {qty_td}{avg_td}{curr_td}{chg_td}
 </tr>
 """
@@ -3278,8 +3321,8 @@ font-weight: 700 !important;
 </div>
 </td>
 {sum_code_td}
-<td style='text-align:right; padding-right:15px;'>{krw_pct:.1f}%</td>
-<td style='text-align:right; padding-right:15px; color:#555;'>{fmt(ck)}</td>
+<td style='text-align:center;'>{krw_pct:.1f}%</td>
+<td style='text-align:center; color:#555;'>{fmt_h(ck)}</td>
 <td style='text-align:center;'>-</td>
 <td style='text-align:center;'>-</td>
 <td style='text-align:center;'>-</td>
@@ -3584,6 +3627,20 @@ font-weight: 700 !important;
                     json.dump(new_settings, f, indent=4)
             except: pass
 
+        # 💡 건당 거래금액: 입력값을 세 자리마다 콤마가 찍힌 형태로 자동 정규화
+        #    text_input 은 key 가 있으면 value= 인자를 무시하고 세션 상태의 원문을 그대로 유지하므로,
+        #    on_change 콜백에서 세션 상태 자체를 다시 써줘야 콤마가 화면에 반영된다.
+        def format_amt_input(coin):
+            k = f"amt_str_{coin}"
+            digits = re.sub(r"[^0-9]", "", str(st.session_state.get(k, "")))
+            if digits:
+                val = int(digits)
+                st.session_state[f"amt_{coin}"] = val
+                st.session_state[k] = f"{val:,}"
+            else:
+                st.session_state[k] = ""
+            save_bot_settings()
+
         # 마스터 토글 변경 시 하위 4개 토글 일괄 동기화
         def sync_main_toggle():
             master_state = st.session_state.main_bot_toggle
@@ -3650,8 +3707,12 @@ font-weight: 700 !important;
 /* 입력창 우측 정렬 */
 div[data-testid="stNumberInput"] input { text-align: right !important; font-weight: bold; font-size: 15.5px; padding-right: 12px; color: #111; }
 
-/* 표 테두리 디자인 */
-.table-rounded-wrapper { border: 2px solid #a0a0a0 !important; border-radius: 12px !important; overflow: hidden !important; width: 100% !important; margin-bottom: 5px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important; }
+/* 표 테두리 디자인
+   ⚠️ 이 래퍼 안의 표(#arbi-monitor-table)는 class='main-table' 도 함께 갖고 있다.
+      .main-table 이 이미 2px #b5b5b5 outline + 12px radius 로 바깥 프레임을 그리므로,
+      래퍼에 border 를 또 주면 2px + 2px = 4px 로 다른 표보다 두 배 두꺼워진다.
+      -> 래퍼는 모서리 클리핑/여백만 담당하고 테두리는 .main-table 에 일임한다. */
+.table-rounded-wrapper { border: none !important; border-radius: 12px !important; overflow: hidden !important; width: 100% !important; margin-bottom: 5px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important; }
 #arbi-monitor-table { border-collapse: collapse !important; width: 100% !important; margin-bottom: 0 !important; border-style: hidden !important; }
 #arbi-monitor-table th, #arbi-monitor-table td { border: 1px solid #dcdcdc !important; }
 
@@ -3663,9 +3724,18 @@ div[data-testid="stNumberInput"] input { text-align: right !important; font-weig
 div.element-container:has(.bot-panel-marker) { display: none !important; }
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) {
 background-color: #ffffff;
-border: 1px solid #dcdcdc;
+/* 바깥 프레임을 표(.main-table)와 같은 표준 두께·색(2px #b5b5b5)으로 맞춘다.
+   border 를 2px 로 키우면 박스 안쪽 폭이 줄어 컬럼이 밀리고 마스터 토글과의 x정렬이 어긋난다.
+   -> 1px 자리는 투명 border 로 남겨 레이아웃을 그대로 두고, 프레임은 outline 으로 그린다.
+      (outline 은 레이아웃에 영향이 없고 border-radius 를 그대로 따라간다) */
+border: 1px solid transparent;
+outline: 2px solid #b5b5b5;
+outline-offset: -2px;
 border-radius: 12px;
 padding: 10px 0 !important;
+/* 제목행의 회색 띠(::before, z-index:-1)가 이 패널의 흰 배경 위에 그려지도록
+   패널을 독립 스택 컨텍스트로 만든다. 없으면 흰 배경이 띠를 덮어버린다. */
+isolation: isolate;
 }
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) div[data-testid="stHorizontalBlock"] {
 border-bottom: none !important;
@@ -3688,14 +3758,46 @@ position: absolute;
 left: 0;
 bottom: -12px;
 width: 100%;
-height: 2px;
-background-color: #eaeaea;
+/* 다른 표의 내부선과 같은 굵기·색으로 통일 (.main-table th/td = 1px solid #dcdcdc).
+   기존 2px #eaeaea 는 눈에 띄게 더 두꺼웠다. */
+height: 1px;
+background-color: #dcdcdc;
 }
+
+/* 2-1. 제목행 배경: 다른 표의 th 와 같은 회색(#f2f2f2) 띠
+   ⚠️ ':first-of-type' 은 코인 행까지 전부 걸리므로(각 행이 부모 안에서 유일한 stHorizontalBlock)
+      제목행 전용 표식(.bot-header-marker)으로만 지목한다.
+   - 회색 띠는 ::before 로 그린다. 제목행의 박스는 실제로 띠 전체를 덮지 않기 때문.
+   - top 은 넉넉히 음수로 빼고 패널의 overflow:hidden 이 위쪽을 잘라내게 한다 (패널 안쪽 끝에 딱 맞음).
+   - bottom 은 밑줄(::after)과 '같은 -12px' 을 써서 띠 아래끝이 밑줄에 정확히 맞닿게 한다. */
+div.element-container:has(.bot-header-marker) { display: none !important; }
+div[data-testid="stHorizontalBlock"]:has(.bot-header-marker) { position: relative !important; }
+div[data-testid="stHorizontalBlock"]:has(.bot-header-marker)::before {
+content: "";
+position: absolute;
+left: 0;
+right: 0;
+top: -40px;
+bottom: -12px;
+background-color: #f2f2f2;
+z-index: -1;
+}
+
 
 /* 💡 맨 아래 나타난 알 수 없는 테두리(가로선) 찌꺼기 완벽 제거 */
 div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) > div {
 border-bottom: none !important;
 box-shadow: none !important;
+}
+
+/* ⚠️ 여기에 ':last-of-type' / '> div:last-child > div' 로 구분선을 지우는 규칙을 넣지 말 것.
+   Streamlit 구조상 각 코인 행이 자기 부모 안에서 유일한 stHorizontalBlock 이라
+   ':last-of-type' 가 '마지막 한 줄'이 아니라 '모든 행'에 걸려 표 안의 선이 전부 사라진다.
+   둥근 모서리 밖으로 삐져나오는 선은 아래 overflow:hidden 으로만 처리한다. */
+
+/* 어떤 선이든 12px 둥근 모서리 밖으로는 나가지 못하게 클리핑 */
+div[data-testid="stVerticalBlock"]:has(> div.element-container .bot-panel-marker) {
+overflow: hidden !important;
 }
 
 /* 3. 2열(토글) 및 3열(코인명) 정렬 (하단 마스터행 제외) */
@@ -3785,11 +3887,25 @@ z-index: 50;
 }
 /* ==================================================================== */
 
-.sticky-log-wrapper { height: 400px !important; overflow-y: auto !important; border: none !important; margin-top: 5px; margin-bottom: 30px; position: relative; display: block; background: #fff; }
-#zappa-trade-log-table { border-collapse: collapse !important; width: 100%; border: none !important; }
-#zappa-trade-log-table th { position: sticky !important; top: 0px !important; background-color: #f2f2f2 !important; z-index: 1000 !important; border-bottom: 2px solid #ccc !important; border-top: 1px solid #dcdcdc !important; outline: none !important; }
-#zappa-trade-log-table td, #zappa-trade-log-table th { border-right: 1px solid #eaeaea; }
-#zappa-trade-log-table td { border-bottom: 1px solid #eaeaea; }
+/* 최근 매매로그 표: 바깥 프레임은 '스크롤 래퍼'가, 내부선은 표가 담당한다.
+   ⚠️ 프레임을 표(.main-table outline)에 걸면 표가 래퍼 안에서 스크롤되므로
+      제목행 위쪽·옆쪽 프레임이 스크롤에 밀려 보이지 않는다.
+      래퍼의 border 는 스크롤 영역 바깥이라 내용에 덮이지 않는다.
+   프레임 = 2px #b5b5b5 (다른 표와 동일) / 내부선 = 1px #dcdcdc (다른 표와 동일) */
+.sticky-log-wrapper { height: 400px !important; overflow-y: auto !important; border: 2px solid #b5b5b5 !important; border-radius: 12px !important; margin-top: 5px; margin-bottom: 30px; position: relative; display: block; background: #fff; }
+/* ⚠️ overflow:visible 필수 — .main-table 이 걸어둔 overflow:hidden 이 남아 있으면
+      제목행의 position:sticky 가 '스크롤 래퍼'가 아니라 '표' 기준으로 잡혀 고정이 풀린다.
+      (sticky 요소는 중간 조상에 overflow:hidden 이 있으면 그 안에서만 고정됨)
+      둥근 모서리 클리핑은 래퍼가 담당하므로 표에는 필요 없다. */
+#zappa-trade-log-table { border-collapse: collapse !important; width: 100%; border: none !important; outline: none !important; border-radius: 0 !important; overflow: visible !important; }
+/* 제목행 틀고정(엑셀 틀고정처럼 상시 노출).
+   ⚠️ 세로선은 '진짜 테두리'를 그대로 쓴다. box-shadow 로 그리면 collapse 테두리와 반올림이 달라
+      본문 세로선과 1px 어긋난다(실측 확인). 세로선은 제목행 안쪽 선이라 sticky 로 떠도 잘 따라온다.
+   ⚠️ 반면 '아래쪽 가로선'은 아래 행과 공유되는 선이라 행과 함께 밀려 사라진다.
+      그 한 줄만 inset box-shadow 로 보강한다. (1px #dcdcdc, 다른 내부선과 동일) */
+#zappa-trade-log-table thead th { position: sticky !important; top: 0px !important; background-color: #f2f2f2 !important; z-index: 1000 !important; border-top: none !important; outline: none !important; box-shadow: inset 0 -1px 0 #dcdcdc; }
+#zappa-trade-log-table td, #zappa-trade-log-table th { border-right: 1px solid #dcdcdc; }
+#zappa-trade-log-table td { border-bottom: 1px solid #dcdcdc; }
 #zappa-trade-log-table tr th:last-child, #zappa-trade-log-table tr td:last-child { border-right: none !important; }
 #zappa-trade-log-table tr th:first-child, #zappa-trade-log-table tr td:first-child { border-left: none !important; }
 
@@ -3810,11 +3926,24 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) {
     display: flex !important;
     align-items: center !important;
 
+    /* 🔑 로봇 + 뱃지의 공통 아랫변 기준값 (토글 컬럼 바닥 기준). 키우면 위로, 줄이면 아래로.
+       뱃지도 이 값을 따라가므로 둘의 아랫변은 항상 같은 높이를 유지한 채 함께 움직인다.
+       (0.5px -> -0.83px : 둘 다 1pt(≈1.33px) 아래로) */
+    --master-bottom: -0.83px;
+
+    /* 뱃지는 '행(row)' 기준, 로봇은 '토글 컬럼' 기준이라 기준면이 다르다.
+       행은 align-items:center 로 컬럼을 가운데 정렬하므로 행 바닥이 컬럼 바닥보다
+       (행높이-컬럼높이)/2 만큼 아래에 있다. 이 값으로 보정해 로봇 아랫변과 높이를 맞춘다.
+       ⚠️ 이 값은 '뱃지만' 움직인다 (로봇은 --master-bottom 을 따른다).
+          키우면 뱃지가 위로, 줄이면 아래로. (13px -> 16px : 뱃지 하단만 2pt(≈3px) 위로) */
+    --master-badge-gap: 16px;
+
     /* ❌ 범인: margin-top은 지우세요! (표까지 같이 아래로 밀어냅니다) */
     /* margin-top: 45px !important; */
 
-    /* ✅ 해결책: 물리적 공간은 냅두고 시각적으로만 아래로 끌어내리기 */
-    transform: translateY(30px) !important; /* 👈 숫자를 키울수록 아래로 훅훅 내려갑니다 */
+    /* ✅ 해결책: 물리적 공간은 냅두고 시각적으로만 아래로 끌어내리기
+       숫자를 키울수록 아래(표 쪽)로 내려가 하단 여백이 줄어든다 */
+    transform: translateY(42px) !important;
     position: relative !important;
     z-index: 99 !important; /* 혹시나 표 뒤로 숨지 않게 층수를 높여줍니다 */
 }
@@ -3825,11 +3954,24 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="c
     padding: 0 !important;
 }
 
-/* 2-1. 뱃지는 마지막 컬럼에서 우측 끝 정렬 (컬럼보다 넓으면 왼쪽 빈 컬럼 위로 넘쳐 표시) */
+/* 2-1. 뱃지(ACTIVE/STANDBY)는 '행(row)'의 오른쪽 끝에 절대 고정한다.
+   ⚠️ 마지막 컬럼 안에서 justify-content:flex-end 로 맞추면, 컬럼 폭이 비율(%)이라
+      창 크기에 따라 끝선이 아래 표와 어긋난다.
+   -> 행 자체가 표와 같은 폭이므로 행 기준 right:0 으로 두면 표 우측 끝선과 항상 일치한다. */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="column"]:last-child {
-    display: flex !important;
-    justify-content: flex-end !important;
-    align-items: center !important;
+    position: static !important;   /* 절대배치 기준을 컬럼이 아닌 행으로 올린다 */
+}
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) div[data-testid="stElementContainer"]:has(.master-badge-box),
+div[data-testid="stHorizontalBlock"]:has(.master-badge-box) div.element-container:has(.master-badge-box) {
+    position: absolute !important;
+    right: 0 !important;
+    top: auto !important;
+    /* 로봇과 아랫변을 맞춘다: 로봇 기준값 + 기준면 차이 보정 */
+    bottom: calc(var(--master-bottom, -2.5px) + var(--master-badge-gap, 13px)) !important;
+    transform: none !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* 3. 뱃지 기본 디자인 */
@@ -3842,14 +3984,60 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) > div[data-testid="c
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* 4. 토글 스위치 크기 조절 */
+/* 4. 토글 스위치 크기 조절 + 세로 미세조정
+   ⚠️ transform 은 레이아웃 높이를 바꾸지 않으므로, 컬럼 바닥에 붙어있는 로봇은 그대로 두고
+      토글만 시각적으로 움직인다. (값을 키우면 내려가고, 줄이면 올라간다)
+   ⚠️ scale(1.3) 뒤에 오는 translateY 는 1.3배로 확대 적용된다.
+      실제 화면 이동량 = 값 x 1.3  ->  3pt(4px) 올리려면 4/1.3 = 3.08 만큼 빼야 한다.
+      (6px -> 2.92px : 3pt 위로, -> 0.87px : 추가로 2pt 위로) */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-testid="stCheckbox"] {
-    transform: scale(1.3) translateY(2px) !important;
+    transform: scale(1.3) translateY(0.87px) !important;
 }
 
 /* 5. 활성화(ON) 트랙 색상: 기본 빨강 -> 딥파스텔 블루 (잔액숨김 토글과 동일) */
 div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="checkbox"]:has(input:checked) > div:first-child {
     background-color: #7fb5e9 !important;
+}
+
+/* 6. 로봇 아이콘: 토글과 '같은 컬럼'에 절대배치해 간격을 px 로 고정
+   ⚠️ 이전에는 로봇을 옆 컬럼(c_robot)에 두고 margin-left:-50px 로 당겼는데,
+      Streamlit 컬럼 폭은 창 크기에 따라 % 로 변하므로 창을 줄이면 겹치고 늘리면 벌어졌다.
+   -> 토글과 같은 컬럼 안에서 position:absolute 로 띄우면 컬럼 폭과 무관하게 항상 같은 간격.
+      left  : 토글 왼쪽 끝 ~ 로봇 왼쪽 끝까지의 고정 거리(px). 간격을 넓히려면 이 값을 키운다.
+      top   : 토글 대비 세로 위치. 위로 올리려면 % 를 줄인다. */
+div[data-testid="column"]:has(.master-robot-abs) {
+    position: relative !important;
+    overflow: visible !important;
+}
+/* 로봇을 감싼 element-container 를 컬럼 흐름에서 완전히 빼고(absolute) 컬럼과 같은 크기로 덮어씌운다.
+   ⚠️ 흐름에 남겨두면 컬럼 높이가 늘어나 top:50% 기준선이 내려가고 로봇이 표 위로 꺼진다.
+   ⚠️ 컬럼을 덮으므로 pointer-events:none 필수 — 없으면 토글이 클릭되지 않는다. */
+div[data-testid="column"]:has(.master-robot-abs) div[data-testid="stElementContainer"]:has(.master-robot-abs),
+div[data-testid="column"]:has(.master-robot-abs) div.element-container:has(.master-robot-abs) {
+    position: absolute !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+}
+.master-robot-abs {
+    position: absolute !important;
+    left: 62px;                  /* 토글과의 가로 간격 (창 크기와 무관하게 고정) */
+    /* 세로: 토글 컬럼 바닥 기준. 뱃지는 행 바닥 기준이라 기준면이 13px 어긋나는데,
+       그 차이는 뱃지 쪽에서 --master-badge-gap 으로 보정한다.
+       따라서 값 조정은 행 규칙의 --master-bottom 한 곳만 고치면 둘이 함께 움직인다. */
+    bottom: var(--master-bottom, -2.5px);
+    transform: none;
+    /* ⚠️ Streamlit 기본 img{max-width:100%} 때문에 좁은 컬럼 안에서 로봇이 축소된다 -> 해제 */
+    width: 55px !important;
+    max-width: none !important;
+    min-width: 55px !important;
+    height: auto !important;
+    pointer-events: none;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -3910,7 +4098,7 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="check
         # f-string 적용으로 파이썬 변수가 HTML 안에 실시간 반영됩니다.
         market_mood_html = f"""
 <details class="zappa-arbi-details" style="margin-top: 15px; margin-bottom: 25px;">
-<summary class="zappa-arbi-summary">💡 ZAPPA Bot 장세 판단 기준 및 추천 타겟<span style="float: right; font-size: 13px; font-weight: 800; color: {mood_color}; background: {mood_bg}; padding: 3px 12px; border-radius: 6px; border: 1px solid {mood_border}; margin-top: -2px;">[현재] {mood_badge} <span style="color:#888; font-weight:normal; margin: 0 4px;">→</span> 🎯 [추천] {mood_rec}</span></summary>
+<summary class="zappa-arbi-summary">💡 ZAPPA Bot 장세 판단 기준 및 추천 타겟<span style="margin-left: auto; margin-right: 14px; font-size: 13px; font-weight: 800; color: {mood_color}; background: {mood_bg}; padding: 3px 12px; border-radius: 6px; border: 1px solid {mood_border}; margin-top: -2px;">[현재] {mood_badge} <span style="color:#888; font-weight:normal; margin: 0 4px;">→</span> 🎯 [추천] {mood_rec}</span></summary>
 <div style="display: flex; padding: 25px; align-items: stretch;">
 
 <div style="flex: 1; padding-right: 20px; border-right: 1.5px solid #f0f0f0; display: flex; flex-direction: column;">
@@ -3964,10 +4152,12 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="check
         with c_toggle:
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             st.toggle("run_master", key="main_bot_toggle", label_visibility="collapsed", on_change=sync_main_toggle)
+            # 💡 로봇은 토글과 같은 컬럼에 둔다 (절대배치). 간격 조정은 CSS의 .master-robot-abs { left } 값으로.
+            st.markdown(f"<img class='master-robot-abs' src='{r_src}'>", unsafe_allow_html=True)
 
+        # c_robot 컬럼은 비워둔다 — 컬럼 개수/비율은 코인 행과 맞춰야 토글 x좌표가 일치하므로 지우면 안 된다.
         with c_robot:
-            # margin-left 음수값을 키울수록 로봇이 토글 쪽으로 더 붙는다 (여백 미세 조정용)
-            st.markdown(f"<div style='display:flex; justify-content:flex-start; margin-left:-50px;'><img src='{r_src}' style='width:55px;'></div>", unsafe_allow_html=True)
+            st.empty()
 
         with c_badge:
             if st.session_state.get('main_bot_toggle', True):
@@ -4014,12 +4204,14 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="check
             st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
             
             cols_h = st.columns(c_ratio)
+            # 💡 제목행 전용 표식 — CSS 에서 이 행에만 회색 배경 띠를 깔기 위한 앵커 (표식 자체는 숨김 처리)
+            cols_h[0].markdown("<span class='bot-header-marker'></span>", unsafe_allow_html=True)
             h_names = ["", " ", "코인명", "누적거래 / 승률", "🎯 진입목표 [ENTRY]", "🏁 청산목표 [EXIT]", "⚓ 건당 거래금액", ""]
-            
+
             for h_col, name in zip(cols_h, h_names):
-                if name: 
+                if name:
                     h_col.markdown(f"""
-<div style='text-align:center; transform: translateY(-12px); font-size:14px; font-weight:600; color:#31333F;'>{name}</div>
+<div style='text-align:center; transform: translateY(-17.5px); font-size:14px; font-weight:600; color:#31333F;'>{name}</div>
 """, unsafe_allow_html=True)
             
             st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
@@ -4064,7 +4256,7 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="check
                     
                 with c_b5: 
                     curr_amt = st.session_state.get(f"amt_{coin}", 3000000)
-                    str_amt = st.text_input(f"in_amt_{coin}", value=f"{curr_amt:,}", key=f"amt_str_{coin}", label_visibility="collapsed", disabled=not is_active, on_change=save_bot_settings)
+                    str_amt = st.text_input(f"in_amt_{coin}", value=f"{curr_amt:,}", key=f"amt_str_{coin}", label_visibility="collapsed", disabled=not is_active, on_change=format_amt_input, args=(coin,))
                     try: 
                         st.session_state[f"amt_{coin}"] = int(str_amt.replace(",", ""))
                     except ValueError: 
@@ -4079,7 +4271,30 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) [data-baseweb="check
         components.html("""
 <script>
 const parentDoc = window.parent.document;
+
+/* 💡 진입목표/청산목표 슬라이더의 채워진 선 색을 토글과 같은 파스텔 하늘색으로 교체.
+   Streamlit 기본 primaryColor(#FF4B4B)가 트랙의 linear-gradient 안에 박혀 있어서
+   CSS 의 background-color 로는 덮이지 않는다(그라데이션이 우선).
+   그렇다고 background 를 통째로 덮으면 '채워진 구간/빈 구간' 2색 구분이 사라진다.
+   -> 계산된 그라데이션 문자열에서 빨강 색값만 치환하고 정지점(%)은 그대로 둔다.
+      슬라이더를 움직이면 정지점이 바뀌므로, 매번 인라인 값을 지우고 다시 계산한다. */
+function recolorSliders() {
+    const RED = 'rgb(255, 75, 75)';
+    const NEW = 'rgb(127, 181, 233)';
+    parentDoc.querySelectorAll('div[data-baseweb="slider"] div').forEach(el => {
+        const prev = el.style.getPropertyValue('background-image');
+        if (prev) el.style.removeProperty('background-image');
+        const bg = window.parent.getComputedStyle(el).backgroundImage;
+        if (bg && bg.indexOf('linear-gradient') !== -1 && bg.indexOf(RED) !== -1) {
+            el.style.setProperty('background-image', bg.split(RED).join(NEW), 'important');
+        } else if (prev) {
+            el.style.setProperty('background-image', prev, 'important');
+        }
+    });
+}
+
 function overrideStreamlitDOM() {
+recolorSliders();
 const table = parentDoc.getElementById('zappa-trade-log-table');
 if (table) {
     let parentEl = table.parentElement;
@@ -4230,7 +4445,7 @@ P_net = Amount × (R_actual / 100)
         # 💡 [패치] 테이블 바로 위: 좌측(버튼)과 우측(환율)을 동일한 선상에 배치
         st.markdown(f"""
 <div style='display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; margin-top: 10px;'>
-<div id='premium-update-btn' style='cursor: pointer; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 8px; padding: 10px 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: background-color 0.2s; width: max-content;'>
+<div id='premium-update-btn' style='cursor: pointer; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 8px; padding: 10px 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: background-color 0.2s; width: max-content; transform: translateY(1.33px);'>
 <div style='display:flex; align-items:center; justify-content:center; gap:1.5px; font-size: 13.5px; font-weight: 800; color: #111; margin-bottom: -2px;'>
 <span style='font-size:13px; color:#4a90e2;'>🔄</span>KimChi PREMIUM
 </div>
