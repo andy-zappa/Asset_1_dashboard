@@ -835,9 +835,12 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
 <div style='margin-top: 20px;'>
     <div style='display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; margin-bottom: 0px;'>
         <img src='{r_src}' style='width: 63px; display: block; margin-bottom: 0px; margin-left: 2px;'>
-        <div id='unified-update-btn' style='text-align: right; font-family: sans-serif; padding-bottom: 0px; margin-bottom: 2px; cursor: pointer;' title='클릭하여 데이터 최신화'>
-            <div style='font-size: 11px; color: #111111; font-weight: 400; letter-spacing: 0.5px; margin-bottom: 2px; position: relative; top: 2px; padding-right: 7px;'>🔄 UPDATE</div>
-            <div style='font-size: 11px; font-weight: 400; color: #111111; letter-spacing: 0.1px; padding-right: 7px;'>{st.session_state.last_sync_time}</div>
+        <div style='display: flex; flex-direction: column; align-items: flex-end; gap: 6px;'>
+            <div id='zappa-master-toggle' title='계좌 카드 전체 펼치기 / 접기'>&gt;</div>
+            <div id='unified-update-btn' style='text-align: right; font-family: sans-serif; padding-bottom: 0px; margin-bottom: 2px; cursor: pointer;' title='클릭하여 데이터 최신화'>
+                <div style='font-size: 11px; color: #111111; font-weight: 400; letter-spacing: 0.5px; margin-bottom: 2px; position: relative; top: 2px; padding-right: 7px;'>🔄 UPDATE</div>
+                <div style='font-size: 11px; font-weight: 400; color: #111111; letter-spacing: 0.1px; padding-right: 7px;'>{st.session_state.last_sync_time}</div>
+            </div>
         </div>
     </div>
 </div>
@@ -911,6 +914,29 @@ transition: transform 0.2s ease; display: inline-block;
 .zappa-expander-dark .zappa-summary { color: #aaa; }
 .zappa-expander-dark .zappa-summary::after { color: #666; }
 .zappa-content { padding: 0px 14px 14px 14px; cursor: pointer; }
+
+/* 🔑 사이드바 상단 마스터 토글 — 계좌 카드 5개(절세/일반/암호화폐/알고리즘/차익거래)를 한 번에 펼치고 접는다.
+   화살표 모양과 90도 회전은 카드의 .zappa-summary::after 와 같은 값으로 맞춰 동일한 컨트롤로 읽히게 한다.
+   ⚠️ 마크업상 unified-update-btn 바깥의 형제로 둬야 한다 — 안에 넣으면 클릭이 데이터 갱신까지 같이 실행된다. */
+#zappa-master-toggle {
+font-family: monospace; font-weight: 900; font-size: 15px; color: #aaa;
+cursor: pointer; user-select: none; line-height: 1;
+padding: 4px 9px; background: none; border: none;
+transition: transform 0.2s ease, color 0.2s ease;
+/* 🔑 margin-right -4px : 아래 카드들의 '>' 와 세로선을 맞추는 값.
+   카드 '>' 우측끝 = 사이드바 우측(R) - .zappa-expander border 1px - .zappa-summary padding 14px = R-15
+   토글 '>' 우측끝 = (R - 헤더행 padding 10px) + 4px - 토글 padding 9px = R-15
+   흰 박스를 없애면서 테두리 1px 이 빠졌으므로 -5px -> -4px 로 재계산한 값이다.
+   ⚠️ 토글 padding(9px) 이나 헤더행 padding(10px) 을 바꾸면 이 값도 다시 계산해야 한다.
+   padding 은 눌리는 영역 확보용으로 남겼다 — 화살표만 두면 클릭 범위가 9x15px 로 너무 좁다. */
+margin-right: -4px;
+/* 🔑 세로 위치 미세조정 : 2pt(≈2.67px) 아래로. 숫자를 키우면 더 내려간다.
+   ⚠️ transform 을 쓰면 안 된다 — .open 의 rotate(90deg) 가 같은 속성이라 서로 덮어쓴다.
+      position:relative + top 은 회전과 독립이고 레이아웃에도 영향이 없어 UPDATE 가 밀리지 않는다. */
+position: relative; top: 2.67px;
+}
+#zappa-master-toggle:hover { color: #111111; }
+#zappa-master-toggle.open { transform: rotate(90deg); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1307,6 +1333,35 @@ else { sessionStorage.setItem(id, 'closed'); }
 });
 }
 setInterval(maintainExpanderState, 300);
+
+// 🔑 상단 마스터 토글: 사이드바 카드 6개를 한 번에 펼치고 접는다.
+//    총 운용자산(zappa-exp-total) 포함 — 검은 카드도 함께 움직인다.
+const MASTER_IDS = ['zappa-exp-total', 'zappa-exp-tax', 'zappa-exp-gen', 'zappa-exp-cryp', 'zappa-exp-quant', 'zappa-exp-arbi'];
+function syncMasterToggle() {
+const btn = parentDoc.getElementById('zappa-master-toggle');
+if (!btn) return;
+const targets = MASTER_IDS.map(id => parentDoc.getElementById(id)).filter(el => el);
+if (!targets.length) return;
+
+if (!btn.hasAttribute('data-master-binded')) {
+btn.setAttribute('data-master-binded', 'true');
+btn.addEventListener('click', () => {
+const list = MASTER_IDS.map(id => parentDoc.getElementById(id)).filter(el => el);
+if (!list.length) return;
+// 하나라도 닫혀 있으면 전부 열고, 전부 열려 있으면 전부 닫는다.
+const shouldOpen = !list.every(d => d.open);
+// ⚠️ sessionStorage 를 여기서 직접 써야 한다. details 의 toggle 이벤트는 비동기라서
+//    그것만 믿으면 maintainExpanderState(300ms) 가 먼저 돌아 옛 값으로 되돌릴 수 있다.
+list.forEach(d => {
+d.open = shouldOpen;
+sessionStorage.setItem(d.id, shouldOpen ? 'open' : 'closed');
+});
+});
+}
+// 카드를 개별로 열고 닫아도 화살표가 실제 상태를 따라가게 한다.
+btn.classList.toggle('open', targets.every(d => d.open));
+}
+setInterval(syncMasterToggle, 300);
 </script>
 """, height=0)
  
@@ -3893,6 +3948,22 @@ z-index: 50;
       래퍼의 border 는 스크롤 영역 바깥이라 내용에 덮이지 않는다.
    프레임 = 2px #b5b5b5 (다른 표와 동일) / 내부선 = 1px #dcdcdc (다른 표와 동일) */
 .sticky-log-wrapper { height: 400px !important; overflow-y: auto !important; border: 2px solid #b5b5b5 !important; border-radius: 12px !important; margin-top: 5px; margin-bottom: 30px; position: relative; display: block; background: #fff; }
+/* 🔑 '조회 기간' 라벨 + 날짜창을 한 덩어리로 표 쪽에 붙여 내리고, 폭을 px 로 고정한다.
+   ⚠️ 선택자 주의 — Streamlit 1.55 는 컬럼 test id 가 "stColumn" 이다.
+      예전 div[data-testid="column"]:has(...) 선택자는 매칭이 안 돼 규칙 전체가 죽어 있었다
+      (static/*.js 실측: "stColumn" O / "column" 은 checkbox.js 의 다른 용도).
+      -> 위젯 key 기반 클래스 .st-key-arbi_log_date 를 쓴다 (key="arbi_log_date" 와 연동).
+   ⚠️ date_input 은 label_visibility="collapsed" 필수 — "hidden" 은 라벨만 숨기고
+      약 28px 공간을 그대로 예약해서 라벨과 박스 사이가 벌어진다.
+   🔒 width 를 px 로 못박아 해상도/창 크기에 따라 박스가 늘어나지 않게 한다.
+      transform 은 레이아웃에 영향이 없어 표는 제자리에 두고 날짜창만 내려간다.
+      라벨 div 에도 같은 translateY 를 줘야 둘이 붙은 채로 함께 내려간다.
+   📐 translateY 15px 의 근거 — 표와의 하단 여백을 KimChi PREMIUM 행에 맞춘 값(화면 실측 기준).
+      실측(26/09/30 캡처): KimChi PREMIUM 20px / ACTIVE 22px / 날짜창 22px -> 둘을 2px 씩 더 내려 20px 로 통일.
+      기준을 바꾸려면 이 값과 ACTIVE 행의 translateY(3959행) 를 같은 방향으로 움직인다. */
+.st-key-arbi_log_date { width: 210px !important; min-width: 0 !important; margin-left: auto !important; margin-right: 2px !important; transform: translateY(15px) !important; }
+.st-key-arbi_log_date div[data-testid="stDateInput"] { width: 100% !important; }
+.st-key-arbi_log_date input { text-align: right !important; padding-right: 12px !important; }
 /* ⚠️ overflow:visible 필수 — .main-table 이 걸어둔 overflow:hidden 이 남아 있으면
       제목행의 position:sticky 가 '스크롤 래퍼'가 아니라 '표' 기준으로 잡혀 고정이 풀린다.
       (sticky 요소는 중간 조상에 overflow:hidden 이 있으면 그 안에서만 고정됨)
@@ -3942,8 +4013,10 @@ div[data-testid="stHorizontalBlock"]:has(.master-badge-box) {
     /* margin-top: 45px !important; */
 
     /* ✅ 해결책: 물리적 공간은 냅두고 시각적으로만 아래로 끌어내리기
-       숫자를 키울수록 아래(표 쪽)로 내려가 하단 여백이 줄어든다 */
-    transform: translateY(42px) !important;
+       숫자를 키울수록 아래(표 쪽)로 내려가 하단 여백이 줄어든다
+       42px -> 44px : 하단 여백을 KimChi PREMIUM 행(실측 20px)에 맞춤
+       44px -> 42.67px : 뱃지 배경이 검은색이라 같은 여백도 더 좁아 보인다. 착시 보정으로 1pt(1.33px) 위로 */
+    transform: translateY(42.67px) !important;
     position: relative !important;
     z-index: 99 !important; /* 혹시나 표 뒤로 숨지 않게 층수를 높여줍니다 */
 }
@@ -4564,16 +4637,15 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
 
         st.markdown("<hr style='border:0; border-top:1px solid #eee; margin: 40px 0 0px 0;'>", unsafe_allow_html=True)
 
-        col_log_title, col_date = st.columns([7.85, 2.15])
-        
-        with col_log_title:
-            st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 20px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
-            
+        st.markdown("<div class='sub-title' style='margin-bottom: 12px; margin-top: 20px;'>📝 최근 매매 로그 (Trade History)</div>", unsafe_allow_html=True)
+
+        col_log_spacer, col_date = st.columns([7.85, 2.15])
+
         with col_date:
             st.markdown("<span class='log-date-marker'></span>", unsafe_allow_html=True)
-            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-bottom:-35px; margin-right:2px;'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-top:45px; margin-bottom:1px; margin-right:2px; transform:translateY(15px);'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
             from datetime import timedelta
-            st.date_input("date_input_hidden_label", value=[datetime.today() - timedelta(days=7), datetime.today()], key="arbi_log_date", label_visibility="hidden")
+            st.date_input("date_input_hidden_label", value=[datetime.today() - timedelta(days=7), datetime.today()], key="arbi_log_date", label_visibility="collapsed")
 
         log_html = """<div class='sticky-log-wrapper'><table class='main-table' id='zappa-trade-log-table'><thead><tr><th class='sortable' title='클릭하여 정렬'>코인명 ↕</th><th class='sortable' title='클릭하여 정렬'>진입 일자 ↕</th><th class='sortable' title='클릭하여 정렬'>진입 시간 ↕</th><th class='sortable' title='클릭하여 정렬'>청산 일자 ↕</th><th class='sortable' title='클릭하여 정렬'>청산 시간 ↕</th><th class='sortable' title='클릭하여 정렬'>진입 Gap(%) ↕</th><th class='sortable' title='클릭하여 정렬'>청산 Gap(%) ↕</th><th class='sortable' title='클릭하여 정렬'>거래 금액 ↕</th><th class='sortable' title='클릭하여 정렬'>실현 손익 ↕</th></tr></thead><tbody>"""
         for log in mock_logs:
