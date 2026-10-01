@@ -1272,38 +1272,54 @@ border-color: #bbbbbb !important;
 
         components.html("""
 <script>
+// 💡 [패치] 사이드바 + 메인 상세페이지 전역에서 cursor:pointer 가 적용된 모든 요소
+//          (= 손가락 커서로 바뀌는 클릭 가능 영역)에 hover 시
+//          '공부하는 여자아이' 이미지(sealogo2.gif) 전환을 적용.
+//          이벤트 위임을 document.body 레벨로 끌어올려 사이드바뿐 아니라
+//          좌측 메뉴 클릭 후 노출되는 상세 화면까지 모두 커버한다.
 const parentDoc = window.parent.document;
-function bindGirlHover() {
-// 공부하는 여자아이 이미지 박스 찾기
+const parentWin = window.parent;
+
+function hasPointerCursor(el, boundary) {
+while (el && el !== boundary && el.nodeType === 1) {
+try {
+const cursor = parentWin.getComputedStyle(el).cursor;
+if (cursor === 'pointer') return true;
+} catch (e) { /* 일부 노드(SVG 내부 등)에서 예외 가능 - 무시 */ }
+el = el.parentElement;
+}
+return false;
+}
+
+const bindInterval = setInterval(() => {
+const body = parentDoc.body;
+if (!body) return;
 const girlBox = parentDoc.querySelector('.seal-hover-box');
 if (!girlBox) return;
-// 호버 이벤트를 연결할 타겟 ID 목록
-const targetIds = [
-'card-total', 'card-pension', 'card-general',
-'card-crypto', 'card-quant', 'card-arbi', 'unified-update-btn'
-];
-let elements = targetIds.map(id => parentDoc.getElementById(id)).filter(el => el);
+if (body.hasAttribute('data-girl-delegated')) {
+clearInterval(bindInterval);
+return;
+}
+body.setAttribute('data-girl-delegated', 'true');
 
-// Admin 버튼 찾기 (anchor를 통해 추적)
-const adminAnchor = parentDoc.getElementById('admin-btn-anchor');
-if (adminAnchor) {
-const adminContainer = adminAnchor.closest('.element-container').nextElementSibling;
-if (adminContainer) {
-const adminBtn = adminContainer.querySelector('button');
-if (adminBtn) elements.push(adminBtn);
-}
-}
-// 각 요소에 마우스를 올리고 내릴 때 이벤트 부여
-elements.forEach(el => {
-if (!el.hasAttribute('data-girl-binded')) {
-el.setAttribute('data-girl-binded', 'true');
-el.addEventListener('mouseenter', () => girlBox.classList.add('active-girl'));
-el.addEventListener('mouseleave', () => girlBox.classList.remove('active-girl'));
+// mouseover 는 버블링되므로 body 에 1번만 바인딩해도 사이드바/메인 상세페이지의
+// 모든 하위 요소를 감지한다. 커서가 pointer 인 요소(또는 조상) 위면 sealogo2,
+// 그 외면 sealogo1 로 복귀.
+body.addEventListener('mouseover', (e) => {
+if (hasPointerCursor(e.target, body)) {
+girlBox.classList.add('active-girl');
+} else {
+girlBox.classList.remove('active-girl');
 }
 });
-}
-// 스트림릿 렌더링 지연을 대비하여 1초마다 체크 후 바인딩
-setInterval(bindGirlHover, 1000);
+
+// 창(문서) 자체를 완전히 벗어나면 안전하게 원복
+body.addEventListener('mouseleave', () => {
+girlBox.classList.remove('active-girl');
+});
+
+clearInterval(bindInterval);
+}, 500);
 </script>
 """, height=0)
 
@@ -1668,11 +1684,13 @@ setInterval(syncMasterToggle, 300);
            
                 total_sum = df['자산'].sum()
                 labels, parents, values = ["포트폴리오"], [""], [0]
-                colors, texts, custom_data = ["#1e222d"], [""], [[0,0,0,0,0,0,0]]
+                # 💡 [패치] customdata 는 길이 8 로 통일 ([pct, pnl, rate, qty, buy, cur, 전일비, is_cash_flag]).
+                #           parent/root 는 자리채움 0 으로, 리프만 실제 지표를 담는다.
+                colors, texts, custom_data = ["#1e222d"], [""], [[0,0,0,0,0,0,0,0]]
 
                 for cat in df['카테고리'].unique():
                     labels.append(cat); parents.append("포트폴리오"); values.append(0)
-                    colors.append("#2a2e39"); texts.append(f"<b style='font-size:14px; color:#e2e8f0;'>{cat}</b>"); custom_data.append([0,0,0,0,0,0,0])
+                    colors.append("#2a2e39"); texts.append(f"<b style='font-size:14px; color:#e2e8f0;'>{cat}</b>"); custom_data.append([0,0,0,0,0,0,0,0])
 
                 for _, r in df.iterrows():
                     labels.append(r['종목명']); parents.append(r['카테고리']); values.append(r['자산'])
@@ -1687,7 +1705,10 @@ setInterval(syncMasterToggle, 300);
                     t_asset = f"₩{int(r['자산']):,}"
                     texts.append(f"<span style='font-size:13.5px;'>{nm_wrap}</span><br><span style='font-size:12.5px;'>{t_rate}</span><br><span style='font-size:11.5px; opacity:0.8;'>{t_asset}</span>")
                     pct = (r['자산'] / total_sum) * 100 if total_sum > 0 else 0
-                    custom_data.append([pct, r['평가손익'], r['수익률'], r.get('수량',0), r.get('매입가',0), r.get('현재가',0), r['전일비']])
+                    # 💡 [패치] customdata 에 '카테고리 플래그(현금성=1, 일반=0)' 를 추가로 담아,
+                    #           JS 측에서 클릭 확대 시 메모 상세 렌더링(현금성은 간소화) 분기에 사용.
+                    is_cash_flag = 1 if r['카테고리'] == '현금성 자산' else 0
+                    custom_data.append([pct, r['평가손익'], r['수익률'], r.get('수량',0), r.get('매입가',0), r.get('현재가',0), r['전일비'], is_cash_flag])
 
                 fig = go.Figure(go.Treemap(
                     labels=labels, parents=parents, values=values, text=texts, textinfo="text",
@@ -1741,10 +1762,110 @@ setInterval(syncMasterToggle, 300);
 하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{gen_dn}</span> 종목
 </div>
 """, unsafe_allow_html=True)
-           
+
                 st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
                 if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), width='stretch')
                 st.markdown("</div>", unsafe_allow_html=True)
+
+            # 💡 [패치] Treemap 종목 클릭(드릴다운/확대) 시 '메모 상세'를 셀 안에 동적으로 표시.
+            #           - 클릭 전: 셀 텍스트 = 기존 요약(종목명/전일비/자산) 그대로
+            #           - 리프 클릭(확대): 해당 리프 텍스트에 메모(총자산·비중·평가손익·등락률·주식수·매입/현재)를
+            #             큰 폰트로 추가. hovertemplate 과 동일한 지표를 셀 안에 노출.
+            #           - 리프 재클릭(드릴아웃) 또는 parent/root 클릭: 메모 제거하고 요약만 남김.
+            #           Python 측 customdata = [pct, pnl, rate, qty, buy, cur, 전일비, is_cash_flag(8번째)]
+            components.html("""
+<script>
+(function() {
+  const parentDoc = window.parent.document;
+  const parentWin = window.parent;
+
+  function buildMemoHTML(label, value, cd) {
+    const pct = Number(cd[0]) || 0;
+    const pnl = Number(cd[1]) || 0;
+    const rate = Number(cd[2]) || 0;
+    const qty = Number(cd[3]) || 0;
+    const buy = Number(cd[4]) || 0;
+    const cur = Number(cd[5]) || 0;
+    const d   = Number(cd[6]) || 0;
+    const isCash = (cd.length >= 8 && Number(cd[7]) === 1);
+    // 💡 셀 배경색(상승=#ff7675, 하락=#74b9ff 파스텔톤)과 겹치지 않도록
+    //    평가손익 글자는 '진하고 채도 높은 적/청'으로 교체 — 어느 배경 위에서도 가독성 확보.
+    const pnlColor = pnl > 0 ? '#B91C1C' : (pnl < 0 ? '#1E40AF' : '#e2e8f0');
+    // 등락률(당일)도 동일한 이유로 톤 차별화
+    const dColor   = d   > 0 ? '#B91C1C' : (d   < 0 ? '#1E40AF' : '#e2e8f0');
+    const sign = v => (v >= 0 ? '+' : '');
+    const fmtInt = v => Math.round(v).toLocaleString('en-US');
+    const qtyFmt = qty.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    const lines = [
+      `<b>총자산 :</b> ₩${fmtInt(value)} <span style='opacity:0.75;'>(비중 ${pct.toFixed(1)}%)</span>`
+    ];
+    if (!isCash) {
+      lines.push(`<b>평가손익 :</b> <span style='color:${pnlColor}; font-weight:700;'>${sign(pnl)}${fmtInt(pnl)}원 (${sign(rate)}${rate.toFixed(2)}%)</span>`);
+      lines.push(`<b>등락률 :</b> <span style='color:${dColor}; font-weight:700;'>${sign(d)}${d.toFixed(2)}%</span>`);
+      lines.push(`<b>주식수 :</b> ${qtyFmt}주`);
+      lines.push(`<b>매입 / 현재 :</b> ₩${fmtInt(buy)} / ₩${fmtInt(cur)}`);
+    }
+    // 셀이 커진 상태이므로 폰트 크기를 요약(13.5px)보다 확실히 키워 가독성 확보
+    return `<br><br><span style='font-size:17px; line-height:1.9;'>${lines.join('<br>')}</span>`;
+  }
+
+  function hookChart(div) {
+    if (div._memoHooked) return;
+    if (!div.data || !div.data[0] || div.data[0].type !== 'treemap') return;
+    if (typeof div.on !== 'function') return;
+    div._memoHooked = true;
+    // 최초 요약 텍스트(메모 없음) 스냅샷을 보관. 이후 매 클릭마다 이 베이스라인에서 재계산.
+    div._origTexts = Array.isArray(div.data[0].text) ? div.data[0].text.slice() : [];
+    div._currentExpandedLabel = null;
+
+    div.on('plotly_treemapclick', function(evt) {
+      if (!evt || !evt.points || !evt.points[0]) return;
+      const pt = evt.points[0];
+      const idx = pt.pointNumber;
+      const cd = pt.customdata;
+      const label = pt.label;
+      // 리프 판정: customdata 가 8칸이고 pct(=cd[0]) 가 0 보다 큼 (parent/root 는 전부 0)
+      const isLeaf = Array.isArray(cd) && cd.length >= 8 && Number(cd[0]) > 0;
+
+      // 항상 '요약만' 상태를 베이스라인으로 사용 — 이전 클릭의 메모는 전부 리셋됨
+      const newTexts = div._origTexts.slice();
+      let targetLevel = '';
+
+      if (isLeaf) {
+        if (div._currentExpandedLabel === label) {
+          // 같은 리프 재클릭 → 드릴아웃 + 메모 제거
+          div._currentExpandedLabel = null;
+          targetLevel = '';
+        } else {
+          // 신규 리프 클릭(또는 다른 리프 전환) → 드릴인 + 메모 추가
+          newTexts[idx] = div._origTexts[idx] + buildMemoHTML(label, pt.value, cd);
+          div._currentExpandedLabel = label;
+          targetLevel = label;
+        }
+      } else {
+        // 카테고리/루트 클릭 → 메모 제거하고 해당 노드 레벨로 이동(루트면 '')
+        div._currentExpandedLabel = null;
+        // 루트 자체를 클릭하면 label 이 루트명이므로 그대로 두면 루트 뷰 유지
+        targetLevel = label || '';
+      }
+
+      // 💡 text 와 level 을 '동기적'으로 함께 restyle — Plotly 의 기본 drill 동작과
+      //    경합(race) 하지 않도록 setTimeout 없이 즉시 적용. 두 속성을 하나의 restyle
+      //    호출로 묶어, 화면 확대/축소와 메모 표시/제거가 '동일 프레임'에서 처리됨.
+      try {
+        parentWin.Plotly.restyle(div, {text: [newTexts], level: targetLevel}, [0]);
+      } catch (e) { /* noop */ }
+    });
+  }
+
+  // 스트림릿 재렌더링 대비, 1초 간격으로 신규 treemap div 를 폴링하여 훅.
+  setInterval(function() {
+    parentDoc.querySelectorAll('.js-plotly-plot').forEach(hookChart);
+  }, 1000);
+})();
+</script>
+""", height=0)
 
     # ---------------------------------------------------------
     # 🍩 대시보드 전용: 파이차트 그리기
