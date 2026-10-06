@@ -1,3 +1,32 @@
+# =============================================================================
+#  ZAPPA ASSET DASHBOARD  --  파일 목차 (INDEX)
+# =============================================================================
+#  Streamlit 단일 파일 대시보드. 코드는 위에서 아래로 실행되며, 그 순서가 곧
+#  화면 렌더링 순서다. (실행문의 순서를 바꾸면 화면 배치가 바뀌므로 주의)
+#  * 각 섹션은 대괄호 라벨([SEC n] / [VIEW n/6])로 검색하면 바로 이동할 수 있다.
+#    아래 라인번호는 현재 시점 기준이며, 코드가 바뀌면 달라질 수 있다.
+# -----------------------------------------------------------------------------
+#  [0] 전역 초기화 / 라이브 데이터 ......................... L46
+#        get_live_data() : 외부 서버 실시간 시세 수신 + BTC gap 갱신
+#  [1] 로그인 / 인증 ....................................... L86
+#        Oracle 해시암호 -> Secrets 백업 -> bcrypt 폴백 / ?token= 자동로그인
+#  [2] 인증 성공 블록 시작 (이하 전체가 이 블록 안) ........ L136
+#  [3] Part 1 : 공통 설정 + 전역 CSS ....................... L145
+#        GUARANTEED_LOGOS (종목 -> 로고 도메인 매핑) ....... L304
+#  [4] 유틸리티 함수 카탈로그 .............................. L315
+#        포맷/변환 · UI콜백 · 로고 · 데이터로딩 함수 (상세는 해당 위치 주석)
+#  [5] 사이드바 (st.sidebar) ............................... L661
+#        계좌/종목 수 합산 · 원금기준 손익 · 알고리즘/차익거래 카드 · Admin/로그아웃
+#  [6] Admin 패널 (show_admin_page) ....................... L1445
+#        비밀번호 변경 / 계좌 설정 저장 (끝에서 st.stop 으로 뷰 렌더 차단)
+#  [7] 메인 뷰 분기 (st.session_state.current_view) ........ L1669
+#        [VIEW 1/6] 대시보드   (Treemap / Pie) ............. L1669
+#        [VIEW 2/6] 절세계좌   (DC / IRP / PENSION / ISA) .. L2281
+#        [VIEW 3/6] 일반계좌   (국내 / 해외 상세) .......... L2825
+#        [VIEW 4/6] 암호화폐   (실시간 시세 / 차트) ........ L3596
+#        [VIEW 5/6] 알고리즘   (Zappa Alpha 봇) ............ L3922
+#        [VIEW 6/6] 차익거래   (봇 컨트롤 / 매매 로그) ..... L4121
+# =============================================================================
 import streamlit as st
 import streamlit.components.v1 as components
 import json
@@ -282,6 +311,43 @@ setInterval(bindSidebarClicks, 300);
         "한국항공우주": "koreaaero.com", "POSCO홀딩스": "posco.co.kr", "셀트리온": "celltrion.com"
     }
 
+    # =========================================================
+    # [SEC 4] 유틸리티 함수 카탈로그  (이 구역: get_logo_html ~ get_crypto_data)
+    # ---------------------------------------------------------
+    #  (주의) 함수 정의 사이에 '실행문'이 끼어 있다. 함수만 따로 빼서
+    #         위로 옮기면 실행 순서가 깨지므로 반드시 제자리에 둘 것:
+    #           - session_state 기본값 초기화  (if 'sort_mode' not in ... 블록)
+    #           - data, g_data, is_oracle_online = fetch_hybrid_data()
+    #           - tot = normalize_insight(data)
+    #
+    #  [포맷/변환]
+    #    safe_float(val)        : 콤마/빈값/None 안전 float 변환 (의존성 없음)
+    #    fmt(v, sign, decimal)  : 천단위 숫자 포맷
+    #    fmt_h(v, ...)          : 잔액숨김(hide_balance) 시 '*' 마스킹 (fmt 의존)
+    #    fmt_p(v) / fmt_p1(v)   : 퍼센트 + 상승/하락 삼각형 (소수 2자리 / 1자리)
+    #    col(v)                 : 양수 red · 음수 blue · 0 gray 클래스
+    #    short_name(nm)         : 종목명 패스스루 (현재 원본 그대로 반환)
+    #    to_kst(time_str)       : 서버 시간문자열 -> 'MM/DD(요일), HH:MM:SS'
+    #
+    #  [UI 콜백]
+    #    toggle_usa_krw/usd()   : 해외 표기 KRW/USD 토글 (최소 1개는 항상 ON)
+    #    on_menu_change()       : 사이드바 라디오 선택 -> current_view 전환
+    #
+    #  [로고]
+    #    get_logo_html(nm)      : 종목명 -> 파비콘/이니셜 배지 HTML
+    #                             ※ 바로 위 GUARANTEED_LOGOS 딕셔너리에 의존.
+    #                               이 함수만 단독으로 위로 옮기지 말 것.
+    #
+    #  [데이터 로딩]  (@st.cache_data 캐시 적용)
+    #    fetch_hybrid_data()    : 절세/일반 계좌 JSON 로드 (+ 로컬 파일 백업)
+    #    normalize_insight(raw) : 총자산/총수익/수익률 집계 정규화 (safe_float 의존)
+    #    get_crypto_data()      : 암호화폐 시세 JSON 로드 (+ 로컬 파일 백업)
+    #
+    #  [중복 정의 주의]
+    #    render_bar(p, color)   : 가로 막대 HTML. 뷰별(절세계좌 / 일반계좌 /
+    #                             차익거래)로 각각 '별도 정의'되어 있다(동일 로직).
+    #                             하나로 합치려면 3곳 동일성 확인 후 진행할 것.
+    # =========================================================
     def get_logo_html(nm):
         if not nm or nm in ["예수금", "[ 합  계 ]", "현금성자산", "현금성자산(예수금)"]: return ""
    
@@ -1481,9 +1547,10 @@ setInterval(syncMasterToggle, 300);
         df_items = pd.DataFrame(curr_items)
         rename_map = {"name": "종목명", "ticker": "종목코드", "qty": "보유수량", "avg_price": "매입단가", "코드": "종목코드", "수량": "보유수량", "매입가": "매입단가", "매입금액": "매입단가"}
         if not df_items.empty: df_items.rename(columns=rename_map, inplace=True)
-        for col in ["종목명", "종목코드", "보유수량", "매입단가"]:
+        base_cols = ["종목명", "종목코드", "보유수량", "매입단가"] + (["매입환율"] if is_usa else [])
+        for col in base_cols:
             if col not in df_items.columns: df_items[col] = None
-        df_items = df_items[["종목명", "종목코드", "보유수량", "매입단가"]]
+        df_items = df_items[base_cols]
    
         if sel_key == "CRYPTO":
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0)
@@ -1496,7 +1563,9 @@ setInterval(syncMasterToggle, 300);
         else:
             df_items["보유수량"] = pd.to_numeric(df_items["보유수량"], errors='coerce').fillna(0.0).astype(float)
             df_items["매입단가"] = pd.to_numeric(df_items["매입단가"], errors='coerce').fillna(0.0).astype(float)
-       
+            if is_usa:
+                df_items["매입환율"] = pd.to_numeric(df_items["매입환율"], errors='coerce').fillna(0.0).astype(float)
+
             p_format = "%,.4f" if is_usa else "%,.0f"
             p_step = 0.0001 if is_usa else 1.0
        
@@ -1506,6 +1575,8 @@ setInterval(syncMasterToggle, 300);
                 "보유수량": st.column_config.NumberColumn("보유수량", format=p_format, step=p_step),
                 "매입단가": st.column_config.NumberColumn(f"매입단가 ({cash_unit})", format=p_format, step=p_step)
             }
+            if is_usa:
+                col_cfg["매입환율"] = st.column_config.NumberColumn("매입환율", format="%,.2f", step=0.01, help="평균 매입 환율 (원/USD). 환차손익 계산에 사용됩니다.")
        
         edited_df = st.data_editor(df_items, num_rows="dynamic", width='stretch', column_config=col_cfg, key=f"editor_{sel_key}")
    
@@ -1595,7 +1666,9 @@ setInterval(syncMasterToggle, 300);
        
         st.stop()
     # =========================================================
-    # 💡 대시보드 화면 (Treemap & Pie Chart)
+    # [VIEW 1/6] 대시보드  (Treemap & Pie Chart)
+    #   총자산 통합 Treemap(get_category 로 종목 분류) ·
+    #   카테고리별 비중 파이/영역 차트 · 계좌 요약
     # =========================================================
     if st.session_state.current_view == '대시보드':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
@@ -2204,6 +2277,11 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
     # =========================================================
     # ⏳ 절세계좌 대시보드 상세 페이지
     # =========================================================
+    # =========================================================
+    # [VIEW 2/6] 절세계좌  (DC / IRP / PENSION / ISA)
+    #   세제혜택 계좌별 보유종목 상세표 · 세율 정렬(tax_rate_for_sort)
+    #   · 비중 파이/영역 차트(render_interactive_pie_area)
+    # =========================================================
     elif st.session_state.current_view == '절세계좌':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
         FIXED_ORDER = ['DC', 'IRP', 'PENSION', 'ISA']
@@ -2221,7 +2299,19 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
        
             t_principal = sum(safe_float(cfg_data.get(f"{k}_PRINCIPAL", 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
             t_prof_actual = sum(safe_float(data[k].get('평가손익', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
-            t_buy_total = t_asset - t_prof_actual
+            # 절세계좌는 '매입금액' 필드가 없어 종목별로 매입금액을 집계한다.
+            #   종목 매입금액 = 평가금액(총자산) − 평가손익. 예수금/현금/합계 행은 제외(예수금 혼입 방지).
+            def _tax_buy_amount(acc_dict):
+                dets = acc_dict.get('상세', [])
+                if not isinstance(dets, list): return 0.0
+                s = 0.0
+                for it in dets:
+                    if not isinstance(it, dict): continue
+                    nm = str(it.get('종목명', ''))
+                    if nm == '[ 합  계 ]' or '예수금' in nm or '현금' in nm: continue
+                    s += safe_float(it.get('총 자산', it.get('총자산', 0))) - safe_float(it.get('평가손익', 0))
+                return s
+            t_buy_total = sum(_tax_buy_amount(data[k]) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
        
             t_prof_1ago = sum(safe_float(data[k].get('평가손익(1일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
             t_prof_7ago = sum(safe_float(data[k].get('평가손익(7일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
@@ -2293,14 +2383,14 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 </div>
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
 </div>
@@ -2472,7 +2562,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     return (prof / prin * 100) if prin > 0 else 0
                 sorted_tax_order.sort(key=tax_rate_for_sort, reverse=True)
 
-            st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
+            st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
             h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
@@ -2505,8 +2595,8 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             h1.append("</table>")
             st.markdown("".join(h1), unsafe_allow_html=True)
        
-            st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
+            st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익(예수금 제외)</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap;'><span style='visibility:hidden;'>+</span>{fmt_h(t_buy_total)}</span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span style='white-space:nowrap;'><span class='summary-val {col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</span> <span class='{col(t_prof_buy)}'>({fmt_p(t_rate_buy)})</span></span></span><span style='white-space:nowrap;'>&nbsp;&nbsp;/&nbsp;&nbsp;예수금 : <span class='summary-val'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span></span></div>", unsafe_allow_html=True)
             h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
             h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
        
@@ -2515,7 +2605,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     a = data[k]
                     a_tot = safe_float(a.get('총 자산', a.get('총자산', 0)))
                     a_prof = safe_float(a.get('평가손익', 0))
-                    a_buy = a_tot - a_prof
+                    a_buy = _tax_buy_amount(a)
                     a_rate = (a_prof / a_buy * 100) if a_buy > 0 else 0
                
                     diff_1_acc = a_prof - safe_float(a.get('평가손익(1일전)', 0))
@@ -2652,8 +2742,10 @@ font-weight: 700 !important;
                     acc_prin = safe_float(cfg_data.get(f"{k}_PRINCIPAL", 0))
                     acc_tot = safe_float(a.get('총 자산', a.get('총자산', 0)))
                     acc_prof_buy = safe_float(a.get('평가손익', 0))
-                    acc_rate_buy = (acc_prof_buy / (acc_tot - acc_prof_buy) * 100) if (acc_tot - acc_prof_buy) > 0 else 0
-                    
+                    # 매입금액 기준 손익률 = 평가손익 / 매입금액 (종목 집계, 예수금 제외)
+                    acc_buy = _tax_buy_amount(a)
+                    acc_rate_buy = (acc_prof_buy / acc_buy * 100) if acc_buy > 0 else 0
+
                     acc_prof_pr = acc_tot - acc_prin
                     acc_rate_pr = (acc_prof_pr / acc_prin * 100) if acc_prin > 0 else 0
 
@@ -2729,6 +2821,11 @@ font-weight: 700 !important;
     # =========================================================
     # 🪴 일반계좌 대시보드 상세페이지 (최종 레이아웃 확정본)
     # =========================================================
+    # =========================================================
+    # [VIEW 3/6] 일반계좌  (Taxable Account)
+    #   국내/해외 보유종목 상세 · 투자원금 오라클 동적 연동
+    #   · 원화/달러 동시 표기(fmt_dual) · gen_sort 정렬
+    # =========================================================
     elif st.session_state.current_view == '일반계좌':
         st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [금융자산] 통합 대시보드</h3>", unsafe_allow_html=True)
 
@@ -2753,10 +2850,24 @@ font-weight: 700 !important;
             "USA2": safe_float(cfg_data_gen.get("USA2_PRINCIPAL", 7457930))
         }
         GEN_ACC_ORDER = ['DOM1', 'DOM2', 'USA1', 'USA2']
-       
+
+        def _gen_buy_amount(acc_dict, is_usa_acc):
+            # 매입금액 = 종목별 Σ(평가금액−평가손익), 예수금/현금/합계 제외.
+            #   서버 '매입금액_KRW'는 예수금이 혼입되어 손익률 분모로 쓰면 왜곡되므로 사용하지 않는다.
+            dets = acc_dict.get('상세', [])
+            if not isinstance(dets, list): return 0.0
+            fx = safe_float(g_data.get('환율', 1443.1)) if is_usa_acc else 1.0
+            s = 0.0
+            for it in dets:
+                if not isinstance(it, dict): continue
+                nm = str(it.get('종목명', ''))
+                if nm == '[ 합  계 ]' or '예수금' in nm or '현금' in nm: continue
+                s += (safe_float(it.get('총자산', it.get('총 자산', 0))) - safe_float(it.get('평가손익', 0))) * fx
+            return s
+
         t_asset = sum(safe_float(g_data[k].get("총자산_KRW", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
         t_profit = sum(safe_float(g_data[k].get("총수익_KRW", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
-        t_buy_total = sum(safe_float(g_data[k].get("매입금액_KRW", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
+        t_buy_total = sum(_gen_buy_amount(g_data[k], 'USA' in k) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
        
         t_prof_7ago = sum(safe_float(g_data[k].get("평가손익(7일전)", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
         t_prof_15ago = sum(safe_float(g_data[k].get("평가손익(15일전)", 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict))
@@ -2892,14 +3003,14 @@ font-weight: 700 !important;
 </div>
 <div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt_h(t_asset - cash_total)}</div>
 <div style='color: #777; font-size: 14px; font-weight: normal; text-align: right; line-height: 20px;'>총 손익</div>
 <div style='text-align: right;'>
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
 <div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
-<div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
+<div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
 </div>
@@ -3079,7 +3190,7 @@ font-weight: 700 !important;
             sorted_gen_order.sort(key=gen_rate_for_sort, reverse=True)
 
         # 💡 [신규 오더 패치] 투자원금 대비 자산 현황 (계산된 t_prof_principal 및 차이값 반영)
-        st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 자산 현황</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
         st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
 
         h1_table = """
@@ -3148,8 +3259,8 @@ font-weight: 700 !important;
         h1.append("</table>")
         st.markdown("".join(h1), unsafe_allow_html=True)
 
-        st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 자산 현황</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='summary-text'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_profit)}'>{fmt_h(t_profit, True)} ({fmt_p(t_rate_buy)})</span></div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익(예수금 제외)</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap;'><span style='visibility:hidden;'>+</span>{fmt_h(t_buy_total)}</span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span style='white-space:nowrap;'><span class='summary-val {col(t_profit)}'>{fmt_h(t_profit, True)}</span> <span class='{col(t_profit)}'>({fmt_p(t_rate_buy)})</span></span></span><span style='white-space:nowrap;'>&nbsp;&nbsp;/&nbsp;&nbsp;예수금 : <span class='summary-val'>{fmt_h(t_asset - t_buy_total - t_profit)}</span></span></div>", unsafe_allow_html=True)
 
         h2_table = """
 <table class='main-table'>
@@ -3183,10 +3294,10 @@ font-weight: 700 !important;
         for k in sorted_gen_order:
             if k in g_data and isinstance(g_data[k], dict):
                 a = g_data[k]
-                buy_krw = safe_float(a.get('매입금액_KRW', 0))
-                ag_acc = safe_float(a.get('총자산_KRW', 0)) - buy_krw
-                ay_acc = (ag_acc / buy_krw * 100) if buy_krw > 0 else 0
+                buy_krw = _gen_buy_amount(a, 'USA' in k)
                 a_prof = safe_float(a.get('총수익_KRW', 0))
+                # 매입금액 기준 손익률 = 평가손익 / 매입금액 (예수금 제외; 총손익 열과 분자 일치)
+                ay_acc = (a_prof / buy_krw * 100) if buy_krw > 0 else 0
                 diff_7_acc = a_prof - safe_float(a.get('평가손익(7일전)', 0))
                 diff_30_acc = a_prof - safe_float(a.get('평가손익(30일전)', 0))
                 h2.append(f"""
@@ -3269,8 +3380,10 @@ font-weight: 700 !important;
                     acc_prin = safe_float(principals.get(k, 0))
                     acc_tot = safe_float(a.get('총자산_KRW', 0))
                     acc_prof_buy = safe_float(a.get('총수익_KRW', 0))
-                    acc_rate_buy = (acc_prof_buy / (acc_tot - acc_prof_buy) * 100) if (acc_tot - acc_prof_buy) > 0 else 0
-                    
+                    # 매입금액 기준 손익률 = 평가손익 / 매입금액 (예수금 제외, 종목집계 헬퍼)
+                    acc_buy_krw = _gen_buy_amount(a, is_usa)
+                    acc_rate_buy = (acc_prof_buy / acc_buy_krw * 100) if acc_buy_krw > 0 else 0
+
                     acc_prof_pr = acc_tot - acc_prin
                     acc_rate_pr = (acc_prof_pr / acc_prin * 100) if acc_prin > 0 else 0
                     
@@ -3287,10 +3400,9 @@ font-weight: 700 !important;
                         dw_str = ["월", "화", "수", "목", "금", "토", "일"][now_seoul.weekday()]
                         
                         right_block = f"""
-<div style='display:flex; flex-direction:column; align-items:flex-end; margin-bottom:0px;'>
-<div style='font-size:12.5px; color:#555; font-weight:normal; padding-bottom:4px;'>
-[ {d_str_clean}({dw_str}), 적용환율 1$ = {rate_val:,.1f} ]
-</div>
+<div style='display:flex; flex-direction:column; align-items:flex-end; margin-bottom:0px; line-height:1.2;'>
+<div style='margin-bottom:2px; visibility:hidden; white-space:nowrap;'><span style='font-size:20px;'>0</span> <span style='font-size:16px;'>(0%)</span></div>
+<div style='font-size:12.5px; color:#555; font-weight:normal; white-space:nowrap;'>[ {d_str_clean}({dw_str}), 적용환율 1$ = {rate_val:,.1f} ]</div>
 </div>
 """
                     else:
@@ -3306,7 +3418,7 @@ font-weight: 700 !important;
                     
                     # 💡 [핵심 패치] KRW 여백 2칸 고정 및 (▲ %) 16px 사이즈 축소
                     st.markdown(f"""
-<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;'>
+<div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:{"-6px" if is_usa else "8px"};'>
 <div class='summary-text' style='margin-bottom:0; display:flex; align-items:flex-start;'>
 <div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
 <div style='white-space:nowrap; line-height:1.2;'>
@@ -3318,15 +3430,48 @@ font-weight: 700 !important;
 </div>
 """, unsafe_allow_html=True)
                        
+                    show_fx = False
                     if is_usa:
-                        u_c1, u_c2 = st.columns([8.8, 1.2])
+                        # 💡 환차손익 토글: 잔액숨김 토글과 동일 스타일(라벨 왼쪽 + ON 트랙 딥파스텔 블루 #7fb5e9)
+                        st.markdown("""
+<style>
+.element-container:has(.fx-toggle-anchor) { display: none !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container { display: flex !important; justify-content: flex-end !important; align-items: center !important; margin: 0 !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container div[data-testid="stCheckbox"] { width: auto !important; min-height: 0 !important; margin: 0 !important; transform: translate(5px, 8px) !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container [data-baseweb="checkbox"] { flex-direction: row-reverse !important; align-items: center !important; gap: 8px !important; width: auto !important; margin: 0 !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container [data-baseweb="checkbox"] p { font-size: 13px !important; font-weight: bold !important; color: #777 !important; white-space: nowrap !important; margin: 0 !important; line-height: 1 !important; transform: translateY(2px) !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container [data-baseweb="checkbox"] > div:first-child { transform: translateY(-1px) !important; }
+.element-container:has(.fx-toggle-anchor) + .element-container [data-baseweb="checkbox"]:has(input:checked) > div:first-child { background-color: #7fb5e9 !important; }
+div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) { margin-bottom: -6px !important; justify-content: flex-end !important; flex-wrap: nowrap !important; }
+div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
+div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) > div:not(:first-child) { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; }
+div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="select"] { width: 130px !important; min-width: 130px !important; }
+div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="select"] > div { padding-left: 8px !important; padding-right: 2px !important; }
+</style>
+""", unsafe_allow_html=True)
+                        u_c1, u_c2, u_c3 = st.columns([8.5, 0.9, 0.6])
                         with u_c2:
+                            st.markdown("<span class='fx-toggle-anchor'></span>", unsafe_allow_html=True)
+                            show_fx = st.toggle("환차손익", key=f"fx_toggle_{k}", value=False)
+                        with u_c3:
                             currency_mode = st.selectbox("표기단위", options=["[원화(KRW)]", "[달러(USD)]", "[원화/달러]"], index=2, label_visibility="collapsed", key=f"curr_sel_box_{k}")
                    
                     code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.gen_show_change_rate else ""
-                   
-                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
+
+                    # 💡 [환차손익] 해외계좌 전용: Admin 입력 매입환율을 종목코드/종목명으로 매핑
+                    buy_fx_map, buy_fx_map_nm = {}, {}
+                    if is_usa:
+                        for _rec in cfg_global.get(k, []):
+                            if isinstance(_rec, dict):
+                                _fxv = safe_float(_rec.get('매입환율', 0))
+                                _ck = str(_rec.get('코드', _rec.get('종목코드', ''))).strip()
+                                _nk = str(_rec.get('종목명', _rec.get('name', ''))).strip()
+                                if _ck: buy_fx_map[_ck] = _fxv
+                                if _nk: buy_fx_map_nm[_nk] = _fxv
+                    fx_th = "<th>매입환율<br>현재환율</th><th>환평가손익<br>환차손익</th>" if (is_usa and show_fx) else ""
+
+                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th>{fx_th}<th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                    
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') not in ["[ 합  계 ]", "예수금"]] if isinstance(details, list) else []
                     cash_item = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "예수금"), {"종목명": "예수금", "총자산": 0, "평가손익": 0, "수익률(%)": 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0}) if isinstance(details, list) else {}
@@ -3353,6 +3498,21 @@ font-weight: 700 !important;
                         if currency_mode == "[원화/달러]": return f"{s_krw}<br><span style='font-size:11.5px; color:#888; font-weight:normal;'>({s_usd})</span>"
                         elif currency_mode == "[달러(USD)]": return s_usd
                         else: return s_krw
+
+                    # 💡 [환차손익 합계] 종목별 환평가손익/환차손익을 미리 합산 (합계행에 표시)
+                    _sum_fx_eval, _sum_fx_diff, _has_fx = 0.0, 0.0, False
+                    if is_usa and show_fx:
+                        for _it in items:
+                            if not isinstance(_it, dict): continue
+                            _nm_it = str(_it.get('종목명', '')).replace('\n', ' ').replace('\r', '').strip()
+                            if ('예수금' in _nm_it) or ('현금' in _nm_it): continue
+                            _bpf_it = buy_fx_map.get(str(_it.get('코드', '')).strip(), 0) or buy_fx_map_nm.get(_nm_it, 0)
+                            if _bpf_it > 0:
+                                _q_it = safe_float(_it.get('수량', 0)); _p_it = safe_float(_it.get('매입가', 0))
+                                _d_it = _q_it * _p_it * (rate_val - _bpf_it)
+                                _sum_fx_diff += _d_it
+                                _sum_fx_eval += (safe_float(_it.get('평가손익', 0)) * rate_val) + _d_it
+                                _has_fx = True
 
                     for i in ([s_data] + items + [cash_item]):
                         if not i: continue
@@ -3382,8 +3542,41 @@ font-weight: 700 !important;
                         diff_amt_raw = (curr_price - (curr_price / (1 + d_rate / 100))) if curr_price > 0 and d_rate != 0 else 0
                         diff_amt_str = fmt_dual(diff_amt_raw, True) if diff_amt_raw != 0 else "0"
                         d_rate_str = "-" if is_s else fmt_p(d_rate); d_class = "" if is_s else col(d_rate)
-                       
-                        row += f"<td>{pct:.1f}%</td><td>{ia}</td><td class='{col(i.get('평가손익', 0))}'>{ip}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td><td>{fmt(i.get('수량', '-'))}</td><td>{ibuy}</td><td>{icurr}</td>"
+
+                        # 💡 [환차손익] 해외계좌 전용 2개 열 (항상 KRW). 매입환율 미입력(0)은 '-'
+                        #   환차손익 = 수량 x 매입단가(USD) x (현재환율 - 매입환율)
+                        #   환평가손익 = 평가손익(KRW) - 환차손익
+                        fx_td = ""
+                        if is_usa and show_fx:
+                            if is_s:
+                                # 합계행: 종목별 환평가손익/환차손익 합산 (매입환율/현재환율 칸은 '-')
+                                if _has_fx:
+                                    fx_td = (f"<td>-</td>"
+                                             f"<td style='padding:4px; line-height:1.4;'>"
+                                             f"<div class='{col(_sum_fx_eval)}'>{fmt(_sum_fx_eval, True)}</div>"
+                                             f"<div class='{col(_sum_fx_diff)}'>{fmt(_sum_fx_diff, True)}</div></td>")
+                                else:
+                                    fx_td = "<td>-</td><td>-</td>"
+                            else:
+                                _is_cash = ('예수금' in orig_nm) or ('현금' in orig_nm)
+                                _bpf = buy_fx_map.get(str(i.get('코드', '')).strip(), 0) or buy_fx_map_nm.get(orig_nm, 0)
+                                if _is_cash or _bpf <= 0:
+                                    fx_td = "<td>-</td><td>-</td>"
+                                else:
+                                    # 환차손익  = 수량 x 매입단가(USD) x (현재환율 - 매입환율)
+                                    # 환평가손익 = 표의 평가손익(KRW) + 환차손익 (매입 당시 환율 효과 반영)
+                                    _q = safe_float(i.get('수량', 0)); _pusd = safe_float(i.get('매입가', 0))
+                                    _pnl_krw = safe_float(i.get('평가손익', 0)) * rate_val
+                                    _fx_diff = _q * _pusd * (rate_val - _bpf)
+                                    _fx_eval = _pnl_krw + _fx_diff
+                                    fx_td = (f"<td style='padding:4px; line-height:1.4;'>"
+                                             f"<div>{fmt(_bpf, decimal=2)}</div>"
+                                             f"<div style='color:#888;'>{fmt(rate_val, decimal=2)}</div></td>"
+                                             f"<td style='padding:4px; line-height:1.4;'>"
+                                             f"<div class='{col(_fx_eval)}'>{fmt(_fx_eval, True)}</div>"
+                                             f"<div class='{col(_fx_diff)}'>{fmt(_fx_diff, True)}</div></td>")
+
+                        row += f"<td>{pct:.1f}%</td><td>{ia}</td><td class='{col(i.get('평가손익', 0))}'>{ip}</td><td class='{col(i.get('수익률(%)', 0))}'>{fmt_p(i.get('수익률(%)', 0))}</td>{fx_td}<td>{fmt(i.get('수량', '-'))}</td><td>{ibuy}</td><td>{icurr}</td>"
                        
                         if st.session_state.gen_show_change_rate:
                             if is_s or i.get('종목명') == '예수금':
@@ -3398,6 +3591,11 @@ font-weight: 700 !important;
                     
     # =========================================================
     # 🪙 암호화폐 상세 화면
+    # =========================================================
+    # =========================================================
+    # [VIEW 4/6] 암호화폐  (Crypto)
+    #   실시간 시세 · 종목별 동적 차트(get_dynamic_chart_with_link)
+    #   · BTC 김치프리미엄(gap) 표시
     # =========================================================
     elif st.session_state.current_view == '암호화폐':
         # 💡 [패치] 암호화폐 전용 세션 상태 초기화
@@ -3502,7 +3700,7 @@ font-weight: 700 !important;
 <div style='background:#f9f9f9; padding:18px 20px; border-radius:10px; display:flex; flex-direction:column; gap:14px;'>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>평가금액</span>
-<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt_h(ce)}</span>
+<span style='color: #111; font-size: 18px; font-weight: 600; line-height: 20px;'>{fmt_h(ce)}</span>
 </div>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>총 손익</span>
@@ -3513,7 +3711,7 @@ font-weight: 700 !important;
 </div>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
 <span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>현금성(예수금)</span>
-<span style='color: #111; font-size: 18px; font-weight: 400; line-height: 20px;'>{fmt(ck)}</span>
+<span style='color: #111; font-size: 18px; font-weight: 600; line-height: 20px;'>{fmt(ck)}</span>
 </div>
 </div>
 </div>
@@ -3720,6 +3918,11 @@ font-weight: 700 !important;
     # =========================================================
     # 🧩 알고리즘(Zappa Alpha) 대시보드 프론트엔드 UI
     # =========================================================
+    # =========================================================
+    # [VIEW 5/6] 알고리즘  (Zappa Alpha Bot)
+    #   사이드바 카드와 데이터 동기화 · 핵심 성과지표 · 자산 성장곡선(Equity)
+    #   · 현재 포지션 / 봇 조종석 · 매매 로그
+    # =========================================================
     elif st.session_state.current_view == '알고리즘':
         
         # 1. 사이드바 카드와 데이터 완벽 동기화 (Sync)
@@ -3914,6 +4117,11 @@ font-weight: 700 !important;
     # =========================================================
     # 💡 [패치] 차익거래 대시보드 메인 페이지 (사이드바 데이터 동기화)
     # =========================================================
+    # =========================================================
+    # [VIEW 6/6] 차익거래  (Arbitrage Bot)
+    #   봇 컨트롤 패널 · 오라클 실시간 JSON 연동 · 마스터 토글 · 매매 로그
+    #   (봇 세션 초기화/로컬 영구저장 -> 실시간 매핑 -> 통계/로그 순)
+    # =========================================================
     elif st.session_state.current_view == '차익거래':
         
         import json
@@ -4058,7 +4266,7 @@ div[data-testid="stNumberInput"] input { text-align: right !important; font-weig
       .main-table 이 이미 2px #b5b5b5 outline + 12px radius 로 바깥 프레임을 그리므로,
       래퍼에 border 를 또 주면 2px + 2px = 4px 로 다른 표보다 두 배 두꺼워진다.
       -> 래퍼는 모서리 클리핑/여백만 담당하고 테두리는 .main-table 에 일임한다. */
-.table-rounded-wrapper { border: none !important; border-radius: 12px !important; overflow: hidden !important; width: 100% !important; margin-bottom: 5px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important; }
+.table-rounded-wrapper { border: none !important; border-radius: 12px !important; overflow: hidden !important; width: 100% !important; margin-bottom: 8px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important; }
 #arbi-monitor-table { border-collapse: collapse !important; width: 100% !important; margin-bottom: 0 !important; border-style: hidden !important; }
 #arbi-monitor-table th, #arbi-monitor-table td { border: 1px solid #dcdcdc !important; }
 
