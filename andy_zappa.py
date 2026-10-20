@@ -35,13 +35,31 @@ import os
 import re
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import urllib.parse
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit_authenticator as stauth
+
+PNL_BASIS_HELP = """
+**[1] 투자원금 대비 총 자산의 증감** : 계좌에 넣은 돈 대비 계좌 전체가 얼마나 늘었는지
+- 총 자산 = 평가금액 + 예수금(현금)
+- 투자원금 = 관리자 '자산정보요약'의 투자원금 (예수금 포함, 입출금 시에만 수기 갱신)
+- 총 손익 = 총 자산 − 투자원금
+- 손익률 = 총 손익 ÷ 투자원금
+
+**[2] 매입금액 대비 종목별 손익(예수금 제외)** : 지금 종목에 실제 투자된 돈 대비 종목 손익
+- 매입금액 = 총 자산 − 예수금 − 총 손익
+- 총 손익 = 종목별 평가손익의 합
+- 손익률 = 총 손익 ÷ 매입금액
+
+**암호화폐** : 일반·절세와 같은 규칙. 투자원금은 Admin 투자원금(현금 110,000,000원 포함, 112,872,566원)
+- [2] 매입금액 = 총 자산 − 미투자 현금(110,000,000원, 서버 `total_krw`) − 총 손익 (2,872,566원 수준)
+
+**기록 기준** : 자산·원금·예수금 일별 저장은 2026-10-20 이후분부터 적용 예정. 그 이전 날짜의 자산·원금 이력은 없어 과거 수익률은 재구성하지 않음
+"""
 
 def get_live_data():
     url = "http://168.107.15.252:8000/arbi"
@@ -579,6 +597,28 @@ setInterval(bindSidebarClicks, 300);
 
     crypto_data = get_crypto_data()
 
+    @st.cache_data(ttl=None)
+    def get_history_data():
+        ts = int(time.time())
+        try:
+            res = requests.get(f"http://168.107.15.252:8000/history?t={ts}", timeout=5)
+            if res.status_code == 200:
+                h = res.json()
+                if isinstance(h, dict) and "error" not in h:
+                    return h
+        except: pass
+        return None
+
+    history_data = get_history_data()
+
+    def hist_pnl_pr(days_ago, keys):
+        if not isinstance(history_data, dict): return '-'
+        ago = (datetime.now(timezone(timedelta(hours=9))).date() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+        e = history_data.get(ago)
+        if not isinstance(e, dict): return '-'
+        if any(e.get(k + '_asset') is None or e.get(k + '_PRINCIPAL') is None for k in keys): return '-'
+        return sum(float(e[k + '_asset']) - float(e[k + '_PRINCIPAL']) for k in keys)
+
     p_asset_all = tot.get('총자산', 0)
     p_profit_all = tot.get('총수익', 0)
     p_rate_all = tot.get('수익률(%)', 0)
@@ -646,8 +686,10 @@ setInterval(bindSidebarClicks, 300);
 
     c_tot_sum = crypto_data.get('total_asset', 0) if isinstance(crypto_data, dict) else 0
     c_prof_sum = crypto_data.get('total_profit', 0) if isinstance(crypto_data, dict) else 0
-    c_buy_sum = c_tot_sum - c_prof_sum
-    c_rate_sum = (c_prof_sum / c_buy_sum * 100) if c_buy_sum > 0 else 0
+    c_cash_sum = safe_float(crypto_data.get('total_krw', 0)) if isinstance(crypto_data, dict) else 0
+    c_buy_sum = c_tot_sum - c_cash_sum - c_prof_sum
+    c_principal = safe_float(cfg_global.get("CRYPTO_PRINCIPAL", 0))
+    c_rate_sum = (c_prof_sum / c_principal * 100) if c_principal > 0 else 0
 
     total_asset = p_asset_all + g_asset_all + c_tot_sum
     total_profit = p_profit_all + g_profit_all + c_prof_sum
@@ -973,6 +1015,9 @@ transition: transform 0.2s ease; display: inline-block;
 .zappa-expander[open] .zappa-summary::after { transform: rotate(90deg); }
 .zappa-expander-dark .zappa-summary { color: #aaa; }
 .zappa-expander-dark .zappa-summary::after { color: #666; }
+/* 절세/일반/암호화폐/알고리즘/차익거래 카드의 '>' : 평소 보통 굵기, 마우스 올리면 굵게 */
+.zappa-expander:not(.zappa-expander-dark) .zappa-summary::after { font-weight: 400; }
+.zappa-expander:not(.zappa-expander-dark) .zappa-summary:hover::after { font-weight: 900; color: #555; }
 .zappa-content { padding: 0px 14px 14px 14px; cursor: pointer; }
 
 /* 🔑 사이드바 상단 마스터 토글 — 계좌 카드 5개(절세/일반/암호화폐/알고리즘/차익거래)를 한 번에 펼치고 접는다.
@@ -1020,7 +1065,7 @@ position: relative; top: 2.67px;
         g_rate_principal = (g_prof_principal / g_orig_all) * 100 if g_orig_all > 0 else 0
 
         # 3. 총 운용자산 원금 기준 손익 (절세 + 일반 + 암호화폐 원금 합산)
-        total_principal_all = p_principal_tot + g_orig_all + c_buy_sum
+        total_principal_all = p_principal_tot + g_orig_all + c_principal
         total_prof_principal = total_asset - total_principal_all
         total_rate_principal = (total_prof_principal / total_principal_all) * 100 if total_principal_all > 0 else 0
         # =========================================================
@@ -1671,7 +1716,254 @@ setInterval(syncMasterToggle, 300);
     #   카테고리별 비중 파이/영역 차트 · 계좌 요약
     # =========================================================
     if st.session_state.current_view == '대시보드':
-        st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
+        if history_data and isinstance(history_data, dict) and len(history_data) > 1:
+            st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🔐 Andy lee님 [총 운용자산] 추이</h3>", unsafe_allow_html=True)
+            try:
+                from datetime import date as dt_date
+
+                dates_all = sorted(history_data.keys())
+                nan = float('nan')
+
+                def hv(entry, key):
+                    v = entry.get(key)
+                    return float(v) if v is not None else nan
+
+                ec_exclude = {'2026-03-30', '2026-07-04'}  # 네트워크 오류로 전 계좌가 0 저장된 날짜
+                rows = []
+                for d in dates_all:
+                    if d in ec_exclude:
+                        continue
+                    entry = history_data[d]
+                    tax_p = sum(hv(entry, k) for k in ['DOM1', 'DOM2', 'USA1', 'USA2'])
+                    adv_p = sum(hv(entry, k) for k in ['DC', 'IRP', 'PENSION', 'ISA'])
+                    cry_p = hv(entry, 'CRYPTO')
+                    t_profit = tax_p + adv_p + cry_p
+                    tax_a = sum(hv(entry, k + '_asset') for k in ['DOM1', 'DOM2', 'USA1', 'USA2'])
+                    adv_a = sum(hv(entry, k + '_asset') for k in ['DC', 'IRP', 'PENSION', 'ISA'])
+                    cry_a = hv(entry, 'CRYPTO_asset')
+                    t_asset = tax_a + adv_a + cry_a
+                    t_base = t_asset - t_profit
+                    t_rate = (t_profit / t_base * 100) if t_base > 0 else nan
+                    rows.append({
+                        '날짜': d,
+                        '총자산': t_asset / 1e6, '총평가손익': t_profit / 1e6, '수익률': t_rate,
+                        '일반_자산': tax_a / 1e6, '절세_자산': adv_a / 1e6, '암호화폐_자산': cry_a / 1e6,
+                        '일반_손익': tax_p / 1e6, '절세_손익': adv_p / 1e6, '암호화폐_손익': cry_p / 1e6,
+                    })
+
+                df_hist = pd.DataFrame(rows)
+                df_hist['날짜'] = pd.to_datetime(df_hist['날짜'])
+
+                for acc in ['절세', '일반', '암호화폐']:
+                    df_hist[f'{acc}_자산비중'] = (df_hist[f'{acc}_자산'] / df_hist['총자산'].where(df_hist['총자산'] != 0) * 100).fillna(0)
+                    df_hist[f'{acc}_손익비중'] = (df_hist[f'{acc}_손익'] / df_hist['총평가손익'].where(df_hist['총평가손익'] != 0) * 100).fillna(0)
+
+                # 보기 모드 바·달력 바 공통 V 표시: 평소 가는 선, 마우스 올리면 굵게. V 는 pointer-events:none 이라 V 를 눌러도 아래 입력칸이 눌린다
+                st.markdown("""<style>
+                .st-key-ec_ctrl div[data-testid="stDateInput"] div[data-baseweb="input"],
+                .st-key-ec_ctrl div[data-baseweb="select"] > div { position: relative; }
+                .st-key-ec_ctrl div[data-testid="stDateInput"] div[data-baseweb="input"]::after,
+                .st-key-ec_ctrl div[data-baseweb="select"] > div::after {
+                    content: ''; position: absolute; right: 16px; top: 50%; width: 7px; height: 7px;
+                    border-right: 1.5px solid #808495; border-bottom: 1.5px solid #808495;
+                    transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+                .st-key-ec_ctrl div[data-testid="stDateInput"] div[data-baseweb="input"]:hover::after,
+                .st-key-ec_ctrl div[data-baseweb="select"] > div:hover::after { border-right-width: 2.5px; border-bottom-width: 2.5px; border-color: #31333F; }
+                /* Streamlit 기본 select 화살표(항상 굵음)는 숨기고 위 V 로 대체. visibility 로 숨겨 클릭 영역은 유지 */
+                .st-key-ec_ctrl div[data-baseweb="select"] svg { visibility: hidden; }
+                /* 보기 모드 바 글자 14px. 달력 숫자는 크기를 지정하지 않아 차익거래 '최근 매매 로그' 달력과 같은 Streamlit 기본값을 그대로 쓴다 */
+                .st-key-ec_ctrl div[data-baseweb="select"], .st-key-ec_ctrl div[data-baseweb="select"] * { font-size: 14px !important; font-family: inherit !important; font-weight: 400 !important; }
+                .st-key-ec_ctrl div[data-baseweb="select"] span, .st-key-ec_ctrl div[data-baseweb="select"] div { line-height: 1.6 !important; }
+                .st-key-ec_ctrl div[data-baseweb="select"], .st-key-ec_ctrl div[data-baseweb="select"] > div,
+                .st-key-ec_ctrl div[data-testid="stDateInput"] div[data-baseweb="input"] { min-height: 40px !important; }
+                /* 달력 글자는 바 가운데: 좌우 padding 을 V 자리(36px)와 같게 둬서 바 전체 기준 중앙 */
+                .st-key-ec_ctrl div[data-testid="stDateInput"] input { text-align: center !important; padding-left: 36px !important; padding-right: 36px !important; cursor: pointer; }
+                /* Plotly 는 선택된 버튼 배경을 인라인 fill rgb(244, 250, 255) 로 그린다 → 잔액보임 토글과 같은 파란색으로 교체 */
+                .st-key-ec_chart rect.updatemenu-item-rect[style*="fill: rgb(244, 250, 255)"] { fill: #7fb5e9 !important; }
+                /* 최고/최저 말풍선 모서리 둥글게 (Plotly annotation 배경 rect) */
+                .st-key-ec_chart g.annotation rect.bg { rx: 6px; ry: 6px; }
+                </style>""", unsafe_allow_html=True)
+                ec_modes = ['총운용자산 / 총평가손익 / 수익률', '총운용자산 (계좌별 상세)', '총평가손익 (계좌별 상세)']
+                with st.container(key='ec_ctrl', horizontal=True, horizontal_alignment='right', vertical_alignment='bottom', gap='small'):
+                    ec_view = st.selectbox("보기 모드", ec_modes, label_visibility='collapsed', width=290)
+                    with st.container(width=290):
+                        # 차익거래 '최근 매매 로그' 달력 라벨과 같은 문구·스타일 (라벨-달력 간격도 동일: 1px + 블록 간격)
+                        st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-bottom:1px; margin-right:2px;'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
+                        ec_date_range = st.date_input(
+                            "기간", value=(df_hist['날짜'].min().date(), df_hist['날짜'].max().date()),
+                            min_value=df_hist['날짜'].min().date(), max_value=df_hist['날짜'].max().date(),
+                            label_visibility='collapsed'
+                        )
+                ec_mode = ec_modes.index(ec_view)
+
+                if isinstance(ec_date_range, (list, tuple)) and len(ec_date_range) == 2:
+                    mask = (df_hist['날짜'].dt.date >= ec_date_range[0]) & (df_hist['날짜'].dt.date <= ec_date_range[1])
+                    df_filtered = df_hist[mask]
+                else:
+                    df_filtered = df_hist
+
+                # 최고/최저 말풍선 색: 자산은 진한 배경, 손익은 연한 배경(손익 선 색과 구분)
+                EC_ANN_ASSET = dict(hi='#ff7675', lo='#74b9ff', hi_arrow='#ff7675', lo_arrow='#74b9ff', fg='#31333F')
+                EC_ANN_PROFIT = dict(hi='#eadcf3', lo='#d6efeb', hi_arrow='#b48bd0', lo_arrow='#6fbfb2', fg='#31333F')
+
+                # (컬럼, 범례/팝업 이름, 색, 굵기, 점선, y축, 비중컬럼)
+                if ec_mode == 0:
+                    ec_specs = [('총자산', '총운용자산', '#D32F2F', 3, None, 'y', None),
+                                ('총평가손익', '총평가손익', '#7B1FA2', 2, None, 'y', None),
+                                ('수익률', '수익률(%)', '#00897B', 2, 'dot', 'y2', None)]
+                    ann_cols = [('총자산', '자산', EC_ANN_ASSET), ('총평가손익', '손익', EC_ANN_PROFIT)]
+                elif ec_mode == 1:
+                    ec_specs = [('총자산', '🌎 총자산', '#D32F2F', 3, None, 'y', None),
+                                ('절세_자산', '⏳ 절세계좌', '#f4b183', 2, None, 'y', '절세_자산비중'),
+                                ('일반_자산', '🪴 일반계좌', '#a9d18e', 2, None, 'y', '일반_자산비중'),
+                                ('암호화폐_자산', '🪙 암호화폐', '#ffd966', 2, None, 'y', '암호화폐_자산비중')]
+                    ann_cols = [('총자산', '자산', EC_ANN_ASSET)]
+                else:
+                    ec_specs = [('총평가손익', '🌎 총평가손익', '#7B1FA2', 3, None, 'y', None),
+                                ('절세_손익', '⏳ 절세계좌', '#f4b183', 2, None, 'y', '절세_손익비중'),
+                                ('일반_손익', '🪴 일반계좌', '#a9d18e', 2, None, 'y', '일반_손익비중'),
+                                ('암호화폐_손익', '🪙 암호화폐', '#ffd966', 2, None, 'y', '암호화폐_손익비중')]
+                    ann_cols = [('총평가손익', '손익', EC_ANN_PROFIT)]
+                has_y2 = any(s[5] == 'y2' for s in ec_specs)
+
+                # 팝업 정렬: 글자별 실측 폭(px, 13px 기준)으로 이름·값 앞을 공백 문자로 채워 ':' '백만원' '%' 위치를 맞춘다
+                EC_SP = {chr(0x3000): 13.0, chr(0x2007): 7.23, chr(0x2002): 6.5, chr(0x2008): 3.61}
+                EC_PX = {',': 3.61, '.': 3.61, ' ': 3.61, '(': 4.33, ')': 4.33, '%': 11.56, '-': 4.33, chr(0x25B2): 12.8, chr(0x25BC): 12.8}
+                EC_PX.update(EC_SP)
+
+                def ec_px(s):
+                    return sum(EC_PX.get(c, 7.23 if c.isdigit() else (13.0 if '가' <= c <= '힣' else 16.0)) for c in s)
+
+                def ec_fill(px):
+                    best, best_err = '', abs(px)
+                    for a in range(int(px // 13.0) + 2):
+                        for b in range(9):
+                            for c in range(2):
+                                for d in range(2):
+                                    err = abs(px - (a * 13.0 + b * 7.23 + c * 6.5 + d * 3.61))
+                                    if err < best_err - 1e-9:
+                                        best, best_err = chr(0x3000) * a + chr(0x2007) * b + chr(0x2002) * c + chr(0x2008) * d, err
+                    return best
+
+                def ec_pad_col(strs):
+                    w = max(ec_px(s) for s in strs) if strs else 0
+                    return [ec_fill(w - ec_px(s)) + s for s in strs]
+
+                ec_name_max = max(ec_px(s[1]) for s in ec_specs)
+
+                def ec_label(nm):
+                    return nm + ec_fill(ec_name_max - ec_px(nm))
+
+                ec_n = len(df_filtered)
+                def ec_fmt(col, v):
+                    if pd.isna(v):
+                        return '-'
+                    if col == '수익률':
+                        return f"{chr(0x25B2) if v >= 0 else chr(0x25BC)}{abs(v):.1f}"
+                    return f"{v:,.0f}"
+
+                ec_val_strs = []
+                for col, *_ in ec_specs:
+                    ec_val_strs += [ec_fmt(col, v) for v in df_filtered[col]]
+                ec_val_strs = ec_pad_col(ec_val_strs)
+                ec_val_map = {s[0]: ec_val_strs[i * ec_n:(i + 1) * ec_n] for i, s in enumerate(ec_specs)}
+                ec_share_cols = [s[6] for s in ec_specs if s[6]]
+                ec_share_strs = ec_pad_col([f"{v:.1f}" for c in ec_share_cols for v in df_filtered[c]])
+                ec_share_map = {c: ec_share_strs[i * ec_n:(i + 1) * ec_n] for i, c in enumerate(ec_share_cols)}
+
+                def ec_hover_texts(col, nm, share_col):
+                    lab = ec_label(nm)
+                    vals = ec_val_map[col]
+                    if col == '수익률':
+                        return [f"{lab} : {v}%" for v in vals]
+                    if share_col:
+                        return [f"{lab} : {v} 백만원 ({p}%)" for v, p in zip(vals, ec_share_map[share_col])]
+                    if ec_mode != 0:
+                        return [f"<b>{lab} : {v} 백만원</b>" for v in vals]
+                    return [f"{lab} : {v} 백만원" for v in vals]
+
+                def ec_minmax(d):
+                    out = []
+                    if len(d) < 2:
+                        return out
+                    t0, t1 = d['날짜'].min(), d['날짜'].max()
+                    for ann_col, _, sty in ann_cols:
+                        dd = d.dropna(subset=[ann_col])
+                        if len(dd) < 2:
+                            continue
+                        for row, label, arrow, ay in [(dd.loc[dd[ann_col].idxmax()], 'MAX', sty['hi_arrow'], -35),
+                                                      (dd.loc[dd[ann_col].idxmin()], 'MIN', sty['lo_arrow'], 32)]:
+                            r = row['수익률']
+                            rate_txt = '' if pd.isna(r) else f"<span style='color:#e00000'>{'▲' if r >= 0 else '▼'}{abs(r):.1f}%</span>, "
+                            pos = (row['날짜'] - t0) / (t1 - t0) if t1 > t0 else 0.5
+                            # 화살표는 항상 말풍선 가운데. 좌우 끝 8% 안이면 말풍선만 안쪽으로 옮겨 잘림 방지 (화살표는 비스듬해짐)
+                            shift = dict(ax=0)
+                            if pos < 0.08 or pos > 0.92:
+                                cx = t0 + (t1 - t0) * (0.08 if pos < 0.08 else 0.92)
+                                shift = dict(axref='x', ax=cx.strftime('%Y-%m-%d'))
+                            out.append(dict(**shift, xanchor='center',
+                                x=row['날짜'].strftime('%Y-%m-%d'), y=round(float(row[ann_col]), 2), xref='x', yref='y',
+                                text=f"{label} {row[ann_col]:,.0f} 백만 ({rate_txt}{row['날짜'].strftime('%m/%d')})",
+                                showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.5, arrowcolor=arrow,
+                                font=dict(size=13, color=sty['fg']), bgcolor='#ffffff',
+                                bordercolor=arrow, borderwidth=1.5, borderpad=4, ay=ay
+                            ))
+                    return out
+
+                # 레이아웃 px 고정값 (margin.autoexpand=False → 화면 폭과 무관하게 위치 고정)
+                EC_H, EC_T, EC_B = 470, 95, 70
+                EC_L, EC_R = 50, (60 if has_y2 else 15)
+                ec_row_y = 1 + 28 / (EC_H - EC_T - EC_B)   # 버튼·범례 줄: 그래프 상단에서 28px 위
+                ec_tick_font = dict(size=13, family='Arial')
+                # 축 단위 라벨은 눈금 라벨 끝선(좌: '1,500'의 마지막 0 / 우: '60.0%'의 %)에 맞춘 px 값
+                ec_axis_labels = [dict(text='백만원', xref='paper', yref='paper', x=0, y=1, xanchor='right', yanchor='bottom',
+                                       xshift=-3, yshift=6, borderpad=0, showarrow=False, font=dict(size=13, color='#666', family='Arial'))]
+                if has_y2:
+                    ec_axis_labels.append(dict(text='수익률(%)', xref='paper', yref='paper', x=1, y=1, xanchor='right', yanchor='bottom',
+                                               xshift=40, yshift=6, borderpad=0, showarrow=False, font=dict(size=13, color='#666', family='Arial')))
+
+                # 1M/3M/6M/1Y/전체: 클릭 시 해당 기간으로 확대 + 그 기간의 최고/최저 표시로 교체 (브라우저에서 즉시 처리)
+                # x축 범위는 명시값 사용 (autorange 는 최고/최저 말풍선까지 포함해 좌우에 빈 공간이 생김)
+                ec_end = df_filtered['날짜'].max()
+                ec_full_range = [df_filtered['날짜'].min().strftime('%Y-%m-%d'), ec_end.strftime('%Y-%m-%d')]
+                ec_buttons = []
+                for lab, months in [('1M', 1), ('3M', 3), ('6M', 6), ('1Y', 12), ('전체', None)]:
+                    d = df_filtered[df_filtered['날짜'] >= ec_end - pd.DateOffset(months=months)] if months else df_filtered
+                    rel = {'xaxis.range': [d['날짜'].min().strftime('%Y-%m-%d'), ec_full_range[1]],
+                           'annotations': ec_axis_labels + ec_minmax(d)}
+                    ec_buttons.append(dict(label=lab, method='relayout', args=[rel]))
+
+                fig_hist = go.Figure()
+                ec_x = df_filtered['날짜'].dt.strftime('%Y-%m-%d').tolist()
+                for col, nm, color, width, dash, yax, share_col in ec_specs:
+                    fig_hist.add_trace(go.Scatter(x=ec_x, y=[None if pd.isna(v) else v for v in df_filtered[col].round(2)], text=ec_hover_texts(col, nm, share_col),
+                        mode='lines', name=nm, line=dict(color=color, width=width, dash=dash), yaxis=yax,
+                        hovertemplate='%{text}<extra></extra>'))
+
+                layout_cfg = dict(
+                    # pad=0: Streamlit 테마 기본 pad(8px)가 눈금 라벨만 밀어내 단위 라벨 정렬이 깨지므로 명시적으로 해제
+                    height=EC_H, margin=dict(l=EC_L, r=EC_R, t=EC_T, b=EC_B, pad=0, autoexpand=False),
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(248,249,250,0.5)',
+                    xaxis=dict(type='date', range=ec_full_range, showgrid=True, gridcolor='#eaeaea', linecolor='#ccc', hoverformat='<b>%Y-%m-%d</b>',
+                               rangeslider=dict(visible=True, thickness=0.05, range=ec_full_range), tickfont=dict(size=13)),
+                    yaxis=dict(showgrid=True, gridcolor='#eaeaea', linecolor='#ccc', tickformat=",.0f", tickfont=ec_tick_font),
+                    updatemenus=[dict(type='buttons', direction='right', buttons=ec_buttons, active=len(ec_buttons) - 1, showactive=True,
+                                      x=0, xanchor='left', y=ec_row_y, yanchor='bottom', pad=dict(l=0, r=0, t=0, b=0),
+                                      bgcolor='#f5f5f5', bordercolor='#dddddd', font=dict(size=13, color='#444'))],
+                    legend=dict(orientation='h', x=1, xanchor='right', y=ec_row_y, yanchor='bottom', font=dict(size=13)),
+                    hovermode='x unified',
+                    hoverlabel=dict(font=dict(size=13, family='Arial, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif')),
+                    annotations=ec_axis_labels + ec_minmax(df_filtered),
+                )
+                if has_y2:
+                    layout_cfg['yaxis2'] = dict(overlaying='y', side='right', showgrid=False, tickformat='.1f', ticksuffix='%', tickfont=ec_tick_font)
+                fig_hist.update_layout(**layout_cfg)
+                with st.container(key='ec_chart'):
+                    st.plotly_chart(fig_hist, use_container_width=True, config={'displaylogo': False})
+            except Exception as e:
+                st.info(f"시계열 차트 로딩 중... ({e})")
+
+        st.markdown("<h3 style='margin-top: 35px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
    
         try:
             import pandas as pd
@@ -2315,22 +2607,16 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
        
             t_prof_1ago = sum(safe_float(data[k].get('평가손익(1일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
             t_prof_7ago = sum(safe_float(data[k].get('평가손익(7일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
-            t_prof_15ago = sum(safe_float(data[k].get('평가손익(15일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
             t_prof_30ago = sum(safe_float(data[k].get('평가손익(30일전)', 0)) for k in FIXED_ORDER if k in data and isinstance(data[k], dict))
-       
+
             # 💡 [패치 1] 투자원금 기준 계산 로직
             t_prof_principal = t_asset - t_principal
             t_rate_principal = (t_prof_principal / t_principal * 100) if t_principal > 0 else 0
-            
-            past_asset_7 = t_asset - t_prof_actual + t_prof_7ago
-            t_prof_pr_7ago = past_asset_7 - t_principal
-            
-            past_asset_15 = t_asset - t_prof_actual + t_prof_15ago
-            t_prof_pr_15ago = past_asset_15 - t_principal
-            
-            past_asset_30 = t_asset - t_prof_actual + t_prof_30ago
-            t_prof_pr_30ago = past_asset_30 - t_principal
-       
+
+            t_prof_pr_7ago = hist_pnl_pr(7, FIXED_ORDER)
+            t_prof_pr_15ago = hist_pnl_pr(15, FIXED_ORDER)
+            t_prof_pr_30ago = hist_pnl_pr(30, FIXED_ORDER)
+
             # 💡 [패치 2] 매입금액 기준 계산 로직
             t_prof_buy = t_prof_actual
             t_rate_buy = (t_prof_buy / t_buy_total * 100) if t_buy_total > 0 else 0
@@ -2562,6 +2848,8 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     return (prof / prin * 100) if prin > 0 else 0
                 sorted_tax_order.sort(key=tax_rate_for_sort, reverse=True)
 
+            with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
+                st.markdown(PNL_BASIS_HELP)
             st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
@@ -2572,23 +2860,13 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     a = data[k]
                     a_tot = safe_float(a.get('총 자산', a.get('총자산', 0)))
                     a_prin = safe_float(cfg_data.get(f"{k}_PRINCIPAL", 0))
-                    a_prof = safe_float(a.get('평가손익', 0))
-                    
+
                     a_prof_pr = a_tot - a_prin
                     a_rate_pr = (a_prof_pr / a_prin * 100) if a_prin > 0 else 0
-                    
-                    a_prof_7ago = safe_float(a.get('평가손익(7일전)', 0))
-                    a_prof_15ago = safe_float(a.get('평가손익(15일전)', 0))
-                    a_prof_30ago = safe_float(a.get('평가손익(30일전)', 0))
-                    
-                    a_past_asset_7 = a_tot - a_prof + a_prof_7ago
-                    a_prof_pr_7ago = a_past_asset_7 - a_prin
-                    
-                    a_past_asset_15 = a_tot - a_prof + a_prof_15ago
-                    a_prof_pr_15ago = a_past_asset_15 - a_prin
-                    
-                    a_past_asset_30 = a_tot - a_prof + a_prof_30ago
-                    a_prof_pr_30ago = a_past_asset_30 - a_prin
+
+                    a_prof_pr_7ago = hist_pnl_pr(7, [k])
+                    a_prof_pr_15ago = hist_pnl_pr(15, [k])
+                    a_prof_pr_30ago = hist_pnl_pr(30, [k])
 
                     h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt_h(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt_h(a_prof_pr, True)}</td><td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td><td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td><td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
 
@@ -2878,14 +3156,9 @@ font-weight: 700 !important;
         t_prof_principal = t_asset - t_original_sum
         t_rate_principal = (t_prof_principal / t_original_sum * 100) if t_original_sum > 0 else 0
         
-        past_asset_7 = t_asset - t_profit + t_prof_7ago
-        t_prof_pr_7ago = past_asset_7 - t_original_sum
-        
-        past_asset_15 = t_asset - t_profit + t_prof_15ago
-        t_prof_pr_15ago = past_asset_15 - t_original_sum
-        
-        past_asset_30 = t_asset - t_profit + t_prof_30ago
-        t_prof_pr_30ago = past_asset_30 - t_original_sum
+        t_prof_pr_7ago = hist_pnl_pr(7, GEN_ACC_ORDER)
+        t_prof_pr_15ago = hist_pnl_pr(15, GEN_ACC_ORDER)
+        t_prof_pr_30ago = hist_pnl_pr(30, GEN_ACC_ORDER)
 
         # 💡 [매입금액 기준 비교 지표 계산]
         t_diff_7 = t_profit - t_prof_7ago; t_diff_15 = t_profit - t_prof_15ago; t_diff_30 = t_profit - t_prof_30ago
@@ -3190,6 +3463,8 @@ font-weight: 700 !important;
             sorted_gen_order.sort(key=gen_rate_for_sort, reverse=True)
 
         # 💡 [신규 오더 패치] 투자원금 대비 자산 현황 (계산된 t_prof_principal 및 차이값 반영)
+        with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
+            st.markdown(PNL_BASIS_HELP)
         st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
         st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
 
@@ -3226,23 +3501,13 @@ font-weight: 700 !important;
                 a = g_data[k]
                 a_tot = safe_float(a.get('총자산_KRW',0))
                 a_prin = safe_float(principals[k])
-                a_prof = safe_float(a.get('총수익_KRW',0))
-                
+
                 a_prof_pr = a_tot - a_prin
                 a_rate_pr = (a_prof_pr / a_prin * 100) if a_prin > 0 else 0
-                
-                a_prof_7ago = safe_float(a.get('평가손익(7일전)', 0))
-                a_prof_15ago = safe_float(a.get('평가손익(15일전)', 0))
-                a_prof_30ago = safe_float(a.get('평가손익(30일전)', 0))
 
-                a_past_asset_7 = a_tot - a_prof + a_prof_7ago
-                a_prof_pr_7ago = a_past_asset_7 - a_prin
-                
-                a_past_asset_15 = a_tot - a_prof + a_prof_15ago
-                a_prof_pr_15ago = a_past_asset_15 - a_prin
-                
-                a_past_asset_30 = a_tot - a_prof + a_prof_30ago
-                a_prof_pr_30ago = a_past_asset_30 - a_prin
+                a_prof_pr_7ago = hist_pnl_pr(7, [k])
+                a_prof_pr_15ago = hist_pnl_pr(15, [k])
+                a_prof_pr_30ago = hist_pnl_pr(30, [k])
 
                 h1.append(f"""
 <tr>
@@ -3500,7 +3765,7 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                         else: return s_krw
 
                     # 💡 [환차손익 합계] 종목별 환평가손익/환차손익을 미리 합산 (합계행에 표시)
-                    _sum_fx_eval, _sum_fx_diff, _has_fx = 0.0, 0.0, False
+                    _sum_fx_eval, _sum_fx_diff, _sum_cost_fx, _has_fx, _fx_missing = 0.0, 0.0, 0.0, False, False
                     if is_usa and show_fx:
                         for _it in items:
                             if not isinstance(_it, dict): continue
@@ -3512,7 +3777,10 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                                 _d_it = _q_it * _p_it * (rate_val - _bpf_it)
                                 _sum_fx_diff += _d_it
                                 _sum_fx_eval += (safe_float(_it.get('평가손익', 0)) * rate_val) + _d_it
+                                _sum_cost_fx += _q_it * _p_it * _bpf_it
                                 _has_fx = True
+                            else:
+                                _fx_missing = True
 
                     for i in ([s_data] + items + [cash_item]):
                         if not i: continue
@@ -3587,7 +3855,23 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                         h3.append(row)
                     h3.append("</table>")
                     st.markdown("".join(h3), unsafe_allow_html=True)
-    
+
+                    if is_usa and show_fx and _has_fx and not _fx_missing:
+                        _cash_krw = safe_float(cash_item.get('총자산', 0)) * rate_val
+                        _gap_fx = _sum_cost_fx - acc_prin
+                        _recon_total = _sum_fx_eval + _gap_fx + _cash_krw
+                        _recon_arrow = '▲' if _recon_total >= 0 else '▼'
+                        _recon_rows = [
+                            ("투자원금 (Admin, 입금 기준)", fmt(acc_prin), ""),
+                            ("재투자 차액 (추정)", fmt(_gap_fx, True), ""),
+                            ("종목 원가 (투자원금 + 재투자 차액(추정), 매입환율 기준)", fmt(_sum_cost_fx), ""),
+                            ("환평가손익 (환차손 포함)", fmt(_sum_fx_eval, True), ""),
+                            ("예수금", fmt(_cash_krw), ""),
+                            ("투자원금 대비 총 손익 <span style='font-weight:normal;'>(재투자 차액+환평가손익+예수금)</span>",f"<span style='color:#e00000;'>({_recon_arrow}{abs(_recon_total / acc_prin * 100):.2f}%) {_recon_arrow}{fmt(abs(_recon_total))}</span>" if acc_prin > 0 else f"<span style='color:#e00000;'>{_recon_arrow}{fmt(abs(_recon_total))}</span>", "font-weight:bold; background-color:#fff9e6;"),
+                        ]
+                        _recon_html = "".join(f"<tr style='{st_}'><td style='text-align:left; padding-left:15px; {st_}'>{lbl}</td><td style='text-align:right; padding-right:15px; {st_}'>{val}</td></tr>" for lbl, val, st_ in _recon_rows)
+                        st.markdown(f"<table class='main-table' style='margin-top:12px;'><tr><th style='text-align:center;'>투자원금 대비 손익 흐름</th><th>금액 (원)</th></tr>{_recon_html}</table>", unsafe_allow_html=True)
+
                     
     # =========================================================
     # 🪙 암호화폐 상세 화면
@@ -5142,7 +5426,8 @@ div.element-container:has(.hidden-btn-marker) + div.element-container { display:
 
         with col_date:
             st.markdown("<span class='log-date-marker'></span>", unsafe_allow_html=True)
-            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-top:45px; margin-bottom:1px; margin-right:2px; transform:translateY(15px);'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
+            # margin-top -7px: 제목~라벨 간격 약 104px(제목 하단 12 + 블록간격 16x2 + 기존 45 + 이동 15) → 절반(52px)
+            st.markdown("<div style='text-align:right; font-size:14px; font-weight:bold; color:#31333F; margin-top:-7px; margin-bottom:1px; margin-right:2px; transform:translateY(15px);'>🗓️ 조회 기간 (시작일 - 종료일)</div>", unsafe_allow_html=True)
             from datetime import timedelta
             st.date_input("date_input_hidden_label", value=[datetime.today() - timedelta(days=7), datetime.today()], key="arbi_log_date", label_visibility="collapsed")
 
