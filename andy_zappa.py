@@ -9,7 +9,7 @@
 #  [0] 전역 초기화 / 라이브 데이터 ......................... L46
 #        get_live_data() : 외부 서버 실시간 시세 수신 + BTC gap 갱신
 #  [1] 로그인 / 인증 ....................................... L86
-#        Oracle 해시암호 -> Secrets 백업 -> bcrypt 폴백 / ?token= 자동로그인
+#        Oracle 해시암호 -> Secrets 백업 (둘 다 없으면 접속 차단) / ?token= 자동로그인(Secrets)
 #  [2] 인증 성공 블록 시작 (이하 전체가 이 블록 안) ........ L136
 #  [3] Part 1 : 공통 설정 + 전역 CSS ....................... L145
 #        GUARANTEED_LOGOS (종목 -> 로고 도메인 매핑) ....... L304
@@ -35,6 +35,7 @@ import os
 import re
 import time
 import requests
+import html as html_lib
 from datetime import datetime, timedelta, timezone
 import urllib.parse
 import pandas as pd
@@ -45,27 +46,50 @@ import streamlit_authenticator as stauth
 
 PNL_BASIS_HELP = """
 **[1] 투자원금 대비 총 자산의 증감** : 계좌에 넣은 돈 대비 계좌 전체가 얼마나 늘었는지
-- 총 자산 = 평가금액 + 예수금(현금)
-- 투자원금 = 관리자 '자산정보요약'의 투자원금 (예수금 포함, 입출금 시에만 수기 갱신)
+- 총 자산 = 평가금액 + 현금성자산(매수하지 않은 현금)
+- 투자원금 = 관리자 '자산정보요약'의 투자원금 (현금성자산 포함, 입출금 시에만 수기 갱신)
 - 총 손익 = 총 자산 − 투자원금
-- 손익률 = 총 손익 ÷ 투자원금
+- 수익률 = 총 손익 ÷ 투자원금
 
-**[2] 매입금액 대비 종목별 손익(예수금 제외)** : 지금 종목에 실제 투자된 돈 대비 종목 손익
-- 매입금액 = 총 자산 − 예수금 − 총 손익
+**[2] 매입금액 대비 종목별 손익** : 지금 종목에 실제 투자된 돈 대비 종목 손익
+- 매입금액 = 총 자산 − 현금성자산 − 총 손익
 - 총 손익 = 종목별 평가손익의 합
-- 손익률 = 총 손익 ÷ 매입금액
+- 수익률 = 총 손익 ÷ 매입금액
 
 **암호화폐** : 일반·절세와 같은 규칙. 투자원금은 Admin 투자원금(현금 110,000,000원 포함, 112,872,566원)
 - [2] 매입금액 = 총 자산 − 미투자 현금(110,000,000원, 서버 `total_krw`) − 총 손익 (2,872,566원 수준)
 
-**기록 기준** : 자산·원금·예수금 일별 저장은 2026-10-20 이후분부터 적용 예정. 그 이전 날짜의 자산·원금 이력은 없어 과거 수익률은 재구성하지 않음
+**기록 기준** : 자산·원금·현금성자산 일별 저장은 2026-10-20 부터 적용. 그 이전 날짜의 자산·원금 이력은 없어 과거 수익률은 재구성하지 않음
 """
 
-def get_live_data():
-    url = "http://168.107.15.252:8000/arbi"
-    
+# =============================================================================
+# 🔐 비밀값은 코드(GitHub)에 두지 않고 Streamlit Cloud Secrets(또는 환경변수)에서만 읽는다
+#   ZAPPA_API_BASE   : Oracle API 주소 (예: http://<서버IP>:8000, 끝에 / 없이)
+#   ZAPPA_API_KEY    : Oracle API 호출 시 X-ZAPPA-KEY 헤더로 보내는 키 (서버가 이 키로 요청을 검증)
+#   ZAPPA_AUTO_TOKEN : 모바일 자동 로그인 ?token= 값 (없으면 자동 로그인 비활성)
+#   ZAPPA_COOKIE_KEY : 로그인 쿠키 서명 키 (없으면 서버 프로세스마다 임의 생성)
+#   ZAPPA_HASHED_PW  : Oracle 장애 시 쓰는 백업 비밀번호 해시
+#   KIS_APP_KEY / KIS_APP_SECRET : 한국투자증권 API
+# =============================================================================
+import hmac
+import secrets as pysecrets
+
+def zappa_secret(name, default=""):
     try:
-        response = requests.get(url, timeout=5)
+        v = st.secrets.get(name)
+    except Exception:
+        v = None
+    return str(v) if v else os.environ.get(name, default)
+
+# 서버 주소도 코드에 두지 않는다. 미설정이면 빈 값 → 서버 호출이 모두 실패해 화면은 로컬 백업 JSON / OFF LINE 으로 표시됨
+ZAPPA_API = zappa_secret("ZAPPA_API_BASE").rstrip("/")
+ZAPPA_HDR = {"X-ZAPPA-KEY": zappa_secret("ZAPPA_API_KEY")} if zappa_secret("ZAPPA_API_KEY") else {}
+
+def get_live_data():
+    url = f"{ZAPPA_API}/arbi"
+
+    try:
+        response = requests.get(url, headers=ZAPPA_HDR, timeout=5)
         if response.status_code == 200:
             return response.json()
     except Exception as e:
@@ -107,7 +131,7 @@ import bcrypt
 # 1. Oracle 서버에서 최신 해시 암호 가져오기 시도
 fetched_hashed_pw = None
 try:
-    res_cfg_auth = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
+    res_cfg_auth = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=2)
     if res_cfg_auth.status_code == 200:
         fetched_hashed_pw = res_cfg_auth.json().get("ZAPPA_HASHED_PW")
 except:
@@ -115,11 +139,11 @@ except:
 
 # 2. 오라클 서버 장애 시, Streamlit Secrets(비밀 금고)에서 백업 암호 가져오기
 if not fetched_hashed_pw:
-    try:
-        fetched_hashed_pw = st.secrets["ZAPPA_HASHED_PW"]
-    except:
-        # 💡 [패치] 라이브러리 버전 충돌을 방지하기 위해 bcrypt로 직접 안전하게 해싱합니다.
-        fetched_hashed_pw = bcrypt.hashpw('andy1234'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    fetched_hashed_pw = zappa_secret("ZAPPA_HASHED_PW")
+# 🔐 [보안] 예전에는 둘 다 실패하면 코드에 적힌 기본 비밀번호로 열렸다(누구나 로그인 가능) → 이제는 접속을 막는다
+if not fetched_hashed_pw:
+    st.error("🔒 인증 정보를 불러오지 못했습니다. (Oracle 서버 응답 없음 + Secrets 'ZAPPA_HASHED_PW' 미설정)")
+    st.stop()
 
 credentials = {
     "usernames": {
@@ -130,12 +154,19 @@ credentials = {
     }
 }
 
-authenticator = stauth.Authenticate(credentials, 'zappa_cookie_v2', 'signature_key', 0)
+# 🔐 [보안] 쿠키 서명 키를 코드에 두면 누구나 로그인 쿠키를 위조할 수 있다 → Secrets 에서 읽고,
+#    없으면 서버 프로세스마다 임의 생성(cache_resource 로 리런 간 유지)
+@st.cache_resource
+def _cookie_key_fallback():
+    return pysecrets.token_hex(32)
+
+authenticator = stauth.Authenticate(credentials, 'zappa_cookie_v2', zappa_secret("ZAPPA_COOKIE_KEY") or _cookie_key_fallback(), 0)
 
 # 3. 💡 모바일 자동 로그인 (비밀 URL 토큰 감지)
 is_auto_login = False
-# 주소창에 ?token=andy_zappa_pass 가 있으면 무조건 통과!
-if st.query_params.get("token") == "andy_zappa_pass":
+# 🔐 [보안] 토큰 값은 Secrets 'ZAPPA_AUTO_TOKEN' 에만 둔다 (미설정이면 자동 로그인 끔). 비교는 시간차 공격 방지용 compare_digest
+_auto_tok = zappa_secret("ZAPPA_AUTO_TOKEN")
+if _auto_tok and hmac.compare_digest(str(st.query_params.get("token", "")).encode("utf-8"), _auto_tok.encode("utf-8")):
     st.session_state["authentication_status"] = True
     is_auto_login = True
 
@@ -366,6 +397,278 @@ setInterval(bindSidebarClicks, 300);
     #                             차익거래)로 각각 '별도 정의'되어 있다(동일 로직).
     #                             하나로 합치려면 3곳 동일성 확인 후 진행할 것.
     # =========================================================
+    NEWS_FINANCE_KW = ("주식", "증시", "증권", "실적", "주가", "투자", "목표주가", "KOSPI", "KOSDAQ", "배당", "매수", "매도", "공시")
+
+    def kis_cred(name):
+        return st.secrets.get(name) or os.environ.get(name, "")
+
+    @st.cache_data(ttl=3300, show_spinner=False)
+    def kis_access_token():
+        r = requests.post("https://openapi.koreainvestment.com:9443/oauth2/tokenP", timeout=15,
+                          json={"grant_type": "client_credentials",
+                                "appkey": kis_cred("KIS_APP_KEY"), "appsecret": kis_cred("KIS_APP_SECRET")})
+        r.raise_for_status()
+        return r.json()["access_token"]
+
+    def kis_hdr():
+        return {"authorization": f"Bearer {kis_access_token()}",
+                "appkey": kis_cred("KIS_APP_KEY"), "appsecret": kis_cred("KIS_APP_SECRET"), "custtype": "P"}
+
+    import threading
+    _kis_tl = threading.local()
+
+    def kis_get(path, tr_id, hdr, params):
+        s = getattr(_kis_tl, "s", None)
+        if s is None: s = _kis_tl.s = requests.Session()
+        last = None
+        for attempt in range(4):
+            try:
+                url = ("https://openapi.koreainvestment.com:9443" + path if path.startswith("/")
+                       else "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/" + path)
+                r = s.get(url, timeout=15, headers={**hdr, "tr_id": tr_id}, params=params)
+                try: j = r.json()
+                except Exception: j = {}
+                if r.status_code == 200 and j.get("rt_cd") == "0": return j
+                last = RuntimeError(f"HTTP {r.status_code} {j.get('msg_cd')} {j.get('msg1')}")
+                if not (r.status_code >= 500 or j.get("msg_cd") == "EGW00201"): raise last
+            except (requests.ConnectionError, requests.Timeout) as e:
+                last = e
+            time.sleep(0.3 * (attempt + 1))
+        raise last
+
+    @st.cache_data(ttl=1800, show_spinner=False)
+    def kis_news_batch(codes):
+        from concurrent.futures import ThreadPoolExecutor
+        hdr = kis_hdr()
+        def one(code):
+            try:
+                o = kis_get("news-title", "FHKST01011800", hdr,
+                            {"FID_NEWS_OFER_ENTP_CODE": "", "FID_COND_MRKT_CLS_CODE": "", "FID_INPUT_ISCD": code,
+                             "FID_TITL_CNTT": "", "FID_INPUT_DATE_1": "", "FID_INPUT_HOUR_1": "",
+                             "FID_RANK_SORT_CLS_CODE": "", "FID_INPUT_SRNO": ""})
+                return code, o.get("output") or []
+            except Exception:
+                return code, []
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            return dict(ex.map(one, codes))
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def kis_card_prices(codes):
+        from concurrent.futures import ThreadPoolExecutor
+        hdr = kis_hdr()
+        now = datetime.now(timezone(timedelta(hours=9)))
+        today = now.strftime("%Y%m%d"); hm = now.hour * 100 + now.minute
+        def px(code, mkt):
+            return kis_get("inquire-price", "FHKST01010100", hdr, {"FID_COND_MRKT_DIV_CODE": mkt, "FID_INPUT_ISCD": code}).get("output") or {}
+        def one(code):
+            try:
+                nxt = px(code, "NX")
+                if safe_float(nxt.get("stck_prpr", 0)) <= 0: nxt = {}
+                rows = kis_get("inquire-daily-price", "FHKST01010400", hdr,
+                               {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code, "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"}).get("output") or []
+                if not rows: return code, ({}, nxt)
+                if rows[0].get("stck_bsop_date") != today:
+                    return code, ({"stck_clpr": rows[0].get("stck_clpr"), "prdy_ctrt": rows[0].get("prdy_ctrt")}, nxt)
+                cur = px(code, "J")
+                sdpr = safe_float(cur.get("stck_sdpr", 0)); price = safe_float(cur.get("stck_prpr", 0))
+                if hm >= 1530 and nxt:
+                    cs = kis_get("inquire-time-itemchartprice", "FHKST03010200", hdr,
+                                 {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code, "FID_INPUT_HOUR_1": "154000",
+                                  "FID_PW_DATA_INCU_YN": "Y", "FID_ETC_CLS_CODE": ""}).get("output2") or []
+                    for c in cs:
+                        if c.get("stck_cntg_hour") == "153000" and c.get("stck_bsop_date", today) == today:
+                            price = safe_float(c.get("stck_prpr", 0)) or price
+                            break
+                rate = (price - sdpr) / sdpr * 100 if sdpr > 0 else safe_float(cur.get("prdy_ctrt", 0))
+                return code, ({"stck_clpr": price, "prdy_ctrt": rate}, nxt)
+            except Exception:
+                return code, ({}, {})
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            return dict(ex.map(one, codes))
+
+    def render_kis_news_html(holdings, per_stock=2):
+        cards = ""
+        codes = tuple(dict.fromkeys(h["code"] for h in holdings))
+        try:
+            news_map = kis_news_batch(codes); price_map = kis_card_prices(codes)
+        except Exception:
+            news_map, price_map = {}, {}
+        for h in holdings:
+            arts = list(news_map.get(h["code"], []))
+            reg, nxt = price_map.get(h["code"], ({}, {}))
+            arts = [a for a in arts if any(k in a.get("hts_pbnt_titl_cntt", "") for k in NEWS_FINANCE_KW)]
+            # 정렬: ① 제목에 종목명(앞 4글자)이 있는 기사 먼저 ② 최신순 — 절세 ETF 구성종목 정렬과 같은 규칙
+            nm4 = str(h["name"]).strip()[:4]
+            arts.sort(key=lambda a: (nm4 in a.get("hts_pbnt_titl_cntt", ""), a.get("data_dt", ""), a.get("data_tm", "")), reverse=True)
+            titles = list(dict.fromkeys(a.get("hts_pbnt_titl_cntt", "") for a in arts))[:per_stock]
+            bullets = "".join(f"<li>{html_lib.escape(t)}</li>" for t in titles)
+            price_line = ""
+            if reg:
+                r_rate = safe_float(reg.get("prdy_ctrt", 0))
+                price_line = (f"<div style='font-size:13px; color:#333; margin-top:2px;'>정규장 {safe_float(reg.get('stck_clpr', 0)):,.0f}원 "
+                              f"<span class='{col(r_rate)}'>{fmt_p(r_rate)}</span>")
+                if nxt:
+                    n_rate = safe_float(nxt.get("prdy_ctrt", 0))
+                    price_line += (f" &nbsp;|&nbsp; 프리·애프터(NXT) {safe_float(nxt.get('stck_prpr', 0)):,.0f}원 "
+                                   f"<span class='{col(n_rate)}'>{fmt_p(n_rate)}</span>")
+                price_line += "</div>"
+            cards += (f"<div style='display:flex; gap:12px; padding:10px 0 10px 26px; border-bottom:1px solid #eee;'>"
+                      f"<div style='flex:0 0 auto;'>{get_logo_html(h['name'])}</div>"
+                      f"<div style='flex:1;'><div style='font-size:15px; font-weight:bold; color:#111;'>{html_lib.escape(short_name(h['name']))}</div>"
+                      f"{price_line}"
+                      f"<ul style='margin:4px 0 0 0; padding-left:18px; font-size:13.5px; color:#444; line-height:1.6;'>{bullets}</ul></div></div>")
+        if not cards: return ""
+        return cards
+
+    @st.cache_data(ttl=1800, show_spinner=False)
+    def yahoo_news_batch(tickers):
+        from concurrent.futures import ThreadPoolExecutor
+        def one(tk):
+            try:
+                r = requests.get("https://query1.finance.yahoo.com/v1/finance/search",
+                                 params={"q": tk, "newsCount": 8, "quotesCount": 1},
+                                 headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                r.raise_for_status()
+                j = r.json()
+                # 같은 요청에 회사명(shortname)을 받아 기사마다 '_co' 로 붙인다 → 제목에 회사명이 있는 기사 우선 정렬용
+                q = next((x for x in (j.get("quotes") or []) if x.get("symbol") == tk), {})
+                co = str(q.get("shortname") or q.get("longname") or "")
+                return tk, [dict(a, _co=co) for a in (j.get("news") or [])]
+            except Exception:
+                return tk, []
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            return dict(ex.map(one, tickers))
+
+    # 회사명(shortname)과 기사 제목 표기가 다른 종목만 보충 (예: Alphabet → Google, Taiwan Semiconductor → TSMC)
+    US_TITLE_ALIAS = {"GOOGL": ("Google",), "GOOG": ("Google",), "TSM": ("TSMC",)}
+
+    def render_us_news_html(holdings, per_stock=2):
+        cards = ""
+        tickers = tuple(dict.fromkeys(h["code"] for h in holdings))
+        try:
+            news_map = yahoo_news_batch(tickers)
+        except Exception:
+            news_map = {}
+        for h in holdings:
+            same = {"GOOGL": ("GOOGL", "GOOG"), "GOOG": ("GOOG", "GOOGL")}.get(h["code"], (h["code"],))
+            arts = [a for a in news_map.get(h["code"], []) if any(t in (a.get("relatedTickers") or []) for t in same) and a.get("title") and a.get("link")]
+            # 정렬: ① 제목에 티커/회사명(shortname 첫 단어, 대소문자 무시)이 있는 기사 먼저 ② 최신순
+            def _hit(a):
+                t = a.get("title", ""); tl = t.lower()
+                co = re.split(r"[ ,.]", str(a.get("_co", "")).strip())[0]
+                words = [co] if len(co) >= 3 else []
+                words += [w for s in same for w in US_TITLE_ALIAS.get(s, ())]
+                return any(re.search(rf"\b{re.escape(s)}\b", t) for s in same) or any(w.lower() in tl for w in words)
+            arts.sort(key=lambda a: (_hit(a), a.get("providerPublishTime", 0)), reverse=True)
+            bullets = "".join(
+                f"<li><a href='{html_lib.escape(a['link'], quote=True)}' target='_blank' rel='noopener noreferrer' style='color:#444; text-decoration:none;'>{html_lib.escape(a['title'])}</a>"
+                f" <span style='color:#999; font-size:12px;'>{html_lib.escape(str(a.get('publisher', '')))}</span></li>"
+                for a in arts[:per_stock])
+            rate = safe_float(h.get("rate", 0))
+            price_line = (f"<div style='font-size:13px; color:#333; margin-top:2px;'>현재가 ${safe_float(h.get('price', 0)):,.2f} "
+                          f"<span class='{col(rate)}'>{fmt_p(rate)}</span></div>") if safe_float(h.get("price", 0)) > 0 else ""
+            cards += (f"<div style='display:flex; gap:12px; padding:10px 0 10px 26px; border-bottom:1px solid #eee;'>"
+                      f"<div style='flex:0 0 auto;'>{get_logo_html(h['name'])}</div>"
+                      f"<div style='flex:1;'><div style='font-size:15px; font-weight:bold; color:#111;'>{html_lib.escape(short_name(h['name']))}</div>"
+                      f"{price_line}"
+                      f"<ul style='margin:4px 0 0 0; padding-left:18px; font-size:13.5px; color:#444; line-height:1.6;'>{bullets}</ul></div></div>")
+        if not cards: return ""
+        return cards
+
+    def news_section(title, cards, height, mt=18):
+        if not cards: return ""
+        return (f"<div style='margin-top:{mt}px;'><span style='color:#111; font-size:16px; font-weight:bold;'>{title}</span>"
+                f"<div style='height:{height}px; min-height:200px; overflow-y:auto; resize:vertical; padding-right:8px;'>{cards}</div></div>")
+
+    FLAG_KR = "<img src='https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1f0-1f1f7.png' alt='🇰🇷' style='height: 24px; width: 24px; object-fit: contain; vertical-align: middle; margin: -3px 6px 0 0;'>"
+    FLAG_US = "<img src='https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png' alt='🇺🇸' style='height: 24px; width: 24px; object-fit: contain; vertical-align: middle; margin: -3px 6px 0 0;'>"
+    ETF_US_PROXY = {"360750": ("SPY", "VOO"), "379810": ("QQQ",), "381180": ("SOXQ", "SOXX", "NVDA", "AVGO", "AMD"),
+                    "458730": ("SCHD",), "494300": ("QQQ",)}
+    # 같은 대표 티커(QQQ)를 쓰는 ETF가 둘 이상일 때, 뒤 카드는 대표 티커 대신 상위 편입종목 기사로 채운다
+    ETF_US_HOLDINGS = {"QQQ": ("MSFT", "AAPL", "AMZN")}
+    ETF_BRANDS = ("KODEX", "TIGER", "PLUS", "RISE", "ACE", "SOL", "HANARO", "KBSTAR", "ARIRANG", "KOSEF", "TIMEFOLIO", "WON", "1Q", "BNK", "HK")
+
+    @st.cache_data(ttl=3600, show_spinner=False)
+    def kis_etf_components(codes):
+        from concurrent.futures import ThreadPoolExecutor
+        hdr = kis_hdr()
+        def one(code):
+            for attempt in range(2):
+                try:
+                    j = kis_get("/uapi/etfetn/v1/quotations/inquire-component-stock-price", "FHKST121600C0", hdr,
+                                {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code, "FID_COND_SCR_DIV_CODE": "11216"})
+                    rows = [{"code": str(r.get("stck_shrn_iscd", "")).strip(), "name": str(r.get("hts_kor_isnm", "")).strip(),
+                             "w": safe_float(r.get("etf_cnfg_issu_rlim", 0))} for r in (j.get("output2") or [])]
+                    if rows or attempt == 1: return code, rows
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            return code, []
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            return dict(ex.map(one, codes))
+
+    def render_tax_etf_news(etfs, per_etf=3):
+        dom = [e for e in etfs if e["code"] not in ETF_US_PROXY]
+        us = [e for e in etfs if e["code"] in ETF_US_PROXY]
+        try:
+            comps = kis_etf_components(tuple(e["code"] for e in dom)) if dom else {}
+            picks = {e["code"]: [r for r in comps.get(e["code"], []) if r["code"].isalnum() and not r["name"].upper().startswith(ETF_BRANDS)][:3] for e in dom}
+            news_codes = tuple(dict.fromkeys(r["code"].zfill(6) if r["code"].isdigit() else r["code"] for rs in picks.values() for r in rs))
+            news_map = kis_news_batch(news_codes) if news_codes else {}
+            us_tickers = tuple(dict.fromkeys(t for e in us for p in ETF_US_PROXY[e["code"]] for t in (p,) + ETF_US_HOLDINGS.get(p, ())))
+            us_map = yahoo_news_batch(us_tickers) if us_tickers else {}
+        except Exception:
+            comps, picks, news_map, us_map = {}, {}, {}, {}
+        def card(e, sub, bullets):
+            name = e["name"]; rate = safe_float(e.get("rate", 0)); price = safe_float(e.get("price", 0))
+            price_line = (f"<div style='font-size:13px; color:#333; margin-top:2px;'>정규장 {price:,.0f}원 "
+                          f"<span class='{col(rate)}'>{fmt_p(rate)}</span></div>") if price > 0 else ""
+            return (f"<div style='display:flex; gap:12px; padding:10px 0 10px 26px; border-bottom:1px solid #eee;'>"
+                    f"<div style='flex:0 0 auto;'>{get_logo_html(name)}</div>"
+                    f"<div style='flex:1; min-width:0;'><div style='font-size:15px; font-weight:bold; color:#111;'>{html_lib.escape(short_name(name))}</div>"
+                    f"{price_line}"
+                    f"<div style='font-size:12.5px; color:#777; line-height:1.5; margin-top:2px;'>{sub}</div>"
+                    f"<ul style='margin:4px 0 0 0; padding-left:18px; font-size:13.5px; color:#444; line-height:1.6;'>{bullets}</ul></div></div>")
+        # 기사 중복 제거는 카드 간 공통: 평가금액이 큰(앞) 카드가 먼저 가져가고, 뒤 카드는 같은 제목을 건너뛴다
+        dom_cards, seen_t = "", set()
+        for e in dom:
+            rows = comps.get(e["code"], [])
+            sub = "구성 상위 : " + " · ".join(f"{html_lib.escape(r['name'])} {r['w']:.1f}%" for r in rows[:4]) if rows else "구성종목 정보 없음"
+            queues = []
+            for r in picks.get(e["code"], []):
+                nc = r["code"].zfill(6) if r["code"].isdigit() else r["code"]
+                arts = [a for a in news_map.get(nc, []) if any(k in a.get("hts_pbnt_titl_cntt", "") for k in NEWS_FINANCE_KW)]
+                arts.sort(key=lambda a: (r["name"][:4] in a.get("hts_pbnt_titl_cntt", ""), a.get("data_dt", ""), a.get("data_tm", "")), reverse=True)
+                queues.append([(r["name"], a.get("hts_pbnt_titl_cntt", "")) for a in arts])
+            chosen = []
+            while len(chosen) < per_etf and any(queues):
+                for q in queues:
+                    while q and q[0][1] in seen_t: q.pop(0)
+                    if q and len(chosen) < per_etf:
+                        chosen.append(q.pop(0)); seen_t.add(chosen[-1][1])
+            bullets = "".join(f"<li><span style='color:#888;'>[{html_lib.escape(n)}]</span> {html_lib.escape(t)}</li>" for n, t in chosen)
+            dom_cards += card(e, sub, bullets)
+        us_cards, seen_us, used_prox = "", set(), set()
+        for e in us:
+            prox = ETF_US_PROXY[e["code"]]
+            # 앞 카드가 이미 같은 대표 티커를 썼으면 상위 편입종목으로 교체 (편입종목 정보가 없으면 대표 티커 유지)
+            src = prox
+            if prox in used_prox:
+                src = tuple(t for p in prox for t in ETF_US_HOLDINGS.get(p, ())) or prox
+            used_prox.add(prox)
+            arts = []
+            for a in sorted((a for t in src for a in us_map.get(t, []) if any(x in (a.get("relatedTickers") or []) for x in src) and a.get("title") and a.get("link")),
+                            key=lambda a: a.get("providerPublishTime", 0), reverse=True):
+                if a["title"] in seen_us: continue
+                seen_us.add(a["title"]); arts.append(a)
+                if len(arts) >= per_etf: break
+            sub = "기사 기준(미국) : " + " · ".join(src) + (f" ({' · '.join(prox)} 상위 편입종목)" if src != prox else "")
+            bullets = "".join(
+                f"<li><a href='{html_lib.escape(a['link'], quote=True)}' target='_blank' rel='noopener noreferrer' style='color:#444; text-decoration:none;'>{html_lib.escape(a['title'])}</a>"
+                f" <span style='color:#999; font-size:12px;'>{html_lib.escape(str(a.get('publisher', '')))}</span></li>" for a in arts[:per_etf])
+            us_cards += card(e, sub, bullets)
+        return dom_cards, us_cards
+
     def get_logo_html(nm):
         if not nm or nm in ["예수금", "[ 합  계 ]", "현금성자산", "현금성자산(예수금)"]: return ""
    
@@ -495,8 +798,8 @@ setInterval(bindSidebarClicks, 300);
         ts = int(time.time())
    
         try:
-            r_p = requests.get(f"http://168.107.15.252:8000/tax_advantaged?t={ts}", timeout=5)
-            r_g = requests.get(f"http://168.107.15.252:8000/taxable?t={ts}", timeout=5)
+            r_p = requests.get(f"{ZAPPA_API}/tax_advantaged?t={ts}", headers=ZAPPA_HDR, timeout=5)
+            r_g = requests.get(f"{ZAPPA_API}/taxable?t={ts}", headers=ZAPPA_HDR, timeout=5)
        
             if r_p.status_code == 200:
                 temp_p = r_p.json()
@@ -528,6 +831,179 @@ setInterval(bindSidebarClicks, 300);
 
     data, g_data, is_oracle_online = fetch_hybrid_data()
 
+    def kis_live_raw(codes, hdr):
+        from concurrent.futures import ThreadPoolExecutor
+        def one(code):
+            try:
+                o = kis_get("inquire-price", "FHKST01010100", hdr,
+                            {"FID_COND_MRKT_DIV_CODE": "UN", "FID_INPUT_ISCD": code}).get("output") or {}
+                p = safe_float(o.get("stck_prpr", 0))
+                return code, ((p, safe_float(o.get("prdy_ctrt", 0))) if p > 0 else None)
+            except Exception:
+                return code, None
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            return dict(ex.map(one, codes))
+
+    def apply_live_prices(g):
+        import copy
+        info = {"ok": 0, "total": 0, "time": ""}
+        orig = g
+        try:
+            if not isinstance(g, dict) or not (kis_cred("KIS_APP_KEY") and kis_cred("KIS_APP_SECRET")):
+                return g, info
+            g = copy.deepcopy(g)
+            skip_nm = ("합  계", "예수금", "현금")
+            def code_of(it):
+                c = str(it.get("코드") or it.get("종목코드") or "").strip().upper()
+                if not c.isalnum(): return ""
+                return c.zfill(6) if c.isdigit() else c
+            codes = set()
+            for k in ("DOM1", "DOM2"):
+                acc = g.get(k)
+                if isinstance(acc, dict) and isinstance(acc.get("상세"), list):
+                    for it in acc["상세"]:
+                        if isinstance(it, dict) and not any(s in str(it.get("종목명", "")) for s in skip_nm):
+                            c = code_of(it)
+                            if c: codes.add(c)
+            if not codes: return g, info
+            bundle = live_bundle(*live_targets(g)); prices = bundle["dom"]; info["at"] = bundle["at"]
+            info["total"] = len(codes)
+            info["ok"] = sum(1 for c in codes if prices.get(c))
+            for k in ("DOM1", "DOM2"):
+                acc = g.get(k)
+                if not (isinstance(acc, dict) and isinstance(acc.get("상세"), list)): continue
+                delta = 0.0; sum_row = None
+                for it in acc["상세"]:
+                    if not isinstance(it, dict): continue
+                    if "합  계" in str(it.get("종목명", "")): sum_row = it; continue
+                    if any(s in str(it.get("종목명", "")) for s in skip_nm): continue
+                    px = prices.get(code_of(it)); qty = safe_float(it.get("수량", 0))
+                    if not px or qty <= 0: continue
+                    old_asset = safe_float(it.get("총자산", it.get("총 자산", 0)))
+                    old_prof = safe_float(it.get("평가손익", 0))
+                    buy = old_asset - old_prof
+                    new_asset = qty * px[0]; new_prof = new_asset - buy
+                    it["현재가"] = px[0]; it["전일비"] = px[1]
+                    it["총자산"] = new_asset; it["평가손익"] = new_prof
+                    it["수익률(%)"] = (new_prof / buy * 100) if buy > 0 else 0
+                    delta += new_asset - old_asset
+                if sum_row is not None:
+                    for fk in ("총자산", "총 자산", "평가손익"):
+                        if fk in sum_row: sum_row[fk] = safe_float(sum_row[fk]) + delta
+                acc["총자산_KRW"] = safe_float(acc.get("총자산_KRW", 0)) + delta
+                acc["총수익_KRW"] = safe_float(acc.get("총수익_KRW", 0)) + delta
+            info["time"] = info["at"].strftime("%H:%M:%S")
+            return g, info
+        except Exception:
+            return orig, {"ok": 0, "total": 0, "time": ""}
+
+    def yahoo_live_raw(tickers):
+        from concurrent.futures import ThreadPoolExecutor
+        def one(tk):
+            try:
+                r = requests.get(f"https://query1.finance.yahoo.com/v8/finance/chart/{tk.replace('.', '-')}",
+                                 params={"interval": "1m", "range": "1d", "includePrePost": "true"},
+                                 headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+                r.raise_for_status()
+                res = r.json()["chart"]["result"][0]
+                meta = res.get("meta") or {}
+                ts = res.get("timestamp") or []
+                cl = res["indicators"]["quote"][0].get("close") or []
+                last = [(t, c) for t, c in zip(ts, cl) if c is not None]
+                if not last: return tk, None
+                last_ts, px = last[-1]
+                reg = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
+                in_regular = reg.get("start") is not None and reg["start"] <= last_ts < reg["end"]
+                base = safe_float(meta.get("chartPreviousClose") if in_regular else meta.get("regularMarketPrice"))
+                if px <= 0 or base <= 0: return tk, None
+                return tk, (float(px), (px - base) / base * 100)
+            except Exception:
+                return tk, None
+        with ThreadPoolExecutor(max_workers=16) as ex:
+            return dict(ex.map(one, tickers))
+
+    def apply_live_prices_us(g):
+        import copy
+        info = {"ok": 0, "total": 0}
+        orig = g
+        try:
+            if not isinstance(g, dict): return g, info
+            g = copy.deepcopy(g)
+            fx = safe_float(g.get("환율", 0))
+            if fx <= 0: return orig, info
+            def tk_of(it):
+                t = str(it.get("코드") or it.get("종목코드") or "").strip().upper()
+                return t if t and t != "-" and all(ch.isalnum() or ch in ".-" for ch in t) else ""
+            tickers = set()
+            for k in ("USA1", "USA2"):
+                acc = g.get(k)
+                if isinstance(acc, dict) and isinstance(acc.get("상세"), list):
+                    for it in acc["상세"]:
+                        if isinstance(it, dict) and "합  계" not in str(it.get("종목명", "")):
+                            t = tk_of(it)
+                            if t: tickers.add(t)
+            if not tickers: return g, info
+            bundle = live_bundle(*live_targets(g)); prices = bundle["us"]; info["at"] = bundle["at"]
+            info["total"] = len(tickers)
+            info["ok"] = sum(1 for t in tickers if prices.get(t))
+            for k in ("USA1", "USA2"):
+                acc = g.get(k)
+                if not (isinstance(acc, dict) and isinstance(acc.get("상세"), list)): continue
+                delta = 0.0; sum_row = None
+                for it in acc["상세"]:
+                    if not isinstance(it, dict): continue
+                    if "합  계" in str(it.get("종목명", "")): sum_row = it; continue
+                    px = prices.get(tk_of(it)); qty = safe_float(it.get("수량", 0))
+                    if not px or qty <= 0: continue
+                    old_asset = safe_float(it.get("총자산", it.get("총 자산", 0)))
+                    old_prof = safe_float(it.get("평가손익", 0))
+                    buy = old_asset - old_prof
+                    new_asset = qty * px[0]; new_prof = new_asset - buy
+                    it["현재가"] = px[0]; it["전일비"] = px[1]
+                    it["총자산"] = new_asset; it["평가손익"] = new_prof
+                    it["수익률(%)"] = (new_prof / buy * 100) if buy > 0 else 0
+                    delta += new_asset - old_asset
+                if sum_row is not None:
+                    for fk in ("총자산", "총 자산", "평가손익"):
+                        if fk in sum_row: sum_row[fk] = safe_float(sum_row[fk]) + delta
+                acc["총자산_KRW"] = safe_float(acc.get("총자산_KRW", 0)) + delta * fx
+                acc["총수익_KRW"] = safe_float(acc.get("총수익_KRW", 0)) + delta * fx
+            return g, info
+        except Exception:
+            return orig, {"ok": 0, "total": 0}
+
+    def live_targets(g):
+        dom, us = set(), set()
+        if not isinstance(g, dict): return (), ()
+        for k in ("DOM1", "DOM2", "USA1", "USA2"):
+            acc = g.get(k)
+            if not (isinstance(acc, dict) and isinstance(acc.get("상세"), list)): continue
+            for it in acc["상세"]:
+                if not isinstance(it, dict) or any(s in str(it.get("종목명", "")) for s in ("합  계", "예수금", "현금")): continue
+                c = str(it.get("코드") or it.get("종목코드") or "").strip().upper()
+                if k.startswith("DOM"):
+                    if c.isalnum(): dom.add(c.zfill(6) if c.isdigit() else c)
+                elif c and c != "-" and all(ch.isalnum() or ch in ".-" for ch in c):
+                    us.add(c)
+        return tuple(sorted(dom)), tuple(sorted(us))
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def live_bundle(dom_codes, us_tickers):
+        from concurrent.futures import ThreadPoolExecutor
+        hdr = kis_hdr() if (dom_codes and kis_cred("KIS_APP_KEY")) else None
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_dom = ex.submit(kis_live_raw, dom_codes, hdr) if hdr else None
+            f_us = ex.submit(yahoo_live_raw, us_tickers) if us_tickers else None
+            out = {"dom": f_dom.result() if f_dom else {}, "us": f_us.result() if f_us else {}}
+        # 'at' = 시세를 실제로 받아온 시각(KST). 캐시(5분)에 함께 저장되므로 리런해도 그대로 유지된다
+        out["at"] = datetime.now(timezone(timedelta(hours=9)))
+        return out
+
+    g_data, live_info = apply_live_prices(g_data)
+    g_data, us_info = apply_live_prices_us(g_data)
+    # 사이드바 UPDATE 시각과 일반계좌 '실시간 시세' 캡션 시각을 이 값 하나로 통일한다 (없으면 기존 방식 유지)
+    live_at = live_info.get("at") or us_info.get("at")
+
     def normalize_insight(raw_data):
         if not isinstance(raw_data, dict): return {}
         insight = raw_data.get("_total", raw_data.get("_insight", {}))
@@ -556,11 +1032,11 @@ setInterval(bindSidebarClicks, 300);
     @st.cache_data(ttl=None)
     def get_crypto_data():
         ts = int(time.time())
-        url = f"http://168.107.15.252:8000/crypto?t={ts}"
+        url = f"{ZAPPA_API}/crypto?t={ts}"
         crypto_d = None
    
         try:
-            res = requests.get(url, timeout=5)
+            res = requests.get(url, headers=ZAPPA_HDR, timeout=5)
             if res.status_code == 200:
                 crypto_d = res.json()
                 if isinstance(crypto_d, dict) and "error" not in crypto_d:
@@ -601,7 +1077,7 @@ setInterval(bindSidebarClicks, 300);
     def get_history_data():
         ts = int(time.time())
         try:
-            res = requests.get(f"http://168.107.15.252:8000/history?t={ts}", timeout=5)
+            res = requests.get(f"{ZAPPA_API}/history?t={ts}", headers=ZAPPA_HDR, timeout=5)
             if res.status_code == 200:
                 h = res.json()
                 if isinstance(h, dict) and "error" not in h:
@@ -643,7 +1119,7 @@ setInterval(bindSidebarClicks, 300);
     GEN_ACC_ORDER_Q = ['DOM1', 'DOM2', 'USA1', 'USA2']
     # [수정1] 사이드바 일반계좌 투자원금을 서버에서 동적으로 가져오도록 변경
     try:
-        res_cfg_global = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
+        res_cfg_global = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=2)
         cfg_global = res_cfg_global.json() if res_cfg_global.status_code == 200 else {}
     except:
         cfg_global = {}
@@ -791,6 +1267,7 @@ background-image: url('{sea_src2}');
             st.toast("📡 오라클 서버에 접속 중입니다...", icon="⏳")
             fetch_hybrid_data.clear()
             get_crypto_data.clear()
+            live_bundle.clear(); kis_card_prices.clear()
             p_tmp, g_tmp, is_ok = fetch_hybrid_data()
             if is_ok:
                 # 성공 시에만 시계 갱신
@@ -891,7 +1368,7 @@ div.element-container:has(#balance-toggle-anchor) + div.element-container [data-
         c_rate_sum_actual = (c_prof_pure / c_buy_pure * 100) if c_buy_pure > 0 else 0
 
         try:
-            res_cfg_side = requests.get("http://168.107.15.252:8000/get_config", timeout=2)
+            res_cfg_side = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=2)
             cfg_data_side = res_cfg_side.json() if res_cfg_side.status_code == 200 else {}
         except:
             cfg_data_side = {}
@@ -925,6 +1402,10 @@ div.element-container:has(.hidden-update-marker) + div.element-container { displ
         # 💡 [자동 시간 기록] 첫 로딩 시 '업데이트 필요' 문구가 있다면 즉시 현재 시간으로 교체합니다.
         if st.session_state.get('last_sync_time', '업데이트 필요') == '업데이트 필요':
             st.session_state.last_sync_time = now_seoul.strftime(f"[ %y/%m/%d({dw_str}), %H:%M:%S ]")
+        # 실시간 시세를 받았으면 UPDATE 시각 = 시세를 실제로 받아온 시각(live_at). 일반계좌 캡션과 같은 값을 쓴다.
+        #   UPDATE 클릭 → 캐시 삭제 → 리런 시 live_bundle 이 새로 받아오므로, 클릭 후 실제 수신 시각이 표시된다.
+        if live_at:
+            st.session_state.last_sync_time = live_at.strftime(f"[ %y/%m/%d({days_kr[live_at.weekday()]}), %H:%M:%S ]")
 
         try:
             r_b64 = get_image_base64("robot.png")
@@ -1501,7 +1982,7 @@ setInterval(syncMasterToggle, 300);
         st.markdown("---")
    
         try:
-            res = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
+            res = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=5)
             cfg = res.json() if res.status_code == 200 else {}
         except:
             cfg = {}
@@ -1527,9 +2008,8 @@ setInterval(syncMasterToggle, 300);
                             if bcrypt.checkpw(old_pw.encode('utf-8'), fetched_hashed_pw.encode('utf-8')):
                                 is_pw_correct = True
                         except Exception:
-                            # 만약의 에러를 대비해 텍스트 직접 비교 보조 (마이그레이션용)
-                            if old_pw == fetched_hashed_pw:
-                                is_pw_correct = True
+                            # 🔐 [보안] 예전의 '해시 문자열 = 입력값' 평문 비교는 해시를 아는 사람이 통과할 수 있어 제거
+                            is_pw_correct = False
                    
                     if is_pw_correct:
                         # 2. 신규 비번 해싱 후 서버 덮어쓰기
@@ -1538,7 +2018,7 @@ setInterval(syncMasterToggle, 300);
                         cfg["ADMIN_PW"] = "" # 평문 기록은 영구 삭제
                        
                         try:
-                            res = requests.post("http://168.107.15.252:8000/update_config", json=cfg, timeout=20)
+                            res = requests.post(f"{ZAPPA_API}/update_config", headers=ZAPPA_HDR, json=cfg, timeout=20)
                             if res.status_code == 200:
                                 st.success("✅ 비밀번호가 안전하게 변경되었습니다!")
                             else:
@@ -1547,8 +2027,28 @@ setInterval(syncMasterToggle, 300);
                             st.error(f"❌ 서버 연결 오류 발생: {e}")
                     else:
                         st.error("❌ 현재 비밀번호가 일치하지 않습니다.")
+
+        # 📱 휴대폰 자동 로그인 QR: 로그인한 상태의 Admin 에서만 표시. 토큰 주소를 메일/메신저로 보내지 않고 휴대폰 카메라로 바로 옮기기 위함
+        #    주소는 지금 열려 있는 페이지 주소(로컬=localhost, 클라우드=streamlit.app) + ?token= 으로 브라우저에서 조립한다
+        with st.expander("📱 휴대폰 자동 로그인 QR (토큰 주소)", expanded=False):
+            _qr_tok = zappa_secret("ZAPPA_AUTO_TOKEN")
+            if not _qr_tok:
+                st.info("Secrets 에 ZAPPA_AUTO_TOKEN 이 없어 자동 로그인이 꺼져 있습니다.")
+            else:
+                st.markdown("<div style='font-size:13.5px; color:#666; margin-bottom:6px;'>※ 휴대폰 카메라로 QR 을 비추고 열린 주소를 북마크(홈 화면 추가)하세요. 이 주소는 비밀번호 없이 들어오는 열쇠이니 공유하지 마세요.</div>", unsafe_allow_html=True)
+                components.html(f"""
+<div id='zappa-qr' style='padding:10px; background:#fff; display:inline-block;'></div>
+<div id='zappa-qr-url' style='font-family:monospace; font-size:12px; color:#555; word-break:break-all; margin-top:6px;'></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const loc = window.parent.location;
+const url = loc.origin + loc.pathname.replace(/\\/$/, '') + '/?token=' + encodeURIComponent({json.dumps(_qr_tok)});
+new QRCode(document.getElementById('zappa-qr'), {{ text: url, width: 220, height: 220 }});
+document.getElementById('zappa-qr-url').textContent = url;
+</script>
+""", height=300)
         st.markdown("<br>", unsafe_allow_html=True)
-   
+
         # 💡 [패치] 관리자 인증 과정 생략 (메인 로그인으로 갈음) 후 즉시 자산 관리 렌더링
         col_cat, col_acc = st.columns(2)
         with col_cat: category = st.selectbox("1️⃣ 자산 유형 선택", ["📂절세계좌", "📂일반계좌", "📂암호화폐"])
@@ -1663,7 +2163,7 @@ setInterval(syncMasterToggle, 300);
        
             if confirm_btn:
                 try:
-                    res = requests.post("http://168.107.15.252:8000/update_config", json=config_to_save, timeout=20)
+                    res = requests.post(f"{ZAPPA_API}/update_config", headers=ZAPPA_HDR, json=config_to_save, timeout=20)
                     if res.status_code == 200:
                         st.success("✅ 오라클 서버에 성공적으로 배포되었습니다. 1~2초 후 새로고침됩니다.")
                         st.cache_data.clear()
@@ -2036,8 +2536,9 @@ setInterval(syncMasterToggle, 300);
                                     o_cur   = safe_float(item.get('현재가', 0))
                                     asset = o_asset * fx
                                     if asset > 0:
+                                        # 표시 이름만 '예수금' → '현금성자산' (카테고리 판정은 원래 이름 nm 으로 그대로)
                                         all_gen_list.append({
-                                            '카테고리': get_category(nm), '종목명': nm,
+                                            '카테고리': get_category(nm), '종목명': ('현금성자산' if nm == '예수금' else nm),
                                             '종목코드': str(item.get('코드', item.get('종목코드', item.get('ticker','')))).strip(),
                                             '자산': asset,
                                             '평가손익': o_pnl * fx, '수익률': safe_float(item.get('수익률(%)', 0)),
@@ -2581,7 +3082,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
         DATE_TAGS = {'DC': '[ 2025.08 ]', 'IRP': '[ 2025.08 ]', 'PENSION': '[ 2025.11 ]', 'ISA': '[ 2025.08 ]'}
 
         try:
-            res_cfg = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
+            res_cfg = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=5)
             cfg_data = res_cfg.json() if res_cfg.status_code == 200 else {}
         except:
             cfg_data = {}
@@ -2675,7 +3176,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
-<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
+<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성자산</div>
 <div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
@@ -2766,34 +3267,6 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                                 it_copy['계좌'] = abbrev_map.get(k, k)
                                 tax_items.append(it_copy)
                            
-            tax_best = sorted(tax_items, key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)[:5]
-            tax_worst = sorted([it for it in tax_items if safe_float(it.get('수익률(%)', 0)) < 5.0], key=lambda x: safe_float(x.get('수익률(%)', 0)))[:5]
-            tax_rise_cnt = sum(1 for it in tax_items if safe_float(it.get('전일비', 0)) > 0)
-            tax_fall_cnt = sum(1 for it in tax_items if safe_float(it.get('전일비', 0)) < 0)
-            tax_flat_cnt = len(tax_items) - tax_rise_cnt - tax_fall_cnt
-       
-            rise_list = sorted([x for x in tax_items if safe_float(x.get('전일비', 0)) > 0], key=lambda x: safe_float(x.get('전일비', 0)), reverse=True)[:3]
-            fall_list = sorted([x for x in tax_items if safe_float(x.get('전일비', 0)) < 0], key=lambda x: safe_float(x.get('전일비', 0)))[:3]
-       
-            rise_str = ", ".join([f"{short_name(it['종목명'])}({it['계좌']} ▲{safe_float(it['전일비']):.2f}%)" for it in rise_list]) if rise_list else "없음"
-            fall_str = ", ".join([f"{short_name(it['종목명'])}({it['계좌']} ▼{abs(safe_float(it['전일비'])):.2f}%)" for it in fall_list]) if fall_list else "없음"
-            tax_zappa_html = f"""
-<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>
-<div style='margin-bottom: 22px;'>
-<span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'>
-<span style='font-size:11px;'>🔵</span> 계좌 현황 및 종목 분석
-</span>
-<div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_prof_principal)}'><strong>{fmt_h(t_prof_principal, True)}</strong> (<span class='{col(t_rate_principal)}'><strong>{fmt_p(t_rate_principal)}</strong></span>)</span> 이며, 퇴직연금(IRP)계좌가 계좌별 수익률 1위를 기록 중입니다. 개별 종목에서는 <strong>{short_name(tax_best[0]['종목명']) if tax_best else '우량주'}</strong>가 효자 역할을 수행 중이나, <strong>{short_name(tax_worst[0]['종목명']) if tax_worst else '일부 종목'}</strong> 등은 단기 조정을 겪고 있습니다.<br>총 <strong>{len(tax_items)}개</strong> 종목 중 전일비 상승종목은 <strong>{tax_rise_cnt}개</strong>, 하락종목은 <strong>{tax_fall_cnt}개</strong>, 보합 <strong>{tax_flat_cnt}개</strong> 입니다.<br><span style='font-size:13.5px; color:#777; font-weight:500;'>※ 상승종목 : {rise_str}</span><br><span style='font-size:13.5px; color:#777; font-weight:500;'>※ 하락종목 : {fall_str}</span></div>
-</div>
-<div style='margin-bottom: 0px;'>
-<span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'>
-<span style='font-size:11px;'>🔵</span> 주식 시황 및 향후 대응 전략
-</span>
-<div>간밤 미국 지표의 끈적한 흐름과 연준의 금리 인하 신중론이 겹치며 변동성이 부각되었습니다. 아웃퍼폼 중인 종목에서 일부 차익 실현하여 현재 <strong>{(p_cash_tot/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금 비중을 선제적으로 확대할 필요가 있습니다.</div>
-</div>
-</div>
-"""
-       
             def render_table_rows(items_list):
                 rows_html = ""
                 for idx, it in enumerate(items_list):
@@ -2815,20 +3288,36 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     rows_html += f"<tr><td>{idx+1}</td>{nm_td}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_td}</tr>"
                 return rows_html
            
+            tax_etfs, seen_etf = [], set()
+            for it in sorted(tax_items, key=lambda x: safe_float(x.get('총자산', x.get('총 자산', 0))), reverse=True):
+                c = str(it.get('종목코드') or it.get('코드') or '').strip().upper()
+                if not c or c == '-' or not c.isalnum() or c in seen_etf: continue
+                seen_etf.add(c)
+                tax_etfs.append({"code": c, "name": str(it.get('종목명', '')).replace(chr(10), ' ').strip(),
+                                 "price": it.get('현재가', 0), "rate": it.get('전일비', 0)})
+            tax_dom_cards, tax_us_cards = render_tax_etf_news(tax_etfs)
+            def _tax_code(x): return str(x.get('종목코드') or x.get('코드') or '').strip().upper()
+            _by_rate = lambda x: safe_float(x.get('수익률(%)', 0))
+            tax_dom_rows = sorted([it for it in tax_items if _tax_code(it) not in ('', '-') and _tax_code(it) not in ETF_US_PROXY], key=_by_rate, reverse=True)
+            tax_us_rows = sorted([it for it in tax_items if _tax_code(it) in ETF_US_PROXY], key=_by_rate, reverse=True)
+            _boxes = 62 + 57 * (len(tax_dom_rows) + len(tax_us_rows))
+            tax_box1 = max(200, round(_boxes * 0.62)); tax_box2 = max(200, _boxes - tax_box1)
             st.markdown(f"""
-<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>
+<div class='insight-bottom-box'>
+<div style='display: flex; gap: 20px; align-items: stretch;'>
 <div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 손익률 우수종목 (TOP 5)</div>
-<table class='main-table' style='margin-bottom: 20px;'><tr><th style='width:40px;'></th><th style='text-align:center;'>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>{render_table_rows(tax_best)}</table>
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 손익률 부진종목</div>
-<table class='main-table' style='margin-bottom: 0px;'><tr><th style='width:40px;'></th><th style='text-align:center;'>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>{render_table_rows(tax_worst)}</table>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>{FLAG_KR}국내 ETF 수익률</div>
+<div style='margin-bottom: 20px;'><table class='main-table' style='margin-bottom: 0;'><tr><th style='width:40px;'></th><th style='text-align:center;'>종목명</th><th>수익률</th><th>평가손익</th><th>등락률</th></tr>{render_table_rows(tax_dom_rows)}</table></div>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>{FLAG_US}해외지수 ETF 수익률</div>
+<div><table class='main-table' style='margin-bottom: 0;'><tr><th style='width:40px;'></th><th style='text-align:center;'>종목명</th><th>수익률</th><th>평가손익</th><th>등락률</th></tr>{render_table_rows(tax_us_rows)}</table></div>
 </div>
-<div style='flex: 1.1; padding-left: 5px;'>
+<div style='flex: 1.1; padding-left: 5px; min-width: 0;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>
-<div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div>
-<div style='font-size: 13.5px; color: #888;'>[ -0.2%p < 보합 < +0.2%p ]</div>
+<div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>📰 뉴스로 본 업황 · 종목 동향</div>
 </div>
-{tax_zappa_html}
+{news_section('💡 [국내] ETF 구성종목 관련 뉴스', tax_dom_cards, tax_box1, 6)}
+{news_section('💡 [해외지수] ETF 관련 뉴스', tax_us_cards, tax_box2, 18)}
+</div>
 </div>
 </div>
 """, unsafe_allow_html=True)
@@ -2852,7 +3341,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                 st.markdown(PNL_BASIS_HELP)
             st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
-            h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
+            h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
             h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
             for k in sorted_tax_order:
@@ -2873,9 +3362,11 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             h1.append("</table>")
             st.markdown("".join(h1), unsafe_allow_html=True)
        
-            st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익(예수금 제외)</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap;'><span style='visibility:hidden;'>+</span>{fmt_h(t_buy_total)}</span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span style='white-space:nowrap;'><span class='summary-val {col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</span> <span class='{col(t_prof_buy)}'>({fmt_p(t_rate_buy)})</span></span></span><span style='white-space:nowrap;'>&nbsp;&nbsp;/&nbsp;&nbsp;예수금 : <span class='summary-val'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span></span></div>", unsafe_allow_html=True)
-            h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>손익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
+            st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익</div>", unsafe_allow_html=True)
+            # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
+        #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
+            st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_prof_buy)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_prof_buy, True)}</span><span class='{col(t_prof_buy)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>", unsafe_allow_html=True)
+            h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
             h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
        
             for k in sorted_tax_order:
@@ -2928,7 +3419,7 @@ font-weight: 700 !important;
             if st.button(lbl3, type="primary" if st.session_state.sort_mode == 'profit' else "secondary", key='sav_btn3', on_click=lambda: setattr(st.session_state, 'sort_mode', 'profit')): pass
            
         with s4:
-            lbl4 = "손익률(●) **]**" if st.session_state.sort_mode == 'rate' else "손익률(○) **]**"
+            lbl4 = "수익률(●) **]**" if st.session_state.sort_mode == 'rate' else "수익률(○) **]**"
             if st.button(lbl4, type="primary" if st.session_state.sort_mode == 'rate' else "secondary", key='sav_btn4', on_click=lambda: setattr(st.session_state, 'sort_mode', 'rate')): pass
            
         with s5:
@@ -2962,7 +3453,7 @@ font-weight: 700 !important;
                             if '현금' in str(i.get('종목명','')) or '예수금' in str(i.get('종목명','')):
                                 i['총 자산'] = isa_cash_val; i['평가손익'] = 0; i['수익률(%)'] = 0; has_cash = True; break
                         if not has_cash:
-                            details.append({'종목명': '현금성자산(예수금)', '총 자산': isa_cash_val, '평가손익': 0, '수익률(%)': 0, '수량': '-', '매입가': '-', '현재가': '-', '전일비': 0})
+                            details.append({'종목명': '현금성자산', '총 자산': isa_cash_val, '평가손익': 0, '수익률(%)': 0, '수량': '-', '매입가': '-', '현재가': '-', '전일비': 0})
 
                     s_data = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "[ 합  계 ]"), {})
                     
@@ -3020,7 +3511,7 @@ font-weight: 700 !important;
                     acc_prin = safe_float(cfg_data.get(f"{k}_PRINCIPAL", 0))
                     acc_tot = safe_float(a.get('총 자산', a.get('총자산', 0)))
                     acc_prof_buy = safe_float(a.get('평가손익', 0))
-                    # 매입금액 기준 손익률 = 평가손익 / 매입금액 (종목 집계, 예수금 제외)
+                    # 매입금액 기준 수익률 = 평가손익 / 매입금액 (종목 집계, 예수금 제외)
                     acc_buy = _tax_buy_amount(a)
                     acc_rate_buy = (acc_prof_buy / acc_buy * 100) if acc_buy > 0 else 0
 
@@ -3030,14 +3521,21 @@ font-weight: 700 !important;
                     if s_data:
                         s_data['수익률(%)'] = acc_rate_buy
 
+                    # 계좌 현금성자산 = 이름에 '현금'/'예수금'이 든 행의 합 (이율보증 등 안전자산은 제외, 합계행 제외). 표시 전용 값
+                    acc_cash = sum(safe_float(i.get('총 자산', i.get('총자산', 0))) for i in details
+                                   if isinstance(i, dict) and i.get('종목명') != '[ 합  계 ]' and ('현금' in str(i.get('종목명', '')) or '예수금' in str(i.get('종목명', ''))))
+
                     # 💡 [핵심 패치 6] KRW 뒤의 띄어쓰기(여백)를 딱 2칸(&nbsp;&nbsp;)으로만 정확히 맞춤
+                    #    '(현금성 N)' 전체를 '(원금기준)' 라벨과 같은 크기·색(12.5px, #666)으로, 금액 N 만 굵게 + 손익률 '(▲ %)'와 같은 16px
+                    #    총 손익 2줄(원금/매입기준)은 3열 grid(라벨 | 금액 | 손익률): 금액 열을 우측정렬 + 고정폭 숫자(tabular-nums)로
+                    #    두어 자릿수가 달라도 끝자리·콤마가 세로로 맞는다. 손익률 '(' 도 같은 x 에서 시작한다
                     st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;'>
 <div class='summary-text' style='margin-bottom:0; display:flex; align-items:flex-start;'>
-<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
-<div style='white-space:nowrap; line-height:1.2;'>
-<div style='margin-bottom:2px;'>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> : <span class='summary-val {col(acc_prof_pr)}'>{fmt_h(acc_prof_pr, True)}</span> <span class='{col(acc_prof_pr)}' style='font-size:16px;'>({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span></div>
-<div><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> : <span class='summary-val {col(acc_prof_buy)}'>{fmt_h(acc_prof_buy, True)}</span> <span class='{col(acc_prof_buy)}' style='font-size:16px;'>({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span></div>
+<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(acc_cash)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+<div style='display:inline-grid; grid-template-columns:auto auto auto; row-gap:2px; align-items:baseline; white-space:nowrap; line-height:1.2;'>
+<span>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> :&nbsp;</span><span class='summary-val {col(acc_prof_pr)}' style='text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(acc_prof_pr, True)}</span><span class='{col(acc_prof_pr)}' style='font-size:16px;'>&nbsp;({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span>
+<span><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> :&nbsp;</span><span class='summary-val {col(acc_prof_buy)}' style='text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(acc_prof_buy, True)}</span><span class='{col(acc_prof_buy)}' style='font-size:16px;'>&nbsp;({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span>
 </div>
 </div>
 {right_block}
@@ -3047,7 +3545,7 @@ font-weight: 700 !important;
                     code_th = "<th>종목코드</th>" if st.session_state.show_code else ""
                     th_chg = "<th>등락률</th>" if st.session_state.show_change_rate else ""
 
-                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
+                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th><th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
 
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') != "[ 합  계 ]"]
 
@@ -3113,7 +3611,7 @@ font-weight: 700 !important;
 
         # [수정2] 일반계좌 상세페이지 내 투자원금 오라클 서버 동적 연동
         try:
-            res_cfg_gen = requests.get("http://168.107.15.252:8000/get_config", timeout=5)
+            res_cfg_gen = requests.get(f"{ZAPPA_API}/get_config", headers=ZAPPA_HDR, timeout=5)
             cfg_data_gen = res_cfg_gen.json() if res_cfg_gen.status_code == 200 else {}
         except:
             cfg_data_gen = {}
@@ -3131,7 +3629,7 @@ font-weight: 700 !important;
 
         def _gen_buy_amount(acc_dict, is_usa_acc):
             # 매입금액 = 종목별 Σ(평가금액−평가손익), 예수금/현금/합계 제외.
-            #   서버 '매입금액_KRW'는 예수금이 혼입되어 손익률 분모로 쓰면 왜곡되므로 사용하지 않는다.
+            #   서버 '매입금액_KRW'는 예수금이 혼입되어 수익률 분모로 쓰면 왜곡되므로 사용하지 않는다.
             dets = acc_dict.get('상세', [])
             if not isinstance(dets, list): return 0.0
             fx = safe_float(g_data.get('환율', 1443.1)) if is_usa_acc else 1.0
@@ -3190,13 +3688,10 @@ font-weight: 700 !important;
         goal_amount = 1500000000; progress_pct = (t_asset / goal_amount) * 100 if goal_amount > 0 else 0
 
         all_tradeable = dom_items + ovs_items
-        rise_cnt = sum(1 for it in all_tradeable if safe_float(it.get('전일비', 0)) > 0.5)
-        fall_cnt = sum(1 for it in all_tradeable if safe_float(it.get('전일비', 0)) < -0.5)
-        flat_cnt = len(all_tradeable) - rise_cnt - fall_cnt
        
-        dom_best = sorted(dom_items, key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)[:5]
+        dom_best = sorted([it for it in dom_items if safe_float(it.get('수익률(%)', 0)) > 0], key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)[:5]
         dom_worst = sorted([it for it in dom_items if safe_float(it.get('수익률(%)', 0)) < 5.0], key=lambda x: safe_float(x.get('수익률(%)', 0)))[:5]
-        ovs_best = sorted(ovs_items, key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)[:5]
+        ovs_best = sorted([it for it in ovs_items if safe_float(it.get('수익률(%)', 0)) > 0], key=lambda x: safe_float(x.get('수익률(%)', 0)), reverse=True)[:5]
         ovs_worst = sorted([it for it in ovs_items if safe_float(it.get('수익률(%)', 0)) < 5.0], key=lambda x: safe_float(x.get('수익률(%)', 0)))[:5]
 
         total_for_bar = max(1, t_asset)
@@ -3207,31 +3702,7 @@ font-weight: 700 !important;
 
         def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
 
-        acc_rates = sorted([(k, (safe_float(g_data[k].get('총수익_KRW',0)) / principals[k] * 100 if principals[k]>0 else 0)) for k in GEN_ACC_ORDER if k in g_data and isinstance(g_data[k], dict)], key=lambda x: x[1], reverse=True)
-        best_acc_name = nm_table.get(acc_rates[0][0], "전체") if acc_rates else "전체"
 
-        zappa_html = f"""
-<div style='font-size: 14.5px; line-height: 1.85; color: #444; padding-left: 0px;'>
-<div style='margin-bottom: 22px;'>
-<span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'>
-<span style='font-size:11px;'>🔵</span> [통합] 계좌 현황 요약
-</span>
-<div>현재 전체 포트폴리오 총 손익은 <span class='{col(t_prof_principal)}'><strong>{fmt_h(t_prof_principal, True)}</strong></span> (<span class='{col(t_rate_principal)}'><strong>{fmt_p(t_rate_principal)}</strong></span>) 이며, <strong>{best_acc_name}</strong> 계좌가 계좌별 수익률 1위를 기록 중입니다. 총 <strong>{len(all_tradeable)}개</strong> 종목 중 0.5% 초과 상승종목은 <strong>{rise_cnt}개</strong>, 하락종목은 <strong>{fall_cnt}개</strong>, 보합종목은 <strong>{flat_cnt}개</strong> 입니다.</div>
-</div>
-<div style='margin-bottom: 15px;'>
-<span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'>
-<span style='font-size:11px;'>🔵</span> [국내] 시황 및 전망
-</span>
-<div>최근 국내 시장은 <strong>{short_name(dom_best[0]['종목명']) if dom_best else '국내 우량주'}</strong> 등 일부 우수 종목이 상승을 견인하고 있으나, <strong>{short_name(dom_worst[0]['종목명']) if dom_worst else '일부 조정주'}</strong> 등은 조정을 받고 있습니다. 실적 기반의 리밸런싱을 권고합니다.</div>
-</div>
-<div style='margin-bottom: 0px;'>
-<span style='color:#111; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:6px; margin-bottom:6px;'>
-<span style='font-size:11px;'>🔵</span> [해외] 시황 및 전망
-</span>
-<div>미국 증시는 <strong>{short_name(ovs_best[0]['종목명']) if ovs_best else '빅테크 우량주'}</strong> 위주로 긍정적 흐름을 보이나, <strong>{short_name(ovs_worst[0]['종목명']) if ovs_worst else '단기 하락주'}</strong> 등 부진 섹터는 비중 조절이 필요합니다. 현재 <strong>{(cash_total/t_asset*100) if t_asset>0 else 0:.1f}%</strong>인 현금성(예수금) 비중을 유동적으로 관리하시기 바랍니다.</div>
-</div>
-</div>
-"""
 
         st.markdown("<div class='sub-title' style='margin-bottom: 15px;'>🪴 [일반계좌] 자산 현황 요약</div>", unsafe_allow_html=True)
        
@@ -3282,7 +3753,7 @@ font-weight: 700 !important;
 <div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</div>
 <div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</div>
 </div>
-<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성(예수금)</div>
+<div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>현금성자산</div>
 <div style='color: #111; font-size: 18px; font-weight: 600; text-align: right; line-height: 20px;'>{fmt(cash_total)}</div>
 </div>
 </div>
@@ -3363,11 +3834,12 @@ font-weight: 700 !important;
         html_parts.append("</div></div></div>")
        
         html_parts.append("""
-<div class='insight-bottom-box' style='display: flex; gap: 20px; align-items: stretch;'>
+<div class='insight-bottom-box'>
+<div style='display: flex; gap: 20px; align-items: stretch; padding-bottom: 18px;'>
 <div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [국내] 손익률 우수종목</div>
-<table class='main-table' style='margin-bottom: 20px;'>
-<tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [국내] 수익률 우수종목</div>
+<div style='min-height: 312px; margin-bottom: 20px;'><table class='main-table' style='margin-bottom: 0;'>
+<tr><th style='width:40px;'></th><th>종목명</th><th>수익률</th><th>평가손익</th><th>등락률</th></tr>
 """)
         for idx, it in enumerate(dom_best):
             c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
@@ -3380,10 +3852,10 @@ font-weight: 700 !important;
             html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
        
         html_parts.append("""
-</table>
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [국내] 손익률 부진종목</div>
-<table class='main-table' style='margin-bottom: 25px;'>
-<tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익</th><th>등락률</th></tr>
+</table></div>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📉 [국내] 수익률 부진종목</div>
+<div style='min-height: 312px;'><table class='main-table' style='margin-bottom: 0;'>
+<tr><th style='width:40px;'></th><th>종목명</th><th>수익률</th><th>평가손익</th><th>등락률</th></tr>
 """)
         for idx, it in enumerate(dom_worst):
             c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) if c_p > 0 and d_rate != 0 else 0
@@ -3396,15 +3868,20 @@ font-weight: 700 !important;
             html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(it.get('평가손익', 0))}'>{fmt(it.get('평가손익', 0), True)}</td>{diff_html}</tr>")
        
         html_parts.append("""
-</table>
-<hr style='border:0; border-top:1px dashed #ddd; margin: 25px 0;'>
+</table></div>
+</div>
+@@DOM_RIGHT@@
+</div>
+<div style='border-top: 2px solid #b5b5b5;'></div>
+<div style='display: flex; gap: 20px; align-items: stretch; padding-top: 18px;'>
+<div style='flex: 1; padding-right: 15px; border-right: 1px solid #eaeaea;'>
 """)
        
         fx_rate = safe_float(g_data.get('환율', 1443.1))
         html_parts.append("""
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [해외] 손익률 우수종목</div>
-<table class='main-table' style='margin-bottom: 20px;'>
-<tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📈 [해외] 수익률 우수종목</div>
+<div style='min-height: 312px; margin-bottom: 20px;'><table class='main-table' style='margin-bottom: 0;'>
+<tr><th style='width:40px;'></th><th>종목명</th><th>수익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>
 """)
         for idx, it in enumerate(ovs_best):
             c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) * fx_rate if c_p > 0 and d_rate != 0 else 0
@@ -3417,10 +3894,10 @@ font-weight: 700 !important;
             html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(safe_float(it.get('평가손익', 0))*fx_rate)}'>{fmt(safe_float(it.get('평가손익', 0))*fx_rate, True)}</td>{diff_html}</tr>")
        
         html_parts.append("""
-</table>
-<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; margin-top: 15px; letter-spacing: normal;'>📉 [해외] 손익률 부진종목</div>
-<table class='main-table' style='margin-bottom: 0px;'>
-<tr><th style='width:40px;'></th><th>종목명</th><th>손익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>
+</table></div>
+<div style='font-size: 17px; font-weight: bold; color: #111; margin-bottom: 8px; letter-spacing: normal;'>📉 [해외] 수익률 부진종목</div>
+<div style='min-height: 312px;'><table class='main-table' style='margin-bottom: 0;'>
+<tr><th style='width:40px;'></th><th>종목명</th><th>수익률</th><th>평가손익(KRW)</th><th>등락률</th></tr>
 """)
         for idx, it in enumerate(ovs_worst):
             c_p = safe_float(it.get('현재가', 0)); d_rate = safe_float(it.get('전일비', 0)); diff_amt = (c_p - (c_p / (1 + d_rate / 100))) * fx_rate if c_p > 0 and d_rate != 0 else 0
@@ -3432,19 +3909,45 @@ font-weight: 700 !important;
             nm_html = f"<td style='line-height:1.3; padding-top:6px; padding-bottom:6px; text-align:left; padding-left:10px;'>{logo_html}{disp_nm}{acc_tag}</td>"
             html_parts.append(f"<tr><td>{idx+1}</td>{nm_html}<td class='{col(it.get('수익률(%)', 0))}'>{fmt_p(it.get('수익률(%)', 0))}</td><td class='{col(safe_float(it.get('평가손익', 0))*fx_rate)}'>{fmt(safe_float(it.get('평가손익', 0))*fx_rate, True)}</td>{diff_html}</tr>")
        
-        html_parts.append(f"""
-</table>
-</div>
-<div style='flex: 1.1; padding-left: 5px;'>
+        holdings, seen_codes = [], set()
+        for it in sorted(dom_items, key=lambda x: safe_float(x.get('총자산', 0)), reverse=True):
+            c = str(it.get('코드', it.get('종목코드', ''))).strip().zfill(6)
+            if not c.isalnum() or c in seen_codes: continue
+            seen_codes.add(c)
+            holdings.append({"code": c, "name": str(it.get('종목명', '')), "전일비": it.get('전일비', 0)})
+        if live_info["total"] or us_info["total"]:
+            live_cap = f"실시간 시세 적용 · 국내(KIS 통합) [{live_info['ok']}/{live_info['total']}]종목, 해외(Yahoo) [{us_info['ok']}/{us_info['total']}]종목 · {live_at.strftime('%H:%M:%S') if live_at else '-'} 기준"
+        else:
+            live_cap = "실시간 시세 미적용 (서버 데이터 기준)"
+        # 시작점을 위 제목 '🪴 [일반계좌]' 의 '[' 에 맞춘다: 제목과 같은 크기(22px bold)의 '🪴 ' 를 투명하게 앞에 깔아 폭을 그대로 확보.
+        #   폰트/이모지 렌더 폭이 기기마다 달라도 제목과 같은 글리프라 항상 일치한다. line-height:0 으로 줄 높이는 늘리지 않는다.
+        #   글자 스타일은 st.caption 기본값(14px, rgba(49,51,63,0.6))과 동일
+        st.markdown(f"<div style='font-size:14px; color:rgba(49, 51, 63, 0.6); line-height:1.5;'>"
+                    f"<span style='visibility:hidden; font-size:22px; font-weight:bold; line-height:0;'>🪴 </span>{live_cap}</div>", unsafe_allow_html=True)
+        news_html = render_kis_news_html(holdings)
+        us_holdings, seen_us = [], set()
+        for it in sorted(ovs_items, key=lambda x: safe_float(x.get('총자산', 0)), reverse=True):
+            c = str(it.get('코드', it.get('종목코드', ''))).strip().upper()
+            if not c or c == "-" or c in seen_us or not all(ch.isalnum() or ch in ".-" for ch in c): continue
+            seen_us.add(c)
+            us_holdings.append({"code": c, "name": str(it.get('종목명', '')), "price": it.get('현재가', 0), "rate": it.get('전일비', 0)})
+        us_news_html = render_us_news_html(us_holdings, per_stock=2)
+        dom_right_html = f"""<div style='flex: 1.1; padding-left: 5px; min-width: 0;'>
 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;'>
-<div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>💡 시황 및 향후 전망</div>
-<div style='font-size: 13.5px; color: #888;'>[ -0.5%p < 보합 < +0.5%p ]</div>
+<div style='font-size: 18px; font-weight: bold; color: #111; letter-spacing: normal;'>📰 뉴스로 보는 종목별 시황</div>
 </div>
-{zappa_html}
+{news_section('💡 [국내] 관련 뉴스', news_html, 639, 6)}
+</div>"""
+        html_parts.append(f"""
+</table></div>
+</div>
+<div style='flex: 1.1; padding-left: 5px; min-width: 0;'>
+{news_section('💡 [해외] 관련 뉴스', us_news_html, 692, 0)}
+</div>
 </div>
 </div>
 """)
-        st.markdown("".join(html_parts), unsafe_allow_html=True)
+        st.markdown("".join(html_parts).replace("@@DOM_RIGHT@@", dom_right_html), unsafe_allow_html=True)
 
         unit_html = "<div style='text-align:right;font-size:13px;color:#555;margin-bottom:5px;font-weight:bold;'>단위 : 원화(KRW)</div>"
 
@@ -3475,7 +3978,7 @@ font-weight: 700 !important;
 <th rowspan='2'>총 자산</th>
 <th rowspan='2' class='th-eval'>총 손익</th>
 <th colspan='3' class='th-blank'>&nbsp;</th>
-<th rowspan='2'>손익률</th>
+<th rowspan='2'>수익률</th>
 <th rowspan='2'>투자원금</th>
 </tr>
 <tr>
@@ -3524,8 +4027,10 @@ font-weight: 700 !important;
         h1.append("</table>")
         st.markdown("".join(h1), unsafe_allow_html=True)
 
-        st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익(예수금 제외)</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap;'><span style='visibility:hidden;'>+</span>{fmt_h(t_buy_total)}</span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span style='white-space:nowrap;'><span class='summary-val {col(t_profit)}'>{fmt_h(t_profit, True)}</span> <span class='{col(t_profit)}'>({fmt_p(t_rate_buy)})</span></span></span><span style='white-space:nowrap;'>&nbsp;&nbsp;/&nbsp;&nbsp;예수금 : <span class='summary-val'>{fmt_h(t_asset - t_buy_total - t_profit)}</span></span></div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익</div>", unsafe_allow_html=True)
+        # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
+        #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
+        st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_profit)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_profit)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_profit, True)}</span><span class='{col(t_profit)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>", unsafe_allow_html=True)
 
         h2_table = """
 <table class='main-table'>
@@ -3534,7 +4039,7 @@ font-weight: 700 !important;
 <th rowspan='2'>총 자산</th>
 <th rowspan='2' class='th-eval'>총 손익</th>
 <th colspan='3' class='th-blank'>&nbsp;</th>
-<th rowspan='2'>손익률</th>
+<th rowspan='2'>수익률</th>
 <th rowspan='2'>매입금액</th>
 </tr>
 <tr>
@@ -3561,7 +4066,7 @@ font-weight: 700 !important;
                 a = g_data[k]
                 buy_krw = _gen_buy_amount(a, 'USA' in k)
                 a_prof = safe_float(a.get('총수익_KRW', 0))
-                # 매입금액 기준 손익률 = 평가손익 / 매입금액 (예수금 제외; 총손익 열과 분자 일치)
+                # 매입금액 기준 수익률 = 평가손익 / 매입금액 (예수금 제외; 총손익 열과 분자 일치)
                 ay_acc = (a_prof / buy_krw * 100) if buy_krw > 0 else 0
                 diff_7_acc = a_prof - safe_float(a.get('평가손익(7일전)', 0))
                 diff_30_acc = a_prof - safe_float(a.get('평가손익(30일전)', 0))
@@ -3616,7 +4121,7 @@ font-weight: 700 !important;
             if st.button(lbl3, type="primary" if st.session_state.gen_sort_mode == 'profit' else "secondary", key='gen_btn3', on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'profit')): pass
            
         with b4:
-            lbl4 = "손익률(●) **]**" if st.session_state.gen_sort_mode == 'rate' else "손익률(○) **]**"
+            lbl4 = "수익률(●) **]**" if st.session_state.gen_sort_mode == 'rate' else "수익률(○) **]**"
             if st.button(lbl4, type="primary" if st.session_state.gen_sort_mode == 'rate' else "secondary", key='gen_btn4', on_click=lambda: setattr(st.session_state, 'gen_sort_mode', 'rate')): pass
            
         with b5:
@@ -3645,7 +4150,7 @@ font-weight: 700 !important;
                     acc_prin = safe_float(principals.get(k, 0))
                     acc_tot = safe_float(a.get('총자산_KRW', 0))
                     acc_prof_buy = safe_float(a.get('총수익_KRW', 0))
-                    # 매입금액 기준 손익률 = 평가손익 / 매입금액 (예수금 제외, 종목집계 헬퍼)
+                    # 매입금액 기준 수익률 = 평가손익 / 매입금액 (예수금 제외, 종목집계 헬퍼)
                     acc_buy_krw = _gen_buy_amount(a, is_usa)
                     acc_rate_buy = (acc_prof_buy / acc_buy_krw * 100) if acc_buy_krw > 0 else 0
 
@@ -3681,14 +4186,21 @@ font-weight: 700 !important;
 </div>
 """
                     
+                    # 계좌 현금성자산(KRW) = 위 [자산 현황 요약]의 cash_total 과 같은 판정('예수금' 이거나 '현금' 포함), 해외는 환율 적용. 표시 전용 값
+                    acc_cash = sum(safe_float(i.get('총자산', 0)) * (rate_val if is_usa else 1) for i in details
+                                   if isinstance(i, dict) and i.get('종목명') != '[ 합  계 ]' and (i.get('종목명') == '예수금' or '현금' in str(i.get('종목명', '')))) if isinstance(details, list) else 0
+
                     # 💡 [핵심 패치] KRW 여백 2칸 고정 및 (▲ %) 16px 사이즈 축소
+                    #    '(현금성 N)' 전체를 '(원금기준)' 라벨과 같은 크기·색(12.5px, #666)으로, 금액 N 만 굵게 + 손익률 '(▲ %)'와 같은 16px
+                    #    총 손익 2줄(원금/매입기준)은 3열 grid(라벨 | 금액 | 손익률): 금액 열을 우측정렬 + 고정폭 숫자(tabular-nums)로
+                    #    두어 자릿수가 달라도 끝자리·콤마가 세로로 맞는다. 손익률 '(' 도 같은 x 에서 시작한다
                     st.markdown(f"""
 <div style='display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:{"-6px" if is_usa else "8px"};'>
 <div class='summary-text' style='margin-bottom:0; display:flex; align-items:flex-start;'>
-<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW&nbsp;&nbsp;/&nbsp;&nbsp;</div>
-<div style='white-space:nowrap; line-height:1.2;'>
-<div style='margin-bottom:2px;'>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> : <span class='summary-val {col(acc_prof_pr)}'>{fmt_h(acc_prof_pr, True)}</span> <span class='{col(acc_prof_pr)}' style='font-size:16px;'>({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span></div>
-<div><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> : <span class='summary-val {col(acc_prof_buy)}'>{fmt_h(acc_prof_buy, True)}</span> <span class='{col(acc_prof_buy)}' style='font-size:16px;'>({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span></div>
+<div style='white-space:nowrap; line-height:1.2; padding-top:1px;'>● 총 자산 : <span class='summary-val'>{fmt_h(acc_tot)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(acc_cash)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</div>
+<div style='display:inline-grid; grid-template-columns:auto auto auto; row-gap:2px; align-items:baseline; white-space:nowrap; line-height:1.2;'>
+<span>총 손익<span style='font-size:12.5px; color:#666; font-weight:normal;'> (원금기준)</span> :&nbsp;</span><span class='summary-val {col(acc_prof_pr)}' style='text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(acc_prof_pr, True)}</span><span class='{col(acc_prof_pr)}' style='font-size:16px;'>&nbsp;({"▲" if acc_rate_pr > 0 else "▼" if acc_rate_pr < 0 else ""} {abs(acc_rate_pr):.2f}%)</span>
+<span><span style='color:transparent;'>총 손익</span><span style='font-size:12.5px; color:#666; font-weight:normal;'> (매입기준)</span> :&nbsp;</span><span class='summary-val {col(acc_prof_buy)}' style='text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(acc_prof_buy, True)}</span><span class='{col(acc_prof_buy)}' style='font-size:16px;'>&nbsp;({"▲" if acc_rate_buy > 0 else "▼" if acc_rate_buy < 0 else ""} {abs(acc_rate_buy):.2f}%)</span>
 </div>
 </div>
 {right_block}
@@ -3736,7 +4248,7 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                                 if _nk: buy_fx_map_nm[_nk] = _fxv
                     fx_th = "<th>매입환율<br>현재환율</th><th>환평가손익<br>환차손익</th>" if (is_usa and show_fx) else ""
 
-                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>손익률</th>{fx_th}<th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
+                    h3 = [f"<table class='main-table'><tr><th style='text-align:center;'>종목명</th>{code_th}<th>비중</th><th>총 자산</th><th>평가손익</th><th>수익률</th>{fx_th}<th>주식수</th><th>매입가</th><th>현재가</th>{th_chg}</tr>"]
                    
                     items = [i for i in details if isinstance(i, dict) and i.get('종목명') not in ["[ 합  계 ]", "예수금"]] if isinstance(details, list) else []
                     cash_item = next((i for i in details if isinstance(i, dict) and i.get('종목명') == "예수금"), {"종목명": "예수금", "총자산": 0, "평가손익": 0, "수익률(%)": 0, "수량": "-", "매입가": "-", "현재가": "-", "전일비": 0}) if isinstance(details, list) else {}
@@ -3797,8 +4309,10 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                             row += f"<td style='text-align:center; padding-left:0px;'>{orig_nm}</td>"
                         else:
                             nm_icon = "<span style='font-size:16px; margin-right:6px; vertical-align:middle;'>💵</span>" if ('예수금' in orig_nm or '현금' in orig_nm) else get_logo_html(orig_nm)
-                            row += f"<td style='text-align:left; padding-left:15px;'>{nm_icon}{orig_nm}</td>"
-                       
+                            # 표시 이름만 '예수금' → '현금성자산' 으로 통일 (orig_nm 은 아래 현금 판정 로직에서 그대로 사용하므로 바꾸지 않음)
+                            disp_nm = '현금성자산' if orig_nm == '예수금' else orig_nm
+                            row += f"<td style='text-align:left; padding-left:15px;'>{nm_icon}{disp_nm}</td>"
+
                         if st.session_state.show_code: row += f"<td>{'-' if is_s or i.get('코드','-')=='-' else i.get('코드', '')}</td>"
                        
                         ia = fmt_dual_h(i.get('총자산', 0)); ip = fmt_dual(i.get('평가손익', 0), True)
@@ -3866,8 +4380,8 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
                             ("재투자 차액 (추정)", fmt(_gap_fx, True), ""),
                             ("종목 원가 (투자원금 + 재투자 차액(추정), 매입환율 기준)", fmt(_sum_cost_fx), ""),
                             ("환평가손익 (환차손 포함)", fmt(_sum_fx_eval, True), ""),
-                            ("예수금", fmt(_cash_krw), ""),
-                            ("투자원금 대비 총 손익 <span style='font-weight:normal;'>(재투자 차액+환평가손익+예수금)</span>",f"<span style='color:#e00000;'>({_recon_arrow}{abs(_recon_total / acc_prin * 100):.2f}%) {_recon_arrow}{fmt(abs(_recon_total))}</span>" if acc_prin > 0 else f"<span style='color:#e00000;'>{_recon_arrow}{fmt(abs(_recon_total))}</span>", "font-weight:bold; background-color:#fff9e6;"),
+                            ("현금성자산", fmt(_cash_krw), ""),
+                            ("투자원금 대비 총 손익 <span style='font-weight:normal;'>(재투자 차액+환평가손익+현금성자산)</span>",f"<span style='color:#e00000;'>({_recon_arrow}{abs(_recon_total / acc_prin * 100):.2f}%) {_recon_arrow}{fmt(abs(_recon_total))}</span>" if acc_prin > 0 else f"<span style='color:#e00000;'>{_recon_arrow}{fmt(abs(_recon_total))}</span>", "font-weight:bold; background-color:#fff9e6;"),
                         ]
                         _recon_html = "".join(f"<tr style='{st_}'><td style='text-align:left; padding-left:15px; {st_}'>{lbl}</td><td style='text-align:right; padding-right:15px; {st_}'>{val}</td></tr>" for lbl, val, st_ in _recon_rows)
                         st.markdown(f"<table class='main-table' style='margin-top:12px;'><tr><th style='text-align:center;'>투자원금 대비 손익 흐름</th><th>금액 (원)</th></tr>{_recon_html}</table>", unsafe_allow_html=True)
@@ -3978,7 +4492,7 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
 {fmt_h(ca)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span>
 </div>
 <div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>
-[ 총 손익 <span class='{col(cp)}'>{fmt_h(cp, True)}</span> / 손익률 <span class='{col(cr)}'>{fmt_p(cr)}</span> ]
+[ 총 손익 <span class='{col(cp)}'>{fmt_h(cp, True)}</span> / 수익률 <span class='{col(cr)}'>{fmt_p(cr)}</span> ]
 </div>
 </div>
 <div style='background:#f9f9f9; padding:18px 20px; border-radius:10px; display:flex; flex-direction:column; gap:14px;'>
@@ -3994,7 +4508,7 @@ div[data-testid="stHorizontalBlock"]:has(.fx-toggle-anchor) div[data-baseweb="se
 </div>
 </div>
 <div style='display:flex; justify-content:space-between; align-items:baseline;'>
-<span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>현금성(예수금)</span>
+<span style='color: #777; font-size: 14px; font-weight: normal; line-height: 20px;'>현금성자산</span>
 <span style='color: #111; font-size: 18px; font-weight: 600; line-height: 20px;'>{fmt(ck)}</span>
 </div>
 </div>
@@ -4037,7 +4551,7 @@ font-weight: 700 !important;
                 if st.button(lbl3, type="primary" if st.session_state.cryp_sort_mode == 'profit' else "secondary", key='cryp_btn3', on_click=lambda: setattr(st.session_state, 'cryp_sort_mode', 'profit')): pass
                
             with cb4:
-                lbl4 = "손익률(●) **]**" if st.session_state.cryp_sort_mode == 'rate' else "손익률(○) **]**"
+                lbl4 = "수익률(●) **]**" if st.session_state.cryp_sort_mode == 'rate' else "수익률(○) **]**"
                 if st.button(lbl4, type="primary" if st.session_state.cryp_sort_mode == 'rate' else "secondary", key='cryp_btn4', on_click=lambda: setattr(st.session_state, 'cryp_sort_mode', 'rate')): pass
                
             with cb5:
@@ -4053,7 +4567,7 @@ font-weight: 700 !important;
             code_th = "<th style='text-align:center;'>종목코드</th>" if st.session_state.show_code else ""
             th_chg = "<th style='text-align:center;'>등락률</th>" if st.session_state.cryp_show_change_rate else ""
            
-            t_h = f"<table class='main-table'><tr><th style='text-align:center;'>코인명</th>{code_th}<th style='text-align:center;'>비중</th><th style='text-align:center;'>총 자산</th><th style='text-align:center;'>평가손익</th><th style='text-align:center;'>손익률</th><th style='text-align:center;'>보유량</th><th style='text-align:center;'>매입가</th><th style='text-align:center;'>현재가</th>{th_chg}</tr>"
+            t_h = f"<table class='main-table'><tr><th style='text-align:center;'>코인명</th>{code_th}<th style='text-align:center;'>비중</th><th style='text-align:center;'>총 자산</th><th style='text-align:center;'>평가손익</th><th style='text-align:center;'>수익률</th><th style='text-align:center;'>보유량</th><th style='text-align:center;'>매입가</th><th style='text-align:center;'>현재가</th>{th_chg}</tr>"
            
             sum_code_td = "<td style='text-align:center;'>-</td>" if st.session_state.show_code else ""
             sum_chg_td = "<td style='text-align:center;'>-</td>" if st.session_state.cryp_show_change_rate else ""
@@ -4226,7 +4740,7 @@ font-weight: 700 !important;
         ]
         
         mock_algo_logs = [
-            {"time": "10:15:22", "coin": "NVDA", "type": "청산(Sell)", "reason": "익절 목표가(5%) 도달", "amt": 2000000, "profit": 102000},
+            {"time": "10:15:22", "coin": "NVDA", "type": "청산(Sell)", "reason": "익절 라인(5%) 도달", "amt": 2000000, "profit": 102000},
             {"time": "09:30:00", "coin": "BTC", "type": "진입(Short)", "reason": "RSI 80 돌파 (단기 과매수)", "amt": 3000000, "profit": "-"},
             {"time": "04:12:45", "coin": "IONQ", "type": "청산(Sell)", "reason": "손절 라인(-3%) 이탈", "amt": 1500000, "profit": -45000},
             {"time": "02:22:10", "coin": "PLTR", "type": "진입(Long)", "reason": "MACD 골든크로스", "amt": 2500000, "profit": "-"},
@@ -4909,7 +5423,7 @@ div[data-testid="column"]:has(.master-robot-abs) div.element-container:has(.mast
         def render_bar(p, color): return f"<div style='width: {p}%; background-color: {color}; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;'><span style='position: absolute; font-size: 13px; color: #333; z-index: 10; white-space: nowrap;'>{p:.0f}%</span></div>" if p > 0 else ""
         p_btc, p_eth, p_sol, p_xrp = 8500000/29000000*100, 5500000/29000000*100, 2500000/29000000*100, 12500000/29000000*100
 
-        html_main_left = f"<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div><div class='insight-container'><div class='insight-left'><div class='card-main'><div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'><div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>💡총 자산</div>{donut_html}<div style='font-size: 13.5px; color: #333; font-weight: bold; margin-top: 14px;'><span style='font-size: 12.5px; color: #666;'>시드머니</span> : {fmt(mock_total_seed)}</div></div><div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'><div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'><div style='font-size: 21px; font-weight: 800 !important; color: #111; text-shadow: 0.3px 0px 0px #111, -0.3px 0px 0px #111; letter-spacing: 0.2px; line-height: 1; margin-bottom: 6px;'>{fmt(mock_total_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span></div><div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='red'>+0</span> / 전주비 <span class='red'>+0</span> ]</div></div><div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(mock_total_asset)}</div><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>총 누적수익</div><div style='text-align: right;'><div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(mock_total_profit)}'>{fmt(mock_total_profit, True)}</div><div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(mock_total_rate)}'>{fmt_p(mock_total_rate)}</div></div></div></div></div><div style='margin-top: 20px;'><div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>{render_bar(p_btc, '#b4a7d6')}{render_bar(p_eth, '#f4b183')}{render_bar(p_sol, '#a9d18e')}{render_bar(p_xrp, '#ffd966')}</div><div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>비트코인</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>이더리움</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>솔라나</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>리플</div></div><div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 디지털자산 차익거래 누적 1억 만들기</span><div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{mock_proj_pct:.1f}%</span></div></div><div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'><div style='width: {mock_proj_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div></div></div></div></div></div>"
+        html_main_left = f"<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div><div class='insight-container'><div class='insight-left'><div class='card-main'><div style='display: flex; gap: 15px; align-items: stretch; margin-bottom: auto;'><div style='flex: 0 0 38%; display: flex; flex-direction: column; align-items: center;'><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 15px; width:100%; text-align:left;'>💡총 자산</div>{donut_html}<div style='font-size: 13.5px; color: #333; font-weight: bold; margin-top: 14px;'><span style='font-size: 12.5px; color: #666;'>시드머니</span> : {fmt(mock_total_seed)}</div></div><div style='flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;'><div class='card-inner' style='padding: 10px 12px; margin-bottom: 8px;'><div style='font-size: 21px; font-weight: 800 !important; color: #111; text-shadow: 0.3px 0px 0px #111, -0.3px 0px 0px #111; letter-spacing: 0.2px; line-height: 1; margin-bottom: 6px;'>{fmt(mock_total_asset)}<span style='font-size: 13.5px; font-weight: normal; margin-left: 3px; letter-spacing: normal; text-shadow: none;'>KRW</span></div><div style='font-size: 13.5px; color: #777; font-weight: normal; line-height: 1;'>[ 전일비 <span class='red'>+0</span> / 전주비 <span class='red'>+0</span> ]</div></div><div style='display: grid; grid-template-columns: auto auto; row-gap: 12px; column-gap: 30px; justify-content: end; align-items: baseline; width: 100%; padding-right: 12px; margin-top: 8px;'><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>평가금액</div><div style='color: #111; font-size: 18px; font-weight: 400; text-align: right; line-height: 20px;'>{fmt(mock_total_asset)}</div><div style='color: #777; font-size: 14px; text-align: right; line-height: 20px;'>총 누적손익</div><div style='text-align: right;'><div style='font-size: 18px; font-weight: 600; line-height: 1;' class='{col(mock_total_profit)}'>{fmt(mock_total_profit, True)}</div><div style='font-size: 13.5px; font-weight: 600; margin-top: 3px; line-height: 1;' class='{col(mock_total_rate)}'>{fmt_p(mock_total_rate)}</div></div></div></div></div><div style='margin-top: 20px;'><div style='display: flex; height: 20px; width: 100%; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; overflow: hidden;'>{render_bar(p_btc, '#b4a7d6')}{render_bar(p_eth, '#f4b183')}{render_bar(p_sol, '#a9d18e')}{render_bar(p_xrp, '#ffd966')}</div><div style='display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #777; padding: 0 2px; margin-bottom: 16px;'><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#b4a7d6; border-radius:3px;'></div>비트코인</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#f4b183; border-radius:3px;'></div>이더리움</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#a9d18e; border-radius:3px;'></div>솔라나</div><div style='display: flex; align-items: center; gap: 4px;'><div style='width:12px; height:12px; background-color:#ffd966; border-radius:3px;'></div>리플</div></div><div style='padding: 10px 15px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid #e8dbad;'><div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'><span style='font-size: 14px; color: #777; font-weight: normal;'>🎯 디지털자산 차익거래 누적 1억 만들기</span><div style='text-align: right;'><span style='font-size: 14px; font-weight: bold; color: #4a90e2;'>{mock_proj_pct:.1f}%</span></div></div><div style='width: 100%; height: 6px; background-color: #e2e2e2; border-radius: 3px; overflow: hidden;'><div style='width: {mock_proj_pct}%; height: 100%; background: linear-gradient(90deg, #9bc2e6, #4a90e2);'></div></div></div></div></div></div>"
 
         cards_data = [
             {'name': '비트코인(BTC)', 'asset': 8500000, 'profit': 1250000, 'seed': 7250000},
@@ -4921,7 +5435,7 @@ div[data-testid="column"]:has(.master-robot-abs) div.element-container:has(.mast
         cards_html = "<div class='insight-right'><div class='grid-2x2'>"
         for cd in cards_data:
             c_rate = (cd['profit'] / cd['seed']) * 100
-            cards_html += f"<div class='card-sub' style='height:100%; justify-content:space-between; cursor:default;'><div><div style='text-align: right; font-size: 13.5px; color: #888; font-weight: normal; margin-bottom: -2px; line-height: 1;'>[ 2026.05 ]</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{cd['name']}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(cd['asset'])}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 누적수익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(cd['profit'])}' style='font-size: 16px; font-weight: normal;'>{fmt(cd['profit'], True)}</div><div class='{col(c_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(c_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>시드머니</span> : {fmt(cd['seed'])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>1</span> 거래</span></div></div>"
+            cards_html += f"<div class='card-sub' style='height:100%; justify-content:space-between; cursor:default;'><div><div style='text-align: right; font-size: 13.5px; color: #888; font-weight: normal; margin-bottom: -2px; line-height: 1;'>[ 2026.05 ]</div><div style='font-size: 18px; font-weight: bold; color: #111; margin-bottom: 2px;'>{cd['name']}</div><div style='border-bottom: 1px solid #eee; margin-bottom: 6px; margin-top: 2px;'></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 자산</span><span style='font-size: 16px; color: #111; font-weight: normal;'>{fmt(cd['asset'])}</span></div><div style='display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;'><span style='font-size: 14.5px; color: #666; font-weight: normal;'>총 누적손익</span><div style='text-align: right; line-height: 1.2;'><div class='{col(cd['profit'])}' style='font-size: 16px; font-weight: normal;'>{fmt(cd['profit'], True)}</div><div class='{col(c_rate)}' style='font-size: 14px; font-weight: normal; margin-top: 1px;'>{fmt_p(c_rate)}</div></div></div></div><div style='font-size: 13.5px; color: #666; font-weight: normal; margin-top: auto; padding-top: 2px; display: flex; justify-content: space-between; align-items: baseline;'><span>* <span style='font-size: 12.5px;'>시드머니</span> : {fmt(cd['seed'])}</span><span><span style='font-size: 16px; font-weight: bold; color: #111;'>1</span> 거래</span></div></div>"
         cards_html += "</div></div></div>"
         
         st.markdown(html_main_left + cards_html, unsafe_allow_html=True)
