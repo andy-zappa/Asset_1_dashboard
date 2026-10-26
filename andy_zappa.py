@@ -147,7 +147,7 @@ if not fetched_hashed_pw:
 
 credentials = {
     "usernames": {
-        "andy": {
+        "andyzappa": {   # 로그인 ID
             "name": "Andy",
             "password": fetched_hashed_pw
         }
@@ -174,14 +174,79 @@ if _auto_tok and hmac.compare_digest(str(st.query_params.get("token", "")).encod
 login_box = st.empty()
 
 # 토큰이 없을 때만 빈 상자 안에 정식 로그인 창 띄우기
+#   디자인: 화면 가운데 380px 카드 + 카드 윗선 위에 zappa_12.gif (원본 225x225 그대로)
+#   CSS/GIF 는 login_box 안에 있으므로 로그인 성공 시 login_box.empty() 와 함께 사라져 본 화면에 영향 없음
+#   (아래 경고/오류 문구도 이 CSS 가 있는 동안만 카드 폭에 맞춰 가운데 정렬)
+#   🔑 로봇 배치: 카드(stForm)의 ::before 로 붙인다. absolute 기준은 테두리 '안쪽'이라 bottom 에 (테두리 2px - GIF 투명 1px) = 1px 을 더해
+#      로봇 몸체 아래끝이 테두리 바깥 윗선에 정확히 '서' 있게 한다. 테두리 굵기를 바꾸면 이 1px 도 (굵기-1)로 바꿀 것.
+#   🔑 세로 위치: 상단 여백(LOGIN_TOP_PAD) + 로봇 위 여백(LOGIN_GIF_GAP). 작은 화면에서 스크롤이 생기면 이 두 값만 줄인다.
 if not is_auto_login:
     with login_box.container():
-        authenticator.login()
+        LOGIN_TOP_PAD, LOGIN_GIF_GAP, LOGIN_GIF_PX = 32, 6, 158   # 로봇: 원본 225px 의 70%
+        _gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "zappa_12.gif")
+        _gif_css = ""
+        if os.path.exists(_gif_path):   # 파일이 없으면(GitHub 미업로드 등) 로봇만 생략하고 로그인 카드는 그대로 표시
+            import base64 as _b64
+            with open(_gif_path, "rb") as _f:
+                _gif = bytearray(_f.read())
+            # 원본 GIF 의 반복 횟수가 1(한 번 재생 후 정지)로 저장돼 있어, 메모리에서만 0(무한 반복)으로 바꿔 쓴다. 원본 파일은 그대로
+            #   NETSCAPE2.0 확장 블록 = 'NETSCAPE2.0' + 0x03 0x01 + 반복횟수(2바이트, little-endian)
+            _li = _gif.find(b"NETSCAPE2.0")
+            if _li >= 0 and _gif[_li + 11:_li + 13] == b"\x03\x01":
+                _gif[_li + 13:_li + 15] = b"\x00\x00"
+            _gif_b64 = _b64.b64encode(bytes(_gif)).decode()
+            _gif_css = (
+                "div[data-testid=\"stForm\"] { margin-top: " + str(LOGIN_GIF_PX + LOGIN_GIF_GAP) + "px !important; }\n"
+                # bottom: 100% + 1px → 테두리(2px) 바깥 윗선에 로봇 몸체 아래끝(GIF 맨 아래 1px 투명 제외)이 정확히 닿음
+                "div[data-testid=\"stForm\"]::before { content: ''; position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%);"
+                " width: " + str(LOGIN_GIF_PX) + "px; height: " + str(LOGIN_GIF_PX) + "px; pointer-events: none;"
+                " background: url('data:image/gif;base64," + _gif_b64 + "') no-repeat center bottom / " + str(LOGIN_GIF_PX) + "px " + str(LOGIN_GIF_PX) + "px; }\n")
+        st.markdown("""
+<style>
+[data-testid="stMainBlockContainer"], .block-container { padding-top: """ + str(LOGIN_TOP_PAD) + """px !important; padding-bottom: 16px !important; }
+div[data-testid="stForm"] { position: relative; overflow: visible !important; max-width: 380px; margin: 0 auto !important; padding: 20px 28px 18px 28px !important;
+    background: #fffdf2; border: 2px solid #e8dbad !important; border-radius: 12px !important; box-shadow: none;   /* 일반계좌 '총 자산' 노란 카드(.card-main)와 같은 테두리·배경 */
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* 사이드바 절세계좌 카드(.zappa-expander:hover)처럼 마우스 올리면 2px 위로 + 그림자. 배경(노란색)·테두리 색은 그대로 유지 */
+div[data-testid="stForm"]:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important; }
+div[data-testid="stForm"] h3 { text-align: center; font-size: 18px !important; font-weight: 400 !important; color: #31333F; margin: 0 0 6px 0 !important; padding: 0 !important; }
+/* ID / PASSWORD 라벨: 사이드바 'KIS | UPbit | Binance' 와 같은 글씨(600, #444, 기본 글꼴), 크기만 14px */
+div[data-testid="stForm"] [data-testid="stWidgetLabel"] p, div[data-testid="stForm"] label p { font-size: 14px !important; font-weight: 400 !important; color: #444 !important; font-family: inherit !important;
+    transform: translate(8px, 6px); }   /* 오른쪽 8px, 아래(입력칸 쪽) 6px. transform 이라 입력칸 위치는 그대로 */
+/* ID / PASSWORD 입력칸: 일반계좌 노란 카드 안 '총 자산' 흰 박스(.card-inner)와 같은 모양·hover 효과 */
+div[data-testid="stForm"] div[data-baseweb="input"] { background: #ffffff !important; border: 1.5px solid #dcdcdc !important; border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s ease; }
+div[data-testid="stForm"] div[data-baseweb="input"] > div, div[data-testid="stForm"] div[data-baseweb="input"] input { background: transparent !important; }
+div[data-testid="stForm"] div[data-baseweb="input"]:hover { background: #f8f9fa !important; border-color: #bbb !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+div[data-testid="stFormSubmitButton"] button { width: 100% !important; height: 40px; margin-top: 6px;
+    background-color: #7fb5e9 !important; color: #ffffff !important; border: none !important; border-radius: 8px !important; font-weight: 600 !important; }
+div[data-testid="stFormSubmitButton"] button:hover { background-color: #5a99d4 !important; color: #ffffff !important; }
+div[data-testid="stFormSubmitButton"] button p { color: #ffffff !important; font-weight: 600 !important; }
+/* 안내/오류 문구: 배경색 없이, 박스 바로 아래에 붙여 오른쪽 정렬 (폭 380px = 박스와 같아 오른쪽 끝선이 박스와 일치) */
+div[data-testid="stAlert"] { max-width: 380px; margin: -6px auto 0 auto !important; }
+div[data-testid="stAlert"] p { font-size: 13px !important; }
+div[data-testid="stAlert"], div[data-testid="stAlert"] > div, div[data-testid="stAlertContainer"] { background: transparent !important; border: none !important; box-shadow: none !important; }
+div[data-testid="stAlertContainer"] { padding: 0 4px 0 0 !important; }
+div[data-testid="stAlert"] div, div[data-testid="stAlert"] p { text-align: right !important; justify-content: flex-end !important; }
+""" + _gif_css + """</style>
+""", unsafe_allow_html=True)
+        authenticator.login(fields={"Form name": "🔒️ Zappa Asset Dashboard", "Username": "ID", "Password": "PASSWORD", "Login": "Sign in"})
 
 if st.session_state.get("authentication_status") is False:
     st.error('❌ 아이디 또는 비밀번호가 일치하지 않습니다.')
 elif st.session_state.get("authentication_status") is None:
-    st.warning('🔒 대시보드 접속을 위해 비밀번호를 입력해주세요.')
+    # 로그인 전 박스 아래: 사이드바 하단 서명(ALGORITHM & AI Engine | Architect & UI / SINCE 2026, BY ANDY)과 같은 글씨를
+    # 박스 폭(380px) 오른쪽 끝에 맞춰 표시 (예전 안내 문구 자리, 간격도 동일하게 약 10px)
+    st.markdown(
+        "<div style='max-width:380px; margin:-6px auto 0 auto; display:flex; justify-content:flex-end; padding-right:4px;'>"
+        "<div style='display:flex; flex-direction:column; width:max-content;'>"
+        # 글씨체: 예전 안내 문구(13px, 기본 글꼴, 보통 굵기)와 동일. 색은 서명용 회색 톤 유지
+        "<div style='font-size:13px; color:#777; font-weight:400; line-height:1.3; margin-bottom:2px;'>"
+        "ALGORITHM &amp; AI Engine <span style='color:#888888; margin:0 4px;'>|</span> Architect &amp; UI</div>"
+        "<div style='display:flex; justify-content:space-between; align-items:baseline; line-height:1.3;'>"
+        "<div style='font-size:13px; color:#999999; font-weight:400;'>SINCE 2026,</div>"
+        "<div style='font-size:13px; color:#666666; font-weight:400;'>BY ANDY</div>"
+        "</div></div></div>", unsafe_allow_html=True)
 elif st.session_state.get("authentication_status"):
     # 💡 [핵심 패치 1] 로그인이 성공하면 겹쳐있던 로그인 상자를 강제로 폭파시켜 흔적을 지웁니다.
     login_box.empty()
@@ -486,22 +551,90 @@ setInterval(bindSidebarClicks, 300);
         with ThreadPoolExecutor(max_workers=8) as ex:
             return dict(ex.map(one, codes))
 
+    # =========================================================
+    # 📰 국내 뉴스 소스: 네이버 검색 API(제목 + 기사 직접 링크) 우선, 없으면 KIS 제목 + 네이버 뉴스 검색 링크
+    #   - 네이버 키(Secrets NAVER_CLIENT_ID / NAVER_CLIENT_SECRET)가 없거나, 호출 실패, 또는 그 종목 결과가 0건이면
+    #     그 종목은 KIS 뉴스 제목으로 대체 → 화면이 비지 않는다. KIS 제목은 누르면 그 제목의 네이버 뉴스 검색 결과가 열린다
+    #   - 정렬 규칙은 두 소스 동일: ① 제목에 종목명(앞 4글자) 포함 먼저 ② 최신순. 금융 키워드(NEWS_FINANCE_KW) 필터
+    # =========================================================
+    def naver_cred():
+        return zappa_secret("NAVER_CLIENT_ID"), zappa_secret("NAVER_CLIENT_SECRET")
+
+    @st.cache_data(ttl=1800, show_spinner=False)
+    def naver_news_batch(queries):
+        from concurrent.futures import ThreadPoolExecutor
+        from email.utils import parsedate_to_datetime
+        # 네이버 검색 API 는 2026-07 말부터 개발자센터 신규 신청이 막히고 '네이버 클라우드 NAVER API HUB' 로 이관됨
+        #   → HUB 주소/헤더 사용. Secrets 의 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 에는 HUB 에서 발급한 Client ID / Secret 을 넣는다
+        cid, csec = naver_cred()
+        hdr = {"X-NCP-APIGW-API-KEY-ID": cid, "X-NCP-APIGW-API-KEY": csec}
+        def clean(s):
+            return html_lib.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()   # 네이버 제목의 <b> 강조 태그·&quot; 제거
+        def one(q):
+            try:
+                r = requests.get("https://naverapihub.apigw.ntruss.com/search/v1/news", headers=hdr,
+                                 params={"query": q, "display": 30, "sort": "date"}, timeout=10)
+                r.raise_for_status()
+                out = []
+                for it in r.json().get("items") or []:
+                    try: ts = parsedate_to_datetime(it.get("pubDate", "")).timestamp()
+                    except Exception: ts = 0
+                    link = it.get("link") or it.get("originallink") or ""   # link = 네이버뉴스(제휴사), 없으면 원문
+                    if not link.startswith(("http://", "https://")): link = ""
+                    out.append({"title": clean(it.get("title")), "link": link, "ts": ts})
+                return q, out
+            except Exception:
+                return q, []
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            return dict(ex.map(one, queries))
+
+    def dom_news_lists(stocks):
+        """stocks: [(종목코드, 종목명)] → {종목코드: [(제목, 링크), ...]} (정렬·필터 적용, 링크 없으면 '')"""
+        out = {}
+        cid, csec = naver_cred()
+        if cid and csec:
+            q_of = {c: re.sub(r"\(.*?\)", "", str(n)).strip() for c, n in stocks}   # 검색어: 괄호 접미사 제거 (예: 삼성전자(자녀용))
+            try: nmap = naver_news_batch(tuple(dict.fromkeys(q_of.values())))
+            except Exception: nmap = {}
+            for c, n in stocks:
+                nm4 = q_of[c][:4]
+                arts = [a for a in nmap.get(q_of[c], []) if a["title"] and any(k in a["title"] for k in NEWS_FINANCE_KW)]
+                arts.sort(key=lambda a: (nm4 in a["title"], a["ts"]), reverse=True)
+                if arts: out[c] = [(a["title"], a["link"]) for a in arts]
+        rest = tuple(dict.fromkeys(c for c, _ in stocks if c not in out))
+        if rest:
+            try: kmap = kis_news_batch(rest)
+            except Exception: kmap = {}
+            for c, n in stocks:
+                if c in out: continue
+                nm4 = str(n).strip()[:4]
+                arts = [a for a in kmap.get(c, []) if any(k in a.get("hts_pbnt_titl_cntt", "") for k in NEWS_FINANCE_KW)]
+                arts.sort(key=lambda a: (nm4 in a.get("hts_pbnt_titl_cntt", ""), a.get("data_dt", ""), a.get("data_tm", "")), reverse=True)
+                # KIS 는 제목만 준다 → 제목으로 '네이버 뉴스 검색' 결과 페이지를 링크 (키·결제 불필요, 보통 맨 위에 해당 기사)
+                out[c] = [(t, "https://search.naver.com/search.naver?where=news&query=" + urllib.parse.quote(t))
+                          for t in (a.get("hts_pbnt_titl_cntt", "") for a in arts)]
+        return out
+
+    def news_li(title, link="", prefix=""):
+        # 링크가 있으면 새 창으로 여는 <a> (해외 Yahoo 뉴스와 같은 모양), 없으면 제목 글자만
+        t = html_lib.escape(title)
+        body = (f"<a href='{html_lib.escape(link, quote=True)}' target='_blank' rel='noopener noreferrer' style='color:#444; text-decoration:none;'>{t}</a>"
+                if link else t)
+        return f"<li>{prefix}{body}</li>"
+
     def render_kis_news_html(holdings, per_stock=2):
         cards = ""
         codes = tuple(dict.fromkeys(h["code"] for h in holdings))
         try:
-            news_map = kis_news_batch(codes); price_map = kis_card_prices(codes)
+            news_lists = dom_news_lists([(h["code"], h["name"]) for h in holdings]); price_map = kis_card_prices(codes)
         except Exception:
-            news_map, price_map = {}, {}
+            news_lists, price_map = {}, {}
         for h in holdings:
-            arts = list(news_map.get(h["code"], []))
             reg, nxt = price_map.get(h["code"], ({}, {}))
-            arts = [a for a in arts if any(k in a.get("hts_pbnt_titl_cntt", "") for k in NEWS_FINANCE_KW)]
-            # 정렬: ① 제목에 종목명(앞 4글자)이 있는 기사 먼저 ② 최신순 — 절세 ETF 구성종목 정렬과 같은 규칙
-            nm4 = str(h["name"]).strip()[:4]
-            arts.sort(key=lambda a: (nm4 in a.get("hts_pbnt_titl_cntt", ""), a.get("data_dt", ""), a.get("data_tm", "")), reverse=True)
-            titles = list(dict.fromkeys(a.get("hts_pbnt_titl_cntt", "") for a in arts))[:per_stock]
-            bullets = "".join(f"<li>{html_lib.escape(t)}</li>" for t in titles)
+            # 같은 제목 중복 제거(처음 나온 링크 유지) 후 종목당 per_stock 건
+            uniq = {}
+            for t, l in news_lists.get(h["code"], []): uniq.setdefault(t, l)
+            bullets = "".join(news_li(t, l) for t, l in list(uniq.items())[:per_stock])
             price_line = ""
             if reg:
                 r_rate = safe_float(reg.get("prdy_ctrt", 0))
@@ -613,12 +746,12 @@ setInterval(bindSidebarClicks, 300);
         try:
             comps = kis_etf_components(tuple(e["code"] for e in dom)) if dom else {}
             picks = {e["code"]: [r for r in comps.get(e["code"], []) if r["code"].isalnum() and not r["name"].upper().startswith(ETF_BRANDS)][:3] for e in dom}
-            news_codes = tuple(dict.fromkeys(r["code"].zfill(6) if r["code"].isdigit() else r["code"] for rs in picks.values() for r in rs))
-            news_map = kis_news_batch(news_codes) if news_codes else {}
+            news_stocks = list(dict.fromkeys((r["code"].zfill(6) if r["code"].isdigit() else r["code"], r["name"]) for rs in picks.values() for r in rs))
+            news_lists = dom_news_lists(news_stocks) if news_stocks else {}
             us_tickers = tuple(dict.fromkeys(t for e in us for p in ETF_US_PROXY[e["code"]] for t in (p,) + ETF_US_HOLDINGS.get(p, ())))
             us_map = yahoo_news_batch(us_tickers) if us_tickers else {}
         except Exception:
-            comps, picks, news_map, us_map = {}, {}, {}, {}
+            comps, picks, news_lists, us_map = {}, {}, {}, {}
         def card(e, sub, bullets):
             name = e["name"]; rate = safe_float(e.get("rate", 0)); price = safe_float(e.get("price", 0))
             price_line = (f"<div style='font-size:13px; color:#333; margin-top:2px;'>정규장 {price:,.0f}원 "
@@ -637,16 +770,15 @@ setInterval(bindSidebarClicks, 300);
             queues = []
             for r in picks.get(e["code"], []):
                 nc = r["code"].zfill(6) if r["code"].isdigit() else r["code"]
-                arts = [a for a in news_map.get(nc, []) if any(k in a.get("hts_pbnt_titl_cntt", "") for k in NEWS_FINANCE_KW)]
-                arts.sort(key=lambda a: (r["name"][:4] in a.get("hts_pbnt_titl_cntt", ""), a.get("data_dt", ""), a.get("data_tm", "")), reverse=True)
-                queues.append([(r["name"], a.get("hts_pbnt_titl_cntt", "")) for a in arts])
+                # 정렬·필터는 dom_news_lists 에서 이미 적용 (구성종목명 앞 4글자 포함 먼저 → 최신순)
+                queues.append([(r["name"], t, l) for t, l in news_lists.get(nc, [])])
             chosen = []
             while len(chosen) < per_etf and any(queues):
                 for q in queues:
                     while q and q[0][1] in seen_t: q.pop(0)
                     if q and len(chosen) < per_etf:
                         chosen.append(q.pop(0)); seen_t.add(chosen[-1][1])
-            bullets = "".join(f"<li><span style='color:#888;'>[{html_lib.escape(n)}]</span> {html_lib.escape(t)}</li>" for n, t in chosen)
+            bullets = "".join(news_li(t, l, prefix=f"<span style='color:#888;'>[{html_lib.escape(n)}]</span> ") for n, t, l in chosen)
             dom_cards += card(e, sub, bullets)
         us_cards, seen_us, used_prox = "", set(), set()
         for e in us:
