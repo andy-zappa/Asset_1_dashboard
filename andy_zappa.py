@@ -271,6 +271,18 @@ section[data-testid="stSidebar"] .block-container { padding-top: 0 !important; m
 .block-container { padding-top: 0rem !important; padding-bottom: 7rem !important; }
 h3 { font-size: 26px !important; font-weight: bold; margin-bottom: -10px; padding-bottom: 0px; }
 .sub-title { font-size: 22px !important; font-weight: bold; margin: 12px 0 10px; }
+/* [1]/[2] 섹션 접기 제목 (zappa_section): 제목 바로 옆 '>' — 평소 보통 굵기, 마우스 올리면 굵게, 펼치면 90도 회전 (사이드바 카드와 동일) */
+.zappa-sec > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+.zappa-sec > summary::-webkit-details-marker { display: none; }
+.zappa-sec > summary::after { content: '>'; font-family: monospace; font-weight: 400; font-size: 18px; color: #aaa; transition: transform 0.2s ease; display: inline-block; }
+.zappa-sec > summary:hover::after { font-weight: 900; color: #555; }
+.zappa-sec[open] > summary::after { transform: rotate(90deg); }
+/* [3] 계좌별 상세 내역 옆 '>': 누르면 아래 계좌 4개(st.expander)를 한 번에 펼치기/접기. 4개 모두 펼쳐져 있으면 90도 회전 */
+/* 대시보드 Treemap / Pie Chart 제목 옆 '>' 도 같은 모양 (펼침 = 90도 회전) */
+.zappa-sec3-toggle, .zappa-blk-toggle { display: inline-block; margin-left: 10px; font-family: monospace; font-weight: 400; font-size: 18px; color: #aaa;
+    cursor: pointer; user-select: none; transition: transform 0.2s ease; vertical-align: middle; }
+.zappa-sec3-toggle:hover, .zappa-blk-toggle:hover { font-weight: 900; color: #555; }
+.zappa-sec3-toggle.open, .zappa-blk-toggle.open { transform: rotate(90deg); }
 /* 표 격자선 두께 통일 (CRITICAL)
    기존에는 border-collapse:separate 였는데, 이 모드는 테두리를 '각 셀 박스 안쪽'에 그린다.
    열 폭이 내용에 따라 소수점으로 잡히므로 어떤 경계는 정수 픽셀(1px 또렷), 어떤 경계는
@@ -923,7 +935,17 @@ setInterval(bindSidebarClicks, 300);
     def short_name(nm):
         return str(nm)
 
-    @st.cache_data(ttl=None)
+    def zappa_section(sec_id, title, body_html, top_gap=0):
+        # 일반/절세계좌 [1]·[2] 섹션 접기·펼치기: 제목 옆 '>' (사이드바 카드 화살표와 같은 모양, 펼치면 90도 회전)
+        #   기본은 접힘(사용자 요청). 펼침/접힘 상태는 사이드바의 maintainExpanderState(sessionStorage, id 기준)가 새로고침 후에도 기억
+        #   top_gap: 위 요소와의 추가 간격(px). [1] 은 바로 위 'ℹ️ 손익 계산 기준 설명' 과 간격을 넓히려고 사용
+        #   빈 줄이 있으면 마크다운이 HTML 블록을 끊어 <details> 가 깨지므로 빈 줄을 없앤다
+        body_html = re.sub(r"\n\s*\n", "\n", body_html)
+        gap = f" style='margin-top:{top_gap}px;'" if top_gap else ""
+        return (f"<details id='{sec_id}' class='zappa-sec'{gap}><summary class='sub-title'>{title}</summary>\n{body_html}\n</details>")
+
+    # 캐시 5분: F5(새로고침)만 해도 최대 5분 안에 서버 최신값으로 바뀐다 (실시간 시세 live_bundle 과 같은 주기). UPDATE 는 즉시 갱신
+    @st.cache_data(ttl=300)
     def fetch_hybrid_data():
         p_data, g_data = {}, {}
         is_online = False
@@ -1161,7 +1183,7 @@ setInterval(bindSidebarClicks, 300);
 
     tot = normalize_insight(data)
 
-    @st.cache_data(ttl=None)
+    @st.cache_data(ttl=300)   # fetch_hybrid_data 와 같은 5분
     def get_crypto_data():
         ts = int(time.time())
         url = f"{ZAPPA_API}/crypto?t={ts}"
@@ -1205,7 +1227,7 @@ setInterval(bindSidebarClicks, 300);
 
     crypto_data = get_crypto_data()
 
-    @st.cache_data(ttl=None)
+    @st.cache_data(ttl=3600)   # 일별 기록이라 1시간. 예전엔 무기한이라 앱 재시작 전까지 새 날짜가 안 보였다
     def get_history_data():
         ts = int(time.time())
         try:
@@ -1398,7 +1420,7 @@ background-image: url('{sea_src2}');
         if st.button("TRIGGER_UPDATE_BACKEND"):
             st.toast("📡 오라클 서버에 접속 중입니다...", icon="⏳")
             fetch_hybrid_data.clear()
-            get_crypto_data.clear()
+            get_crypto_data.clear(); get_history_data.clear()
             live_bundle.clear(); kis_card_prices.clear()
             p_tmp, g_tmp, is_ok = fetch_hybrid_data()
             if is_ok:
@@ -2046,7 +2068,7 @@ clearInterval(bindInterval);
 <script>
 const parentDoc = window.parent.document;
 function maintainExpanderState() {
-const details = parentDoc.querySelectorAll('.zappa-expander');
+const details = parentDoc.querySelectorAll('.zappa-expander, .zappa-sec');   // .zappa-sec = 일반/절세계좌 [1]·[2] 접기 섹션
 details.forEach(detail => {
 const id = detail.id;
 if (!id) return;
@@ -2096,6 +2118,65 @@ sessionStorage.setItem(d.id, shouldOpen ? 'open' : 'closed');
 btn.classList.toggle('open', targets.every(d => d.open));
 }
 setInterval(syncMasterToggle, 300);
+
+// 🔑 일반/절세계좌 '[3] 계좌별 상세 내역' 옆 '>' : 아래 계좌 4개(st.expander, 제목이 '📂 [' 로 시작)를 한 번에 펼치고 접는다.
+//    하나라도 닫혀 있으면 전부 열고, 전부 열려 있으면 전부 닫는다. Streamlit 상태와 맞추려고 details.open 대신 summary 를 클릭한다.
+function sec3Accounts() {
+    return Array.from(parentDoc.querySelectorAll('div[data-testid="stExpander"] details')).filter(d => {
+        const s = d.querySelector('summary'); return s && s.innerText.indexOf('📂 [') !== -1;
+    });
+}
+function syncSec3Toggle() {
+    const btn = parentDoc.querySelector('.zappa-sec3-toggle');
+    if (!btn) return;
+    const list = sec3Accounts();
+    if (!btn.hasAttribute('data-sec3-binded')) {
+        btn.setAttribute('data-sec3-binded', 'true');
+        btn.addEventListener('click', () => {
+            const cur = sec3Accounts();
+            const shouldOpen = !cur.every(d => d.open);
+            cur.forEach(d => { if (d.open !== shouldOpen) d.querySelector('summary').click(); });
+        });
+    }
+    btn.classList.toggle('open', list.length > 0 && list.every(d => d.open));
+}
+setInterval(syncSec3Toggle, 300);
+
+// 🔑 대시보드 'Treemap' / 'Pie Chart' 제목 옆 '>' : 제목 다음 요소부터 다음 큰 제목(h3) 전까지를 숨기고/보인다.
+//    (차트·칸나누기가 여러 Streamlit 요소라 <details> 로 감쌀 수 없어서 형제 요소를 직접 숨김)
+//    상태는 sessionStorage('blk-<이름>')에 기억 → 새로고침/UPDATE 후에도 유지. 기본은 펼침.
+function blkRange(btn) {
+    let top = btn;
+    while (top.parentElement && top.parentElement.getAttribute('data-testid') !== 'stVerticalBlock') top = top.parentElement;
+    const out = [];
+    for (let el = top.nextElementSibling; el; el = el.nextElementSibling) {
+        if (el.querySelector('h3')) break;   // 다음 큰 제목에서 멈춤 (Pie Chart 는 화면 끝까지)
+        out.push(el);
+    }
+    return out;
+}
+function syncBlkToggles() {
+    // ⚠️ 화면(메뉴) 전환 시 Streamlit 은 같은 위치의 DOM 칸을 재사용한다. 숨김 표시가 남으면 다른 화면의 요소(예: [2] 표)가 사라진다.
+    //    → 매번 '내가 숨긴 칸'을 먼저 전부 되돌린 뒤, 지금 화면에 있는 접힌 영역만 다시 숨긴다 (같은 실행 안이라 깜빡임 없음)
+    parentDoc.querySelectorAll('[data-blk-hidden]').forEach(el => { el.style.display = ''; el.removeAttribute('data-blk-hidden'); });
+    parentDoc.querySelectorAll('.zappa-blk-toggle').forEach(btn => {
+        const key = 'blk-' + btn.getAttribute('data-blk');
+        if (!btn.hasAttribute('data-blk-binded')) {
+            btn.setAttribute('data-blk-binded', 'true');
+            btn.addEventListener('click', () => {
+                const opening = sessionStorage.getItem(key) === 'closed';
+                sessionStorage.setItem(key, opening ? 'open' : 'closed');
+                syncBlkToggles();
+                // 숨겨져 있던 차트가 다시 보일 때 크기를 다시 잡도록 resize 신호 (Plotly/ECharts 가 화면 폭에 맞춰 다시 그림)
+                if (opening) setTimeout(() => window.parent.dispatchEvent(new Event('resize')), 60);
+            });
+        }
+        const closed = sessionStorage.getItem(key) === 'closed';
+        if (closed) blkRange(btn).forEach(el => { el.style.display = 'none'; el.setAttribute('data-blk-hidden', '1'); });
+        btn.classList.toggle('open', !closed);
+    });
+}
+setInterval(syncBlkToggles, 300);
 </script>
 """, height=0)
  
@@ -2349,7 +2430,7 @@ document.getElementById('zappa-qr-url').textContent = url;
     # =========================================================
     if st.session_state.current_view == '대시보드':
         if history_data and isinstance(history_data, dict) and len(history_data) > 1:
-            st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🔐 Andy lee님 [총 운용자산] 추이</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-top: 5px; margin-bottom: 25px;'>🚀 Andy lee님 [총 운용자산] 추이</h3>", unsafe_allow_html=True)
             try:
                 from datetime import date as dt_date
 
@@ -2595,7 +2676,7 @@ document.getElementById('zappa-qr-url').textContent = url;
             except Exception as e:
                 st.info(f"시계열 차트 로딩 중... ({e})")
 
-        st.markdown("<h3 style='margin-top: 35px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: 35px; margin-bottom: 25px;'>🧩 총 자산 통합 포트폴리오 분석 (Treemap)<span class='zappa-blk-toggle' data-blk='treemap' title='펼치기 / 접기'>&gt;</span></h3>", unsafe_allow_html=True)
    
         try:
             import pandas as pd
@@ -2813,11 +2894,16 @@ document.getElementById('zappa-qr-url').textContent = url;
 상승↑ : <span style='color: #ff4b4b; font-size: 22px; font-weight: 900;'>{pen_up}</span> 종목 &nbsp; / &nbsp;
 하락↓ : <span style='color: #4b8bff; font-size: 22px; font-weight: 900;'>{pen_dn}</span> 종목
 </div>
+<style>
+/* Treemap 둥근 모서리: 예전 '<div>…</div>' 감싸기는 Streamlit 이 요소를 따로 그려 차트를 감싸지 못하고 빈 막대만 남았다
+   → 키 있는 컨테이너(.st-key-tm_*)로 감싸고 차트 자체를 둥글게 자른다.
+   ⚠️ 이 <style> 을 별도 st.markdown 으로 빼면 왼쪽 열에만 요소가 하나 늘어 제목~차트 간격이 오른쪽보다 16px 커진다 → 제목 블록에 함께 둔다 */
+.st-key-tm_pension [data-testid='stPlotlyChart'], .st-key-tm_general [data-testid='stPlotlyChart'] {{ border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 8px; }}
+</style>
 """, unsafe_allow_html=True)
-           
-                st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-                if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), width='stretch')
-                st.markdown("</div>", unsafe_allow_html=True)
+
+                with st.container(key='tm_pension'):
+                    if all_pension_list: st.plotly_chart(render_treemap(all_pension_list, "⏳ 절세계좌 통합 포트폴리오"), width='stretch')
            
             with c2:
                 st.markdown(f"""
@@ -2828,9 +2914,8 @@ document.getElementById('zappa-qr-url').textContent = url;
 </div>
 """, unsafe_allow_html=True)
 
-                st.markdown("<div style='background-color: #1e222d; padding: 5px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;'>", unsafe_allow_html=True)
-                if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), width='stretch')
-                st.markdown("</div>", unsafe_allow_html=True)
+                with st.container(key='tm_general'):   # 둥근 모서리 CSS 는 위 절세계좌 Treemap 쪽에서 함께 적용
+                    if all_gen_list: st.plotly_chart(render_treemap(all_gen_list, "🪴 일반계좌 통합 (한국+미국) 포트폴리오"), width='stretch')
 
             # 💡 [패치] Treemap 종목 클릭(드릴다운/확대) 시 '메모 상세'를 셀 안에 동적으로 표시.
             #           - 클릭 전: 셀 텍스트 = 기존 요약(종목명/전일비/자산) 그대로
@@ -3032,7 +3117,7 @@ document.getElementById('zappa-qr-url').textContent = url;
     # ---------------------------------------------------------
     # 🍩 대시보드 전용: 파이차트 그리기
     # ---------------------------------------------------------
-            st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>🍩 통합 종목별 상세 비중 (Pie Chart)<span class='zappa-blk-toggle' data-blk='pie' title='펼치기 / 접기'>&gt;</span></h3>", unsafe_allow_html=True)
        
             def get_detailed_grouped_df(keys, is_usa=False):
                 records = []
@@ -3051,20 +3136,24 @@ document.getElementById('zappa-qr-url').textContent = url;
                                 buy_amt = asset - profit
                                 qty = safe_float(it.get('수량', 0))
                                 code = str(it.get('코드', it.get('종목코드', it.get('ticker','')))).strip()
-                                records.append({'종목명': nm, '종목코드': code, '총자산': asset, '평가손익': profit, '매입금액': buy_amt, '수량': qty})
+                                # 전일자산: 오늘 총자산을 종목 등락률(전일비)로 되돌린 값 → 파이 가운데 '비중 전일비(%p)' 계산용
+                                d_rate = safe_float(it.get('전일비', 0))
+                                prev_asset = asset / (1 + d_rate / 100) if d_rate > -100 else asset
+                                records.append({'종목명': nm, '종목코드': code, '총자산': asset, '평가손익': profit, '매입금액': buy_amt, '수량': qty, '전일자산': prev_asset})
                 if not records: return pd.DataFrame()
                 df = pd.DataFrame(records)
                 # 💡 종목코드(정상값) 우선 그룹 → 이름 접미사가 달라도(예: 삼성전자(자녀용)) 코드가 같으면 합산. 표시명은 최단명.
                 df['_grp'] = df.apply(lambda x: str(x['종목코드']).strip() if str(x['종목코드']).strip() not in ('', '-', 'None', 'nan', 'NaN') else str(x['종목명']).strip(), axis=1)
                 df_g = df.groupby('_grp').agg({
                     '종목명': (lambda s: min(s, key=len)),
-                    '총자산': 'sum', '평가손익': 'sum', '매입금액': 'sum', '수량': 'sum'
+                    '총자산': 'sum', '평가손익': 'sum', '매입금액': 'sum', '수량': 'sum', '전일자산': 'sum'
                 }).reset_index()
                 df_g['수익률'] = (df_g['평가손익'] / df_g['매입금액'].replace(0, pd.NA) * 100).fillna(0)
                 df_g = df_g.sort_values('총자산', ascending=False).reset_index(drop=True)
                 return df_g
 
-            def render_interactive_pie_area(df_pie, title):
+            def render_interactive_pie_area(df_pie, title, center_html=""):
+                # center_html: 도넛 가운데(검은 원) 위에 겹쳐 표시할 HTML (예: 4개 파이 중 이 파이의 비중과 전일비)
                 if df_pie.empty: return
                 donut_colors = ['#D32F2F','#F57C00','#FBC02D','#388E3C','#1976D2','#7B1FA2', '#0097A7', '#689F38', '#C2185B', '#E64A19', '#303F9F', '#455A64']
                 chart_data = [{"value": float(row['총자산']), "name": row['종목명']} for idx, row in df_pie.iterrows()]
@@ -3120,6 +3209,11 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
 .chart-area {{ flex:1.2; position:relative; }}
 
 .legend-item {{ transition:all 0.2s; border-left:4px solid transparent; }}
+/* 도넛 가운데 비중: 마우스 올리면 아래에 흰 카드(총자산·총손익) 표시. 겹친 레이어 중 이 부분만 마우스를 받는다 */
+.pie-center {{ position:relative; pointer-events:auto; cursor:default; padding:6px 10px; }}
+.pie-tip {{ display:none; position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); z-index:20;
+    background:#ffffff; border:1px solid #eaeaea; border-radius:12px; padding:10px 14px; box-shadow:0 6px 12px rgba(0,0,0,0.18); white-space:nowrap; }}
+.pie-center:hover .pie-tip {{ display:block; }}
 .legend-item:hover, .legend-item.active {{ background:#2d3240; transform:translateX(4px); }}
 
 @media screen and (max-width: 750px) {{
@@ -3128,11 +3222,34 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
     .chart-area {{ flex: 1 !important; min-height: 230px; }}
 }}
 </style></head>
-<body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="list-area">{list_html}</div></div><div class="chart-area" id="pie-chart"></div></div></div>
+<body><div class="box"><div class="title">{title}</div><div class="content"><div class="left-panel"><div class="list-area">{list_html}</div></div><div class="chart-area"><div id="pie-chart" style="width:100%; height:100%;"></div><div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; z-index:5; white-space:nowrap;">{center_html}</div></div></div></div>
 <script>
     var itemsData = {json.dumps(items_js, ensure_ascii=False)};
     var chart = echarts.init(document.getElementById('pie-chart'));
     chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
+    // 글꼴·로고 로딩으로 왼쪽 목록 폭이 바뀌어도 도넛이 차트 영역 정가운데에 오도록 크기 재계산
+    window.addEventListener('resize', function(){{ chart.resize(); }});
+    setTimeout(function(){{ chart.resize(); }}, 300); setTimeout(function(){{ chart.resize(); }}, 1200);
+    // hover 카드(.pie-tip) 글꼴을 대시보드 본문(사이드바)과 같게: 이 프레임엔 Streamlit 글꼴이 없어 숫자가 더 크게 보였다
+    //   → 부모 문서의 @font-face 선언을 절대주소로 바꿔 복사해 넣고, 부모 body 의 글꼴 이름을 그대로 적용
+    (function() {{
+        try {{
+            var pd = window.parent.document, css = '';
+            for (var i = 0; i < pd.styleSheets.length; i++) {{
+                var sh = pd.styleSheets[i], rules;
+                try {{ rules = sh.cssRules; }} catch (e) {{ continue; }}
+                for (var j = 0; j < rules.length; j++) {{
+                    if (rules[j].type === 5) {{   // CSSFontFaceRule
+                        css += rules[j].cssText.replace(/url\\(["']?([^"')]+)["']?\\)/g, function(m, u) {{
+                            return 'url("' + new URL(u, sh.href || window.parent.location.href).href + '")'; }}) + '\\n';
+                    }}
+                }}
+            }}
+            if (css) {{ var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }}
+            var ff = window.parent.getComputedStyle(pd.body).fontFamily;
+            document.querySelectorAll('.pie-tip').forEach(function(el) {{ el.style.fontFamily = ff; }});
+        }} catch (e) {{ }}
+    }})();
 
     chart.on('mouseover', function(p){{ highlightLegend(p.dataIndex); }});
     chart.on('mouseout', function(){{ highlightLegend(-1); }});
@@ -3157,7 +3274,83 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
 
             df_dom_g = get_detailed_grouped_df(['DOM1', 'DOM2'])
             df_usa_g = get_detailed_grouped_df(['USA1', 'USA2'], is_usa=True)
-       
+
+            # ---------------------------------------------------------
+            # ⏳ 절세계좌 ETF 통합 상세 (한국 / 미국) 데이터
+            #   데이터: 절세계좌(DC/IRP/PENSION/ISA) 보유 ETF. 전부 원화(국내 상장)라 환율 적용 없음
+            #   한국/미국 구분: 사이드바 '국내 % / 해외 %' 와 같은 규칙(종목명에 미국·S&P·나스닥·필라델피아·다우지수 → 미국)
+            #   제외: 합계행, 현금성(현금·예수금·MMF), 이율보증형(안전자산)
+            # ---------------------------------------------------------
+            def get_tax_grouped_df(want_us):
+                records = []
+                for k in ['DC', 'IRP', 'PENSION', 'ISA']:
+                    if not (isinstance(data, dict) and isinstance(data.get(k), dict)): continue
+                    details = data[k].get('상세', [])
+                    if not isinstance(details, list): continue
+                    for it in details:
+                        if not isinstance(it, dict): continue
+                        nm = re.sub(r'\s+', ' ', str(it.get('종목명', ''))).strip()
+                        if not nm or nm.replace(' ', '') == '[합계]' or any(x in nm.upper() for x in ['현금', '예수금', 'MMF', '이율보증']): continue
+                        is_us = any(kw in nm.upper() for kw in ['미국', 'S&P', '나스닥', '필라델피아', '다우지수'])
+                        if is_us != want_us: continue
+                        asset = safe_float(it.get('총 자산', it.get('총자산', 0)))
+                        profit = safe_float(it.get('평가손익', 0))
+                        d_rate = safe_float(it.get('전일비', 0))
+                        records.append({'종목명': nm, '종목코드': str(it.get('종목코드', it.get('코드', ''))).strip(),
+                                        '총자산': asset, '평가손익': profit, '매입금액': asset - profit, '수량': safe_float(it.get('수량', 0)),
+                                        '전일자산': asset / (1 + d_rate / 100) if d_rate > -100 else asset})
+                if not records: return pd.DataFrame()
+                df = pd.DataFrame(records)
+                # 같은 ETF 를 여러 계좌에 나눠 보유하면 종목코드 기준으로 합산 (일반계좌 파이차트와 같은 규칙)
+                df['_grp'] = df.apply(lambda x: str(x['종목코드']).strip() if str(x['종목코드']).strip() not in ('', '-', 'None', 'nan', 'NaN') else str(x['종목명']).strip(), axis=1)
+                df_g = df.groupby('_grp').agg({'종목명': (lambda s: min(s, key=len)), '총자산': 'sum', '평가손익': 'sum', '매입금액': 'sum', '수량': 'sum', '전일자산': 'sum'}).reset_index()
+                df_g['수익률'] = (df_g['평가손익'] / df_g['매입금액'].replace(0, pd.NA) * 100).fillna(0)
+                return df_g.sort_values('총자산', ascending=False).reset_index(drop=True)
+
+            df_tax_kr = get_tax_grouped_df(False)
+            df_tax_us = get_tax_grouped_df(True)
+
+            # ---------------------------------------------------------
+            # 🍩 도넛 가운데 표시: 4개 파이(일반 한국·미국, 절세 한국·미국) 합계 대비 이 파이의 비중 + 전일 대비 비중 변화(%p)
+            #   - 비중 = 이 파이 총자산 / 4개 파이 총자산 합. 소수 1자리 반올림 후에도 합이 정확히 100.0% 가 되도록 최대잉여법 적용
+            #   - 전일 비중 = 종목별 '전일자산'(오늘 총자산 ÷ (1+전일비%)) 합으로 계산. 수량 변동·환율 변동은 반영하지 않는 추정치
+            # ---------------------------------------------------------
+            _pie_groups = [df_dom_g, df_usa_g, df_tax_kr, df_tax_us]
+            _now = [float(d['총자산'].sum()) if not d.empty else 0.0 for d in _pie_groups]
+            _prev = [float(d['전일자산'].sum()) if not d.empty else 0.0 for d in _pie_groups]
+            _tn, _tp = sum(_now), sum(_prev)
+            _raw = [(n / _tn * 100) if _tn > 0 else 0.0 for n in _now]
+            _units = [int(r * 10) for r in _raw]
+            if _tn > 0:
+                for _i in sorted(range(4), key=lambda i: _raw[i] * 10 - int(_raw[i] * 10), reverse=True)[:max(0, 1000 - sum(_units))]:
+                    _units[_i] += 1
+            _diff = [(_raw[i] - ((_prev[i] / _tp * 100) if _tp > 0 else 0.0)) for i in range(4)]
+
+            _prof = [float(d['평가손익'].sum()) if not d.empty else 0.0 for d in _pie_groups]
+            _buy = [float(d['매입금액'].sum()) if not d.empty else 0.0 for d in _pie_groups]
+
+            def pie_center_html(i):
+                d = round(_diff[i], 1)
+                if d > 0:   dtxt, dcol = f"(▲{d:.1f}%p)", "#ff7675"
+                elif d < 0: dtxt, dcol = f"(▼{abs(d):.1f}%p)", "#74b9ff"
+                else:       dtxt, dcol = "(0.0%p)", "#94a3b8"
+                # 마우스 올리면 보이는 카드: 사이드바 절세/일반계좌 카드의 총자산·총손익 글씨 형태 그대로 (국내/해외 비중·종목수 제외)
+                #   총손익 = 이 파이 종목들의 평가손익 합, 수익률 = 평가손익 합 ÷ 매입금액 합 (매입기준)
+                p, rate = _prof[i], ((_prof[i] / _buy[i] * 100) if _buy[i] > 0 else 0.0)
+                pcol = "#D32F2F" if p > 0 else ("#1976D2" if p < 0 else "#555")
+                tip = (f"<div class='pie-tip'>"
+                       f"<div style='display:grid; grid-template-columns:auto auto; column-gap:14px; row-gap:3px; align-items:baseline;'>"
+                       f"<span style='font-size:12.5px; color:#777; text-align:left;'>총자산</span>"
+                       f"<span style='font-size:21px; font-weight:600; color:#111; text-align:right;'>{fmt_h(_now[i])} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></span>"
+                       f"<span style='font-size:12.5px; color:#777; text-align:left;'>총손익</span>"
+                       f"<span style='font-size:16px; color:#555; text-align:right;'><span style='color:{pcol}; font-weight:bold;'>{fmt_h(p, True)}</span> "
+                       f"<span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(rate)})</span></span>"
+                       f"</div></div>")
+                return (f"<div class='pie-center'>"
+                        f"<div style='font-size:11.5px; color:#94a3b8; margin-bottom:2px;'>전체 비중</div>"
+                        f"<div style='font-size:20px; font-weight:bold; color:#f1f5f9; line-height:1.1;'>{_units[i] / 10:.1f}%</div>"
+                        f"<div style='font-size:12.5px; color:{dcol}; margin-top:3px;'>{dtxt}</div>{tip}</div>")
+
             st.markdown("""
 <style>
 div[data-testid="column"] { padding-bottom: 80px !important; }
@@ -3172,14 +3365,14 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             with cb1:
                 title_kr = f"""
 <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 통합 상세비중 (</span>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 개별종목 통합 상세 (</span>
     <img src='{flag_kr}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
     <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
 </div>
 """
                 try:
                     if not df_dom_g.empty:
-                        render_interactive_pie_area(df_dom_g, title_kr)
+                        render_interactive_pie_area(df_dom_g, title_kr, pie_center_html(0))
                     else:
                         st.info("한국 계좌 데이터가 없습니다.")
                 except: pass
@@ -3187,18 +3380,36 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
             with cb2:
                 title_us = f"""
 <div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
-    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 통합 상세비중 (</span>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>🪴 일반계좌 개별종목 통합 상세 (</span>
     <img src='{flag_us}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
     <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
 </div>
 """
                 try:
                     if not df_usa_g.empty:
-                        render_interactive_pie_area(df_usa_g, title_us)
+                        render_interactive_pie_area(df_usa_g, title_us, pie_center_html(1))
                     else:
                         st.info("미국 계좌 데이터가 없습니다.")
                 except: pass
-    
+
+            # ⏳ 절세계좌 ETF 통합 상세 (한국 / 미국) — 일반계좌 파이차트 아래에 2개 (데이터/비중 계산은 위에서 4개 함께 처리)
+            ct1, ct2 = st.columns(2)
+            for _col, _df, _flag, _nm, _pi in [(ct1, df_tax_kr, flag_kr, "한국", 2), (ct2, df_tax_us, flag_us, "미국", 3)]:
+                with _col:
+                    _title = f"""
+<div style='display: flex; align-items: center; justify-content: center; gap: 8px;'>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>⏳ 절세계좌 ETF 통합 상세 (</span>
+    <img src='{_flag}' style='height: 24px; width: 24px; object-fit: contain; margin-top: -3px;'>
+    <span style='font-size: 1.35rem; font-weight: bold; color: #eeeeee;'>)</span>
+</div>
+"""
+                    try:
+                        if not _df.empty:
+                            render_interactive_pie_area(_df, _title, pie_center_html(_pi))
+                        else:
+                            st.info(f"절세계좌 {_nm} 데이터가 없습니다.")
+                    except: pass
+
     # =========================================================
     # ⏳ 절세계좌 대시보드 상세 페이지
     # =========================================================
@@ -3471,8 +3682,7 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
 
             with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
                 st.markdown(PNL_BASIS_HELP)
-            st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
+            _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
             h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
@@ -3492,12 +3702,11 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                     h1.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt_h(a_tot)}</td><td class='{col(a_prof_pr)}'>{fmt_h(a_prof_pr, True)}</td><td class='{col(a_prof_pr_7ago)}'>{fmt(a_prof_pr_7ago, True)}</td><td class='{col(a_prof_pr_15ago)}'>{fmt(a_prof_pr_15ago, True)}</td><td class='{col(a_prof_pr_30ago)}'>{fmt(a_prof_pr_30ago, True)}</td><td class='{col(a_rate_pr)}'>{fmt_p(a_rate_pr)}</td><td>{fmt(a_prin)}</td></tr>")
 
             h1.append("</table>")
-            st.markdown("".join(h1), unsafe_allow_html=True)
-       
-            st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익</div>", unsafe_allow_html=True)
+            st.markdown(zappa_section("sec-tax-1", "📊 [1] 투자원금 대비 총 자산의 증감", _s1_sum + "".join(h1), top_gap=14), unsafe_allow_html=True)
+
             # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
         #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
-            st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_prof_buy)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_prof_buy, True)}</span><span class='{col(t_prof_buy)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>", unsafe_allow_html=True)
+            _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_prof_buy)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_prof_buy, True)}</span><span class='{col(t_prof_buy)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
             h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
             h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
        
@@ -3515,12 +3724,12 @@ div[data-testid="column"] { padding-bottom: 80px !important; }
                
                     h2.append(f"<tr><td>{P_MAP[k].split(' ')[0]}</td><td>{fmt_h(a_tot)}</td><td class='{col(a_prof)}'>{fmt_h(a_prof, True)}</td><td class='{col(diff_1_acc)}'>{fmt(diff_1_acc, True)}</td><td class='{col(diff_7_acc)}'>{fmt(diff_7_acc, True)}</td><td class='{col(diff_30_acc)}'>{fmt(diff_30_acc, True)}</td><td class='{col(a_rate)}'>{fmt_p(a_rate)}</td><td>{fmt(a_buy)}</td></tr>")
             h2.append("</table>")
-            st.markdown("".join(h2), unsafe_allow_html=True)
+            st.markdown(zappa_section("sec-tax-2", "📈 [2] 매입금액 대비 종목별 손익", _s2_sum + "".join(h2)), unsafe_allow_html=True)
        
         # =========================================================
         # 🛡️ 절세계좌(ISA/IRP/DC) 상세페이지 - [플로팅 메뉴 정밀 튜닝]
         # =========================================================
-        st.markdown("<div id='sav_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+        st.markdown("<div id='sav_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역<span class='zappa-sec3-toggle' title='계좌 4개 전체 펼치기 / 접기'>&gt;</span></div>", unsafe_allow_html=True)
        
         if 'sort_mode' not in st.session_state: st.session_state.sort_mode = 'init'
         if 'show_change_rate' not in st.session_state: st.session_state.show_change_rate = False
@@ -3562,8 +3771,7 @@ font-weight: 700 !important;
             lbl6 = "💻종목코드[+]" if st.session_state.show_code else "💻종목코드[-]"
             if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='sav_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
+        # (예전 <br> 제거: [3] 제목과 아래 계좌 목록 사이 여백 축소)
         EXPANDER_MAP = {
             'DC': '퇴직연금(DC)계좌 / (삼성증권 7165962472-28)',
             'IRP': '퇴직연금(IRP)계좌 / (삼성증권 7164499007-29)',
@@ -4100,8 +4308,7 @@ font-weight: 700 !important;
         # 💡 [신규 오더 패치] 투자원금 대비 자산 현황 (계산된 t_prof_principal 및 차이값 반영)
         with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
             st.markdown(PNL_BASIS_HELP)
-        st.markdown("<div class='sub-title'>📊 [1] 투자원금 대비 총 자산의 증감</div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>", unsafe_allow_html=True)
+        _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
 
         h1_table = """
 <table class='main-table'>
@@ -4157,12 +4364,11 @@ font-weight: 700 !important;
 </tr>
 """)
         h1.append("</table>")
-        st.markdown("".join(h1), unsafe_allow_html=True)
+        st.markdown(zappa_section("sec-gen-1", "📊 [1] 투자원금 대비 총 자산의 증감", _s1_sum + "".join(h1), top_gap=14), unsafe_allow_html=True)
 
-        st.markdown("<div class='sub-title'>📈 [2] 매입금액 대비 종목별 손익</div>", unsafe_allow_html=True)
         # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
         #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
-        st.markdown(f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_profit)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_profit)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_profit, True)}</span><span class='{col(t_profit)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>", unsafe_allow_html=True)
+        _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_profit)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_profit)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_profit, True)}</span><span class='{col(t_profit)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
 
         h2_table = """
 <table class='main-table'>
@@ -4215,12 +4421,12 @@ font-weight: 700 !important;
 </tr>
 """)
         h2.append("</table>")
-        st.markdown("".join(h2), unsafe_allow_html=True)
+        st.markdown(zappa_section("sec-gen-2", "📈 [2] 매입금액 대비 종목별 손익", _s2_sum + "".join(h2)), unsafe_allow_html=True)
 
          # =========================================================
         # 🪴 일반계좌 [플로팅 메뉴 정밀 튜닝]
         # =========================================================
-        st.markdown("<div id='gen_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역</div>", unsafe_allow_html=True)
+        st.markdown("<div id='gen_detail_section' style='padding-top: 20px; margin-top: -20px;'></div><div class='sub-title'>🔍 [3] 계좌별 상세 내역<span class='zappa-sec3-toggle' title='계좌 4개 전체 펼치기 / 접기'>&gt;</span></div>", unsafe_allow_html=True)
        
         # 💡 [안전장치] 변수명 초기화 누락으로 인한 렌더링 중단(빈 캡슐 현상) 완벽 차단
         if 'gen_sort_mode' not in st.session_state: st.session_state.gen_sort_mode = 'init'
@@ -4266,8 +4472,7 @@ font-weight: 700 !important;
             lbl6 = "💻종목코드[+]" if st.session_state.show_code else "💻종목코드[-]"
             if st.button(lbl6, type="primary" if st.session_state.show_code else "secondary", key='gen_btn6', on_click=lambda: setattr(st.session_state, 'show_code', not st.session_state.show_code)): pass
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
+        # (예전 <br> 제거: [3] 제목과 아래 계좌 목록 사이 여백 축소)
         # [3]번 섹션은 고정된 순서(GEN_ACC_ORDER)를 그대로 사용
         for k in GEN_ACC_ORDER:
             if k in g_data and isinstance(g_data[k], dict):
