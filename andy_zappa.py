@@ -4,28 +4,28 @@
 #  Streamlit 단일 파일 대시보드. 코드는 위에서 아래로 실행되며, 그 순서가 곧
 #  화면 렌더링 순서다. (실행문의 순서를 바꾸면 화면 배치가 바뀌므로 주의)
 #  * 각 섹션은 대괄호 라벨([SEC n] / [VIEW n/6])로 검색하면 바로 이동할 수 있다.
-#    아래 라인번호는 현재 시점 기준이며, 코드가 바뀌면 달라질 수 있다.
+#    아래 라인번호는 2026-10-29 기준이며, 코드가 바뀌면 달라질 수 있다 (라벨 검색이 우선).
 # -----------------------------------------------------------------------------
-#  [0] 전역 초기화 / 라이브 데이터 ......................... L46
+#  [0] 전역 초기화 / 라이브 데이터 ......................... L30
 #        get_live_data() : 외부 서버 실시간 시세 수신 + BTC gap 갱신
-#  [1] 로그인 / 인증 ....................................... L86
+#  [1] 로그인 / 인증 ....................................... L128
 #        Oracle 해시암호 -> Secrets 백업 (둘 다 없으면 접속 차단) / ?token= 자동로그인(Secrets)
-#  [2] 인증 성공 블록 시작 (이하 전체가 이 블록 안) ........ L136
-#  [3] Part 1 : 공통 설정 + 전역 CSS ....................... L145
-#        GUARANTEED_LOGOS (종목 -> 로고 도메인 매핑) ....... L304
-#  [4] 유틸리티 함수 카탈로그 .............................. L315
+#  [2] 인증 성공 블록 시작 (이하 전체가 이 블록 안) ........ L250
+#  [3] Part 1 : 공통 설정 + 전역 CSS ....................... L259
+#        GUARANTEED_LOGOS (종목 -> 로고 도메인 매핑) ....... L430
+#  [4] 유틸리티 함수 카탈로그 .............................. L441
 #        포맷/변환 · UI콜백 · 로고 · 데이터로딩 함수 (상세는 해당 위치 주석)
-#  [5] 사이드바 (st.sidebar) ............................... L661
+#  [5] 사이드바 (st.sidebar) ............................... L1333
 #        계좌/종목 수 합산 · 원금기준 손익 · 알고리즘/차익거래 카드 · Admin/로그아웃
-#  [6] Admin 패널 (show_admin_page) ....................... L1445
+#  [6] Admin 패널 (show_admin_page) ....................... L2197
 #        비밀번호 변경 / 계좌 설정 저장 (끝에서 st.stop 으로 뷰 렌더 차단)
-#  [7] 메인 뷰 분기 (st.session_state.current_view) ........ L1669
-#        [VIEW 1/6] 대시보드   (Treemap / Pie) ............. L1669
-#        [VIEW 2/6] 절세계좌   (DC / IRP / PENSION / ISA) .. L2281
-#        [VIEW 3/6] 일반계좌   (국내 / 해외 상세) .......... L2825
-#        [VIEW 4/6] 암호화폐   (실시간 시세 / 차트) ........ L3596
-#        [VIEW 5/6] 알고리즘   (Zappa Alpha 봇) ............ L3922
-#        [VIEW 6/6] 차익거래   (봇 컨트롤 / 매매 로그) ..... L4121
+#  [7] 메인 뷰 분기 (st.session_state.current_view) ........ L2438
+#        [VIEW 1/6] 대시보드   (Treemap / Pie) ............. L2438
+#        [VIEW 2/6] 절세계좌   (DC / IRP / PENSION / ISA) .. L3456
+#        [VIEW 3/6] 일반계좌   (국내 / 해외 상세) .......... L3980
+#        [VIEW 4/6] 암호화폐   (실시간 시세 / 차트) ........ L4770
+#        [VIEW 5/6] 알고리즘   (Zappa Alpha 봇) ............ L5096
+#        [VIEW 6/6] 차익거래   (봇 컨트롤 / 매매 로그) ..... L5295
 # =============================================================================
 import streamlit as st
 import streamlit.components.v1 as components
@@ -2079,11 +2079,22 @@ if (savedState === 'open') { detail.setAttribute('open', ''); }
 else if (savedState === 'closed') { detail.removeAttribute('open'); }
 
 // 2. 사용자가 클릭할 때마다 상태 저장
+// ⚠️ 절세계좌 ↔ 일반계좌를 바로 오가면 Streamlit 이 같은 위치의 <details> 를 재사용하고 id 만 바꾼다
+//    (sec-tax-1 → sec-gen-1). 그래서 id 는 바인딩 시점 값(const id)이 아니라 이벤트 시점의 detail.id 를 읽는다.
+//    옛 id 로 저장하면 새 id 의 저장값으로 계속 복원돼 '열었다 바로 닫힘 / 닫히지 않음' 이 생긴다.
 if (!detail.hasAttribute('data-state-binded')) {
 detail.setAttribute('data-state-binded', 'true');
+// ⚠️ toggle 이벤트는 비동기라 그 사이 300ms 주기 복원이 먼저 돌 수 있다
+//    → summary 클릭 순간에 바뀔 상태를 sessionStorage 에 먼저 써 둔다 (클릭 시점엔 detail.open 이 아직 옛 값)
+detail.addEventListener('click', (e) => {
+if (e.defaultPrevented || !detail.id) return;
+const sm = e.target.closest('summary');
+if (!sm || sm.parentElement !== detail) return;
+sessionStorage.setItem(detail.id, detail.open ? 'closed' : 'open');
+});
 detail.addEventListener('toggle', () => {
-if (detail.open) { sessionStorage.setItem(id, 'open'); }
-else { sessionStorage.setItem(id, 'closed'); }
+if (!detail.id) return;
+sessionStorage.setItem(detail.id, detail.open ? 'open' : 'closed');
 });
 }
 });
@@ -2670,6 +2681,17 @@ document.getElementById('zappa-qr-url').textContent = url;
                 )
                 if has_y2:
                     layout_cfg['yaxis2'] = dict(overlaying='y', side='right', showgrid=False, tickformat='.1f', ticksuffix='%', tickfont=ec_tick_font)
+                    # 수익률 축: 자동 범위(최저~최고)는 너무 촘촘해 등락이 과장돼 보인다 (예: 18~25%)
+                    #   → 최저·최고 바깥에 여유(데이터 폭의 40%, 최소 5%p)를 두고 5%p 단위로 맞춤. 데이터가 커지면 범위도 따라 커진다
+                    #     예) 18~25% → 10~30% / 45~70% → 35~80% / 18~70% → 0~95% (최저가 0% 이상이면 축이 0% 아래로 내려가지 않음)
+                    #   기간 버튼(1M~전체)을 눌러도 같은 범위를 유지
+                    _r = df_filtered['수익률'].dropna() if '수익률' in df_filtered else pd.Series(dtype=float)
+                    if len(_r):
+                        _lo, _hi = float(_r.min()), float(_r.max())
+                        _pad = max((_hi - _lo) * 0.4, 5)
+                        _y2_lo = np.floor((_lo - _pad) / 5) * 5
+                        if _lo >= 0: _y2_lo = max(_y2_lo, 0)
+                        layout_cfg['yaxis2']['range'] = [_y2_lo, np.ceil((_hi + _pad) / 5) * 5]
                 fig_hist.update_layout(**layout_cfg)
                 with st.container(key='ec_chart'):
                     st.plotly_chart(fig_hist, use_container_width=True, config={'displaylogo': False})
@@ -3210,7 +3232,11 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
 
 .legend-item {{ transition:all 0.2s; border-left:4px solid transparent; }}
 /* 도넛 가운데 비중: 마우스 올리면 아래에 흰 카드(총자산·총손익) 표시. 겹친 레이어 중 이 부분만 마우스를 받는다 */
-.pie-center {{ position:relative; pointer-events:auto; cursor:default; padding:6px 10px; }}
+.pie-center {{ position:relative; pointer-events:auto; cursor:default; padding:6px 10px; border-radius:10px; transition:all 0.2s; }}
+/* 가운데 비중에 마우스 올리면 왼쪽 목록 hover 와 같은 배경(#2d3240)으로 떠오르고, '전체 비중' 글씨도 밝아진다 */
+.pie-center:hover {{ background:#2d3240; transform:translateY(-2px); box-shadow:0 4px 10px rgba(0,0,0,0.35); }}
+.pie-center .pc-label {{ transition:color 0.2s; }}
+.pie-center:hover .pc-label {{ color:#f1f5f9 !important; font-weight:bold; }}
 .pie-tip {{ display:none; position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); z-index:20;
     background:#ffffff; border:1px solid #eaeaea; border-radius:12px; padding:10px 14px; box-shadow:0 6px 12px rgba(0,0,0,0.18); white-space:nowrap; }}
 .pie-center:hover .pie-tip {{ display:block; }}
@@ -3226,7 +3252,9 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
 <script>
     var itemsData = {json.dumps(items_js, ensure_ascii=False)};
     var chart = echarts.init(document.getElementById('pie-chart'));
-    chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
+    chart.setOption({{ tooltip:{{show:false}}, color:{json.dumps(donut_colors)}, series:[{{ type:'pie', radius:['45%','85%'], itemStyle:{{borderColor:'#1a1e28',borderWidth:3}}, label:{{show:true,position:'inside',formatter:'{{d}}%',color:'#fff',fontSize:12,fontWeight:'bold'}},
+        // 조각 hover(또는 목록 hover/클릭) 시: 조각이 바깥으로 커지고 그림자 + 안의 % 숫자도 커진다
+        emphasis:{{ scale:true, scaleSize:9, itemStyle:{{shadowBlur:14, shadowColor:'rgba(0,0,0,0.55)'}}, label:{{fontSize:16, fontWeight:'bold'}} }}, data:{json.dumps(chart_data, ensure_ascii=False)} }}] }});
     // 글꼴·로고 로딩으로 왼쪽 목록 폭이 바뀌어도 도넛이 차트 영역 정가운데에 오도록 크기 재계산
     window.addEventListener('resize', function(){{ chart.resize(); }});
     setTimeout(function(){{ chart.resize(); }}, 300); setTimeout(function(){{ chart.resize(); }}, 1200);
@@ -3251,10 +3279,32 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
         }} catch (e) {{ }}
     }})();
 
-    chart.on('mouseover', function(p){{ highlightLegend(p.dataIndex); }});
-    chart.on('mouseout', function(){{ highlightLegend(-1); }});
+    chart.on('mouseover', function(p){{
+        // 다른 조각에 마우스를 올리면 고정돼 있던 조각은 잠시 내려 두 조각이 동시에 커지지 않게 한다
+        if (sliceOn >= 0 && sliceOn !== p.dataIndex) {{ chart.dispatchAction({{type:'downplay', seriesIndex:0, dataIndex:sliceOn}}); sliceOn = -1; }}
+        highlightLegend(p.dataIndex);
+    }});
+    chart.on('mouseout', function(){{ highlightLegend(pinned); highlightSlice(pinned); }});
 
-    function highlightLegend(idx){{
+    // 목록 → 도넛 연동: 목록 항목에 마우스 올리면 해당 조각이 커지고, 클릭하면 그 상태로 고정(같은 항목 다시 클릭 시 해제)
+    //   pinned: 클릭으로 고정된 항목 번호(-1 = 없음). 마우스가 빠지면 고정 항목으로 되돌아간다 (모바일은 클릭만 동작)
+    var pinned = -1, sliceOn = -1;
+    function highlightSlice(idx){{
+        if (sliceOn >= 0) chart.dispatchAction({{type:'downplay', seriesIndex:0, dataIndex:sliceOn}});
+        sliceOn = idx;
+        if (idx >= 0) chart.dispatchAction({{type:'highlight', seriesIndex:0, dataIndex:idx}});
+    }}
+    document.querySelectorAll('.legend-item').forEach(function(el){{
+        var idx = parseInt(el.getAttribute('data-idx'), 10);
+        el.addEventListener('mouseenter', function(){{ highlightSlice(idx); highlightLegend(idx, true); }});
+        el.addEventListener('mouseleave', function(){{ highlightSlice(pinned); highlightLegend(pinned, true); }});
+        el.addEventListener('click', function(){{
+            pinned = (pinned === idx) ? -1 : idx;
+            highlightSlice(pinned >= 0 ? pinned : idx); highlightLegend(pinned >= 0 ? pinned : idx, true);
+        }});
+    }});
+
+    function highlightLegend(idx, noScroll){{
         document.querySelectorAll('.legend-item').forEach(el => {{
             el.classList.remove('active');
             el.style.borderLeftColor = 'transparent';
@@ -3264,7 +3314,7 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
             if(target) {{
                 target.classList.add('active');
                 target.style.borderLeftColor = itemsData[idx].color;
-                target.scrollIntoView({{behavior: "smooth", block: "nearest"}});
+                if (!noScroll) target.scrollIntoView({{behavior: "smooth", block: "nearest"}});
             }}
         }}
     }}
@@ -3347,7 +3397,7 @@ body {{ margin:0; padding:0; font-family:'Apple SD Gothic Neo',sans-serif; backg
                        f"<span style='font-size:12.5px; font-weight:normal; color:#555;'>({fmt_p1(rate)})</span></span>"
                        f"</div></div>")
                 return (f"<div class='pie-center'>"
-                        f"<div style='font-size:11.5px; color:#94a3b8; margin-bottom:2px;'>전체 비중</div>"
+                        f"<div class='pc-label' style='font-size:11.5px; color:#94a3b8; margin-bottom:2px;'>전체 비중</div>"
                         f"<div style='font-size:20px; font-weight:bold; color:#f1f5f9; line-height:1.1;'>{_units[i] / 10:.1f}%</div>"
                         f"<div style='font-size:12.5px; color:{dcol}; margin-top:3px;'>{dtxt}</div>{tip}</div>")
 
