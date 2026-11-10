@@ -969,7 +969,9 @@ setInterval(bindSidebarClicks, 300);
             if isinstance(val, str):
                 val = val.replace(",", "").strip()
                 if val == "-": return 0.0
-            return float(val)
+            f = float(val)
+            if f != f or f in (float('inf'), float('-inf')): return 0.0   # 💡 NaN/Inf 방어: 빈 셀(data_editor)의 NaN이 배포 JSON에 섞여 서버가 거부하던 문제 차단
+            return f
         except: return 0.0
 
     def fmt(v, sign=False, decimal=0):
@@ -1478,6 +1480,85 @@ setInterval(bindSidebarClicks, 300);
     div_gen_ytd_gross = sum(v for m, v in div_gen_month_gross.items() if m.startswith(_div_cur_year))
     _div_ytd_mcnt = len([m for m in div_month_gross if m.startswith(_div_cur_year) and div_month_gross[m] > 0])
     div_gen_annualized = (div_gen_ytd_gross / _div_ytd_mcnt * 12) if _div_ytd_mcnt else 0.0
+
+    # 💡 [배당금] 당월 예측 (사이드바 카드 · 상세 헤드라인 · 현금흐름 당월칸 공용 — sync 단일소스)
+    #    당월 입력된 실제 세후값은 그대로, 미입력 종목 중 '이달 지급예정분'만 최근 지급 세후평균으로 예측해 더함.
+    _divp_now = pd.Timestamp.now()
+    _divp_this_m = f"{_divp_now.year:04d}-{_divp_now.month:02d}"
+    _divp_cur_mo = _divp_now.month
+    _divp_ym0 = _divp_now.year * 12 + (_divp_now.month - 1)
+    _divp_last12 = [f"{(_divp_ym0 - i)//12:04d}-{(_divp_ym0 - i)%12 + 1:02d}" for i in range(11, -1, -1)]
+    _divp_series = {}   # {계좌키: {종목명: {YYYY-MM: [세전, 세후]}}}
+    for _mk, _accs in div_raw.items():
+        if not isinstance(_accs, dict): continue
+        for _ak, _lst in _accs.items():
+            if not isinstance(_lst, list): continue
+            _r = div_wh_rate(_ak)
+            for _it in _lst:
+                if not isinstance(_it, dict): continue
+                _g = safe_float(_it.get('세전', _it.get('금액', 0)))
+                _nm = str(_it.get('종목명', '')).strip() or '(미지정)'
+                _d = _divp_series.setdefault(_ak, {}).setdefault(_nm, {})
+                _c = _d.get(_mk, [0.0, 0.0]); _d[_mk] = [_c[0] + _g, _c[1] + _g * (1 - _r)]
+    _DIVP_MONTHLY_NAMES = ('커버드콜', '고배당주', '미국배당다우존스')
+    def _divp_freq(ak, nm):
+        if any(_s in nm for _s in _DIVP_MONTHLY_NAMES): return 12
+        _d = _divp_series.get(ak, {}).get(nm, {})
+        _idx = sorted(int(m[:4]) * 12 + (int(m[5:7]) - 1) for m in _d if _d.get(m, [0.0, 0.0])[0] > 0)
+        _run = _best = (1 if _idx else 0)
+        for _i in range(1, len(_idx)):
+            _run = (_run + 1) if _idx[_i] == _idx[_i - 1] + 1 else 1
+            _best = max(_best, _run)
+        return 12 if _best >= 3 else 4
+    def _divp_due(ak, nm):
+        _f = _divp_freq(ak, nm)
+        if _f >= 12: return True
+        _d = _divp_series.get(ak, {}).get(nm, {})
+        _pm = sorted({int(m[5:7]) for m in _d if _d.get(m, [0.0, 0.0])[0] > 0})
+        if not _pm: return False
+        _step = max(1, round(12 / _f))
+        return any((_divp_cur_mo - _p) % _step == 0 for _p in _pm)
+    def _divp_onepay(ak, nm):
+        _d = _divp_series.get(ak, {}).get(nm, {})
+        _p = [_d[m][0] for m in _divp_last12 if _d.get(m, [0.0, 0.0])[0] > 0] or [v[0] for v in _d.values() if v[0] > 0]
+        if not _p: return 0.0
+        return sum(_p) / len(_p) * (1 - div_wh_rate(ak))
+    _divp_held_cache = {}
+    def _divp_held(ak, nm):
+        if ak not in _divp_held_cache:
+            _src = g_data if ak in DIV_GEN_KEYS else data
+            _acc = _src.get(ak, {}) if isinstance(_src, dict) else {}
+            _s = set()
+            for _it in (_acc.get('상세', []) or []):
+                if isinstance(_it, dict):
+                    _hn = str(_it.get('종목명', '')).replace(' ', '').strip()
+                    if _hn: _s.add(_hn)
+            _divp_held_cache[ak] = _s
+        _hs = _divp_held_cache[ak]
+        if not _hs: return True
+        return nm.replace(' ', '').strip() in _hs
+    def _divp_curval(ak, nm):   # 💡 당월 표시값(세후): 입력된 실제 우선, 없으면 이달 지급예정분만 예측
+        _a = _divp_series.get(ak, {}).get(nm, {}).get(_divp_this_m, [0.0, 0.0])[1]
+        if _a > 0: return _a
+        return _divp_onepay(ak, nm) if _divp_due(ak, nm) else 0.0
+    def _divp_curval2(ak, nm):   # 💡 당월 [세전, 세후] 표시값 (종목별 표의 '당월(예상)' 칸용). 세후 합은 div_cur_pred 와 동일
+        _c = _divp_series.get(ak, {}).get(nm, {}).get(_divp_this_m, [0.0, 0.0])
+        if _c[0] > 0 or _c[1] > 0: return [_c[0], _c[1]]   # 실제 입력분 우선
+        if not _divp_due(ak, nm): return [0.0, 0.0]
+        _d = _divp_series.get(ak, {}).get(nm, {})
+        _p = [_d[m][0] for m in _divp_last12 if _d.get(m, [0.0, 0.0])[0] > 0] or [v[0] for v in _d.values() if v[0] > 0]
+        if not _p: return [0.0, 0.0]
+        _gp = sum(_p) / len(_p)
+        return [_gp, _gp * (1 - div_wh_rate(ak))]
+    div_cur_pred = div_cur_pred_tax = div_cur_pred_gen = 0.0
+    for _ak in (DIV_TAX_KEYS + DIV_GEN_KEYS):
+        for _nm in _divp_series.get(_ak, {}):
+            if not _divp_held(_ak, _nm): continue
+            _v = _divp_curval(_ak, _nm)
+            if _v <= 0: continue
+            div_cur_pred += _v
+            if _ak in DIV_TAX_KEYS: div_cur_pred_tax += _v
+            else: div_cur_pred_gen += _v
 
     g_asset_all = 0
     g_profit_all = 0
@@ -2062,7 +2143,7 @@ position: relative; top: 2.67px;
 </div>
 </details>
 """
-        # 💡 [배당금] 사이드바 카드 (리밸런싱 바로 위) — 당월 예상(최근 3개월 세후 평균) + 올해 누적(세후)
+        # 💡 [배당금] 사이드바 카드 (리밸런싱 바로 위) — 당월 예상(div_cur_pred: 실제 입력분+이달 지급예정 예측, 상세 헤드라인과 sync) + 올해 누적(세후)
         #    카드 클릭 → bindSidebarClicks JS 가 숨긴 dividend_bar_btn 을 대신 누름
         dividend_card_html = f"""
 <details id='zappa-exp-dividend' class='zappa-expander'>
@@ -2071,7 +2152,7 @@ position: relative; top: 2.67px;
 </summary>
 <div id='card-dividend' class='zappa-content'>
 <div style='text-align: right; padding-bottom: 2px;'>
-<div style='font-size:21px; font-weight:600; color:#111;'>{fmt_h(div_est_month)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
+<div style='font-size:21px; font-weight:600; color:#111;'>{fmt_h(div_cur_pred)} <span style='font-size:12.5px; font-weight:normal; color:#555;'>KRW</span></div>
 <div style='font-size:12.5px; margin-top:4px; color:#888;'>올해 누적 {fmt_h(div_ytd_net)} KRW</div>
 </div>
 </div>
@@ -2459,9 +2540,9 @@ sessionStorage.setItem(detail.id, detail.open ? 'open' : 'closed');
 }
 setInterval(maintainExpanderState, 300);
 
-// 🔑 상단 마스터 토글: 총 운용자산(검은 카드)·절세계좌·일반계좌·암호화폐·골드현물 카드 5개를 한 번에 펼치고 접는다.
-//    알고리즘·차익거래·리밸런싱은 제외 — 개별로만 열고 닫는다.
-const MASTER_IDS = ['zappa-exp-total', 'zappa-exp-tax', 'zappa-exp-gen', 'zappa-exp-cryp', 'zappa-exp-gold'];
+// 🔑 상단 마스터 토글: 총 운용자산(검은 카드)·절세계좌·일반계좌·암호화폐·골드현물·배당금 카드를 한 번에 펼치고 접는다.
+//    알고리즘·차익거래·리밸런싱은 제외 — 개별로만 열고 닫는다. (사이드바 순서상 배당금은 골드현물 다음, 리밸런싱은 배당금 다음)
+const MASTER_IDS = ['zappa-exp-total', 'zappa-exp-tax', 'zappa-exp-gen', 'zappa-exp-cryp', 'zappa-exp-gold', 'zappa-exp-dividend'];
 function syncMasterToggle() {
 const btn = parentDoc.getElementById('zappa-master-toggle');
 if (!btn) return;
@@ -2664,6 +2745,19 @@ document.getElementById('zappa-qr-url').textContent = url;
             _didx = _mopts.index(_default_m) if _default_m in _mopts else 0
             sel_month = st.selectbox("📅 입력 월 선택 (기본: 지난달)", _mopts, index=_didx, key="div_month_sel")
 
+            def _holding_code_map():   # 💡 클라우드 보유종목에서 종목명(공백제거)→코드/티커 조회맵 (기정리값)
+                _m = {}
+                _src = g_data if div_group == "일반계좌" else data   # 💡 일반=/taxable, 절세=/tax_advantaged
+                for _ak in _grp_keys:
+                    _acc = _src.get(_ak, {}) if isinstance(_src, dict) else {}
+                    for _it in (_acc.get('상세', []) or []):
+                        if not isinstance(_it, dict): continue
+                        _nm = str(_it.get('종목명', '')).replace(' ', '').strip()
+                        _cd = str(_it.get('코드', _it.get('종목코드', _it.get('ticker', '')))).strip()
+                        if _nm and _cd: _m[_nm] = _cd
+                return _m
+            _div_cmap = _holding_code_map()
+
             def _div_df_from_month(mk):
                 rows = []
                 md = div_raw.get(mk, {})
@@ -2673,11 +2767,16 @@ document.getElementById('zappa-qr-url').textContent = url;
                         if not isinstance(lst, list): continue
                         for it in lst:
                             if not isinstance(it, dict): continue
-                            rows.append({"계좌": _KEY2LBL.get(ak, ak), "종목명": str(it.get('종목명', '')),
+                            _nm0 = str(it.get('종목명', ''))
+                            _cd0 = str(it.get('종목코드', it.get('코드', ''))).strip()
+                            if not _cd0:   # 💡 저장분에 코드가 없으면(과거 입력분) 보유종목에서 종목명으로 조회해 채움
+                                _cd0 = _div_cmap.get(_nm0.replace(' ', '').strip(), '')
+                            rows.append({"계좌": _KEY2LBL.get(ak, ak), "종목명": _nm0,
+                                         "종목코드": _cd0,
                                          "세전금액": safe_float(it.get('세전', it.get('금액', 0))),
                                          "주식수": safe_float(it.get('주식수', 0)), "주당배당": safe_float(it.get('주당배당', 0))})
                 if not rows:
-                    rows = [{"계좌": DIV_ACC_LABEL.get(div_acc_key, ""), "종목명": "", "세전금액": 0.0, "주식수": 0.0, "주당배당": 0.0}]
+                    rows = [{"계좌": DIV_ACC_LABEL.get(div_acc_key, ""), "종목명": "", "종목코드": "", "세전금액": 0.0, "주식수": 0.0, "주당배당": 0.0}]
                 return pd.DataFrame(rows)
 
             def _div_holdings_df():   # 💡 현재 보유종목(종목명·주식수)으로 시드, 세전=0 (저장분 없을 때 자동 사용)
@@ -2689,9 +2788,11 @@ document.getElementById('zappa-qr-url').textContent = url;
                         if not isinstance(_it, dict): continue
                         _nm = str(_it.get('종목명', '')).strip()
                         if not _nm or _nm == '[ 합  계 ]' or _nm == '예수금' or '현금' in _nm: continue
-                        _rows.append({"계좌": _KEY2LBL[_ak], "종목명": _nm, "세전금액": 0.0, "주식수": safe_float(_it.get('수량', 0)), "주당배당": 0.0})
+                        _rows.append({"계좌": _KEY2LBL[_ak], "종목명": _nm,
+                                      "종목코드": str(_it.get('코드', _it.get('종목코드', _it.get('ticker', '')))).strip(),
+                                      "세전금액": 0.0, "주식수": safe_float(_it.get('수량', 0)), "주당배당": 0.0})
                 if not _rows:
-                    _rows = [{"계좌": div_acc_name, "종목명": "", "세전금액": 0.0, "주식수": 0.0, "주당배당": 0.0}]
+                    _rows = [{"계좌": div_acc_name, "종목명": "", "종목코드": "", "세전금액": 0.0, "주식수": 0.0, "주당배당": 0.0}]
                 return pd.DataFrame(_rows)
 
             _seed_sig = f"{sel_month}|{div_acc_key}"   # 💡 월 또는 계좌가 바뀌면 에디터 새로 시드
@@ -2723,6 +2824,7 @@ document.getElementById('zappa-qr-url').textContent = url;
             div_col_cfg = {
                 "계좌": st.column_config.SelectboxColumn("계좌", options=_acc_opts, required=False),
                 "종목명": st.column_config.TextColumn("종목명"),
+                "종목코드": st.column_config.TextColumn("종목코드/티커"),
                 "세전금액": st.column_config.NumberColumn("배당금(세전, KRW)", format="%,.0f", step=1.0),
                 "주식수": st.column_config.NumberColumn("주식수(선택)", format="%,.0f", step=1.0),
                 "주당배당": st.column_config.NumberColumn("주당배당(선택)", format="%,.2f", step=0.01),
@@ -2775,6 +2877,8 @@ document.getElementById('zappa-qr-url').textContent = url;
                     _ak = _LBL2KEY.get(_lbl, div_acc_key)   # 💡 계좌 칸이 비면 현재 선택 계좌로 귀속
                     if _ak not in _grp_keys: continue       # 💡 현재 선택 계좌만 저장(다른 계좌 혼입 방지)
                     _rec = {"종목명": _nm, "세전": safe_float(_row.get('세전금액', 0))}
+                    _code = str(_row.get('종목코드', '')).strip()
+                    if _code and _code.lower() != 'nan': _rec["종목코드"] = _code
                     _qs, _dps = safe_float(_row.get('주식수', 0)), safe_float(_row.get('주당배당', 0))
                     if _qs: _rec["주식수"] = _qs
                     if _dps: _rec["주당배당"] = _dps
@@ -3166,15 +3270,36 @@ document.getElementById('zappa-qr-url').textContent = url;
                 return 0.0
             return sum(_pays) / len(_pays) * _div_freq(ak, nm)
 
+        # 💡 '현재 보유' 판정 (연간 예상·종합과세·당월 예측에서 매도 종목 제외) — 아래 _arows/게이지와 공용
+        _held_cache = {}
+        def _held_set(ak):
+            if ak in _held_cache: return _held_cache[ak]
+            _src = g_data if ak in DIV_GEN_KEYS else data
+            _acc = _src.get(ak, {}) if isinstance(_src, dict) else {}
+            _s = set()
+            for _it in (_acc.get('상세', []) or []):
+                if isinstance(_it, dict):
+                    _hn = str(_it.get('종목명', '')).replace(' ', '').strip()
+                    if _hn: _s.add(_hn)
+            _held_cache[ak] = _s
+            return _s
+        def _is_held(ak, nm):
+            _hs = _held_set(ak)
+            if not _hs: return True   # 보유 데이터 없음/오프라인 → 필터하지 않음(전부 매도로 오판 방지)
+            return nm.replace(' ', '').strip() in _hs
+
+        # 💡 당월 예측(div_cur_pred / div_cur_pred_tax / div_cur_pred_gen)은 상단 집계블록에서 단일 계산됨 — 사이드바 카드와 sync. 여기선 그대로 사용.
+
         if not div_has:
             st.info("아직 입력된 배당 내역이 없습니다. 좌측 Admin → 1️⃣ 자산 유형 '📂배당금' 에서 월별 수령 배당(세전)을 입력하면 이 화면이 채워집니다.")
 
         # ---------------- 헤드라인: 당월 예상 + 올해 누적
         st.markdown(f"""
 <div class='card-main' style='width:100%; padding:22px 40px; background:#ffffff; border:1px solid #ddd; border-radius:15px; margin-bottom:25px; text-align:center;'>
-<div style='font-size:14px; color:#777; margin-bottom:8px;'>당월 예상 배당금 <span style='font-size:12px; color:#aaa;'>(최근 3개월 세후 평균)</span></div>
-<div style='font-size:24px; font-weight:600; color:#333; line-height:1;'>{fmt_h(div_est_month)} <span style='font-size:13px; font-weight:normal; color:#888;'>KRW</span></div>
-<div style='font-size:13.5px; color:#888; margin-top:12px;'>올해({_dcy}) 누적 배당금 (세후) : <b style='color:#333;'>{fmt_h(div_ytd_net)}</b> KRW</div>
+<div style='font-size:14px; color:#777; margin-bottom:8px;'>당월 예상 배당금 <span style='font-size:12px; color:#aaa;'>(실제 입력분 + 이달 지급예정 예측, 세후)</span></div>
+<div style='font-size:24px; font-weight:600; color:#333; line-height:1;'>{fmt_h(div_cur_pred)} <span style='font-size:13px; font-weight:normal; color:#888;'>KRW</span></div>
+<div style='font-size:13px; color:#999; margin-top:10px;'>최근 3개월 세후 평균 : <b style='color:#555;'>{fmt_h(div_est_month)}</b> KRW</div>
+<div style='font-size:13.5px; color:#888; margin-top:6px;'>올해({_dcy}) 누적 배당금 (세후) : <b style='color:#333;'>{fmt_h(div_ytd_net)}</b> KRW</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -3184,22 +3309,26 @@ document.getElementById('zappa-qr-url').textContent = url;
             return sum(_series.get(_ak, {}).get(_nm, {}).get(_m, [0.0, 0.0])[1]
                        for _ak in _keys for _nm in _series.get(_ak, {}))
         _cf = "<table class='main-table'><tr><th style='text-align:center;'>구분</th>"
-        for _m in _recent6: _cf += f"<th style='text-align:center;'>{_m}</th>"
-        _cf += "<th style='text-align:center;'>6개월 합</th></tr>"
-        # 전 계좌 세후
-        _tot6 = 0.0
-        _cf += "<tr><td style='text-align:center; font-weight:bold;'>세후 배당 (전 계좌)</td>"
         for _m in _recent6:
-            _v = div_month_net.get(_m, 0.0); _tot6 += _v
-            _cf += f"<td style='text-align:right; padding-right:14px; font-weight:bold;'>{fmt_h(_v)}</td>"
+            _mh = f"{_m} (예상)" if _m == _this_m else _m   # 💡 당월은 예측값이므로 '(예상)' 표기
+            _cf += f"<th style='text-align:center;'>{_mh}</th>"
+        _cf += "<th style='text-align:center;'>6개월 합</th></tr>"
+        # 전 계좌 세후 (당월은 예측값 div_cur_pred — 헤드라인·사이드바와 sync)
+        _tot6 = 0.0
+        _cf += "<tr><td style='text-align:center; font-weight:bold;'>[ 합계 ]</td>"
+        for _m in _recent6:
+            _v = div_cur_pred if _m == _this_m else div_month_net.get(_m, 0.0); _tot6 += _v
+            _bg = " background:#eef5ff;" if _m == _this_m else ""
+            _cf += f"<td style='text-align:right; padding-right:14px; font-weight:bold;{_bg}'>{fmt_h(_v)}</td>"
         _cf += f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fffbe6;'>{fmt_h(_tot6)}</td></tr>"
-        # 절세계좌 / 일반계좌 세후 분리
-        for _glbl, _gkeys in [("🛡️ 절세계좌", DIV_TAX_KEYS), ("💰 일반계좌", DIV_GEN_KEYS)]:
+        # 절세계좌 / 일반계좌 세후 분리 (당월은 계좌군별 예측값)
+        for _glbl, _gkeys, _gpred in [("🛡️ 절세계좌", DIV_TAX_KEYS, div_cur_pred_tax), ("💰 일반계좌", DIV_GEN_KEYS, div_cur_pred_gen)]:
             _gt = 0.0
             _cf += f"<tr><td style='text-align:center; color:#666;'>{_glbl}</td>"
             for _m in _recent6:
-                _gv = _grp_net_m(_gkeys, _m); _gt += _gv
-                _cf += f"<td style='text-align:right; padding-right:14px; color:#555;'>{fmt_h(_gv)}</td>"
+                _gv = _gpred if _m == _this_m else _grp_net_m(_gkeys, _m); _gt += _gv
+                _bg = " background:#eef5ff;" if _m == _this_m else ""
+                _cf += f"<td style='text-align:right; padding-right:14px; color:#555;{_bg}'>{fmt_h(_gv)}</td>"
             _cf += f"<td style='text-align:right; padding-right:14px; color:#555; background:#fcfcf2;'>{fmt_h(_gt)}</td></tr>"
         _cf += "</table>"
         st.markdown(_cf, unsafe_allow_html=True)
@@ -3226,13 +3355,15 @@ document.getElementById('zappa-qr-url').textContent = url;
             if not _ks: return ""
             _h = f"<h4 style='margin:22px 0 10px; font-weight:bold;'>{title} <span style='font-size:13px; color:#888; font-weight:normal;'>({_basis} 기준)</span></h4>"
             _h += ("<table class='main-table'><tr><th style='text-align:center;'>계좌</th><th style='text-align:center;'>종목</th>"
-                   "<th style='text-align:center;'>이달</th><th style='text-align:center;'>전달</th>"
-                   "<th style='text-align:center;'>최근 3개월</th><th style='text-align:center;'>누적 6개월</th><th style='text-align:center;'>올해 누적</th></tr>")
+                   "<th style='text-align:center;'>당월(예상)</th><th style='text-align:center;'>전월</th>"
+                   "<th style='text-align:center;'>최근 3개월 합</th><th style='text-align:center;'>누적 6개월</th><th style='text-align:center;'>올해 누적</th></tr>")
             _gt = [0.0] * 5
             for _ak in _ks:
                 _at = [0.0] * 5
                 for _nm in sorted(_series.get(_ak, {}).keys()):
-                    _rv = [_ssum(_ak, _nm, [_this_m], _bi), _ssum(_ak, _nm, [_prev_m], _bi),
+                    # 💡 당월은 예측값(div_cur_pred 와 sync) — 보유종목은 실제입력/이달 지급예정 예측, 매도종목은 실제값만
+                    _cur = _divp_curval2(_ak, _nm)[_bi] if _is_held(_ak, _nm) else _ssum(_ak, _nm, [_this_m], _bi)
+                    _rv = [_cur, _ssum(_ak, _nm, [_prev_m], _bi),
                            _ssum(_ak, _nm, _recent3, _bi), _ssum(_ak, _nm, _recent6, _bi), _syear(_ak, _nm, _bi)]
                     for i in range(5): _at[i] += _rv[i]
                     _h += (f"<tr><td style='text-align:center; color:#888;'>{DIV_ACC_LABEL[_ak]}</td>"
@@ -3258,22 +3389,12 @@ document.getElementById('zappa-qr-url').textContent = url;
         # 💡 '현재 보유' 판정 — Oracle 실시간 보유종목(상세) 종목명과 공백 제거 후 대조.
         #    DIVIDEND 종목명은 Admin '보유종목 불러오기'가 Oracle 이름을 그대로 넣으므로 일치함.
         #    과거 이력 표(위)는 매도 종목도 유지하고, '앞으로 받을' 연간 예상·종합과세 추정에서만 매도 종목을 제외한다.
-        _held_cache = {}
-        def _held_set(ak):
-            if ak in _held_cache: return _held_cache[ak]
-            _src = g_data if ak in DIV_GEN_KEYS else data
-            _acc = _src.get(ak, {}) if isinstance(_src, dict) else {}
-            _s = set()
-            for _it in (_acc.get('상세', []) or []):
-                if isinstance(_it, dict):
-                    _hn = str(_it.get('종목명', '')).replace(' ', '').strip()
-                    if _hn: _s.add(_hn)
-            _held_cache[ak] = _s
-            return _s
-        def _is_held(ak, nm):
-            _hs = _held_set(ak)
-            if not _hs: return True   # 보유 데이터 없음/오프라인 → 필터하지 않음(전부 매도로 오판 방지)
-            return nm.replace(' ', '').strip() in _hs
+        # 💡 _held_cache/_held_set/_is_held 는 상단 '당월 예측' 블록에서 이미 정의됨(공용). 중복 정의 제거.
+        def _pay_months_label(ak, nm, f):   # 💡 분기·반기·연 배당은 과거 지급월을 괄호로 병기 (예: (2/5/8/11월)). 월배당은 생략
+            if f >= 12: return ""
+            _d = _series.get(ak, {}).get(nm, {})
+            _ms = sorted({int(m[5:7]) for m in _d if _d.get(m, [0.0, 0.0])[0] > 0})
+            return (" (" + "/".join(str(x) for x in _ms) + "월)") if _ms else ""
 
         _arows = []
         for _ak in _scope_keys:
@@ -3281,13 +3402,14 @@ document.getElementById('zappa-qr-url').textContent = url;
                 _est = _annual_est(_ak, _nm)
                 if _est <= 0: continue
                 _mo = _meta.get(_ak, {}).get(_nm, {'q': 0.0, 'dps': 0.0})
-                _arows.append((DIV_ACC_LABEL[_ak], _nm, _mo['q'], _mo['dps'], _est, _div_freq(_ak, _nm), _is_held(_ak, _nm)))
+                _fqv = _div_freq(_ak, _nm)
+                _arows.append((DIV_ACC_LABEL[_ak], _nm, _mo['q'], _mo['dps'], _est, _fqv, _is_held(_ak, _nm), _pay_months_label(_ak, _nm, _fqv)))
         _arows.sort(key=lambda r: (r[6] is False, -r[4]))   # 보유 종목 먼저, 그다음 금액순
         if _arows:
             _at = ("<table class='main-table'><tr><th style='text-align:center;'>계좌</th><th style='text-align:center;'>종목</th>"
                    "<th style='text-align:center;'>주기</th><th style='text-align:center;'>주식수</th><th style='text-align:center;'>주당 배당</th><th style='text-align:center;'>연간 예상(세전)</th></tr>")
             _tote = 0.0
-            for _al, _nm, _q, _dp, _est, _fq, _hd in _arows:
+            for _al, _nm, _q, _dp, _est, _fq, _hd, _pml in _arows:
                 if _hd:
                     _tote += _est
                     _nm_cell, _est_cell = _nm, fmt_h(_est)
@@ -3295,7 +3417,7 @@ document.getElementById('zappa-qr-url').textContent = url;
                     _nm_cell = f"{_nm} <span style='color:#bbb;'>(매도추정)</span>"
                     _est_cell = f"<span style='color:#bbb;'>{fmt_h(_est)}</span>"
                 _at += (f"<tr><td style='text-align:center; color:#888;'>{_al}</td><td style='text-align:left; padding-left:12px;'>{_nm_cell}</td>"
-                        f"<td style='text-align:center; color:#555;'>{_freq_label(_fq)}</td>"
+                        f"<td style='text-align:center; color:#555;'>{_freq_label(_fq)}{_pml}</td>"
                         f"<td style='text-align:right; padding-right:14px;'>{'-' if _q <= 0 else fmt_h(_q)}</td>"
                         f"<td style='text-align:right; padding-right:14px;'>{'-' if _dp <= 0 else fmt(_dp, decimal=2)}</td>"
                         f"<td style='text-align:right; padding-right:14px;'>{_est_cell}</td></tr>")
