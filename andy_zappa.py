@@ -948,6 +948,7 @@ setInterval(bindSidebarClicks, 300);
         st.session_state['show_rebal_page'] = False  # 💡 메뉴 선택 시 리밸런싱 페이지에서 빠져나옴
         st.session_state['show_gold_page'] = False   # 💡 골드현물 페이지도 동일
         st.session_state['show_dividend_page'] = False  # 💡 배당금 페이지도 동일
+        st.session_state['show_admin_page'] = False  # 💡 Admin 페이지도 동일
 
     def to_kst(time_str):
         if not time_str or time_str in ['업데이트 필요', '자체 집계 모드']:
@@ -1443,8 +1444,8 @@ setInterval(bindSidebarClicks, 300);
     # 💡 [배당금] 수동 입력 집계 — cfg 'DIVIDEND' = {"YYYY-MM": {계좌키: [{"종목명","세전",("주식수","주당배당")}]}}
     #    세후·원천징수 = 세전 × 원천징수율 (국내 15.4%, 미국 15%, 절세계좌 0).
     #    금융소득종합과세(연 2,000만원)는 일반계좌(DOM1·DOM2·USA1·USA2) 세전 배당만 합산. 절세계좌는 제외.
-    DIV_ACC_LABEL = {'DC': '퇴직연금(DC)', 'IRP': '퇴직연금(IRP)', 'PENSION': '연금저축', 'ISA': 'ISA(중개형)',
-                     'DOM1': '국내Ⅰ 키움', 'DOM2': '국내Ⅱ 삼성', 'USA1': '미국Ⅰ 키움', 'USA2': '미국Ⅱ 키움'}
+    DIV_ACC_LABEL = {'DC': '퇴직연금(DC)', 'IRP': '퇴직연금(IRP)', 'PENSION': '연금저축(CMA)', 'ISA': 'ISA(중개형)',
+                     'DOM1': '국내Ⅰ. 키움', 'DOM2': '국내Ⅱ. 삼성', 'USA1': '미국Ⅰ. 키움', 'USA2': '미국Ⅱ. 키움'}   # 💡 로마숫자 뒤 마침표 = 원본(DIV_ACC_FULL '국내Ⅰ.')·일반계좌 상세와 동일 표기
     # 💡 배당금 계좌 선택 드롭다운용 풀네임(일반계좌/절세계좌 Admin의 acc_list와 동일). 계좌번호 변경 시 여기도 함께 갱신
     DIV_ACC_FULL = {'DC': '[ 퇴직연금(DC) (삼성 : 7165962472-28) ]', 'IRP': '[ 퇴직연금(IRP)계좌 (삼성 : 7164499007-29) ]',
                     'PENSION': '[ 연금저축(CMA)계좌 (삼성 : 7169434836-15) ]', 'ISA': '[ ISA(중개형) (키움 : 6448-4934) ]',
@@ -1473,7 +1474,8 @@ setInterval(bindSidebarClicks, 300);
     div_has = any(v > 0 for v in div_month_gross.values())
     div_all_months = sorted(div_month_net.keys())
     _div_cur_year = pd.Timestamp.now().strftime('%Y')
-    _div_recent3 = div_all_months[-3:]
+    _div_this_m0 = pd.Timestamp.now().strftime('%Y-%m')
+    _div_recent3 = [m for m in div_all_months if m < _div_this_m0][-3:]   # 💡 진행 중인 당월 제외 → 완료된 직전 3개월 평균 (반쪽짜리 당월이 평균을 끌어내리던 버그 수정)
     div_est_month = (sum(div_month_net[m] for m in _div_recent3) / len(_div_recent3)) if _div_recent3 else 0.0
     div_ytd_net = sum(v for m, v in div_month_net.items() if m.startswith(_div_cur_year))
     div_ytd_gross = sum(v for m, v in div_month_gross.items() if m.startswith(_div_cur_year))
@@ -1766,7 +1768,14 @@ div.element-container:has(#balance-toggle-anchor) + div.element-container [data-
         menu_options = ["대시보드", "절세계좌", "일반계좌", "암호화폐", "알고리즘", "차익거래"]
         def format_menu(option):
             return "AI 알고리즘" if option == "알고리즘" else option
-        st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", key="menu_sel", on_change=on_menu_change)
+        # 💡 [네비 버그 수정] 상세페이지(배당/골드/리밸런싱/Admin) 진입 중에는 라디오 선택을 비워둔다.
+        #    그래야 '총운용자산(=대시보드)'을 다시 눌렀을 때 None->대시보드 '값 변화'가 생겨 on_change가 발화해
+        #    상세페이지를 빠져나올 수 있다. (이미 선택된 항목 재클릭은 on_change 미발화라 전환이 안 되던 문제)
+        if any(st.session_state.get(_f) for _f in ('show_dividend_page', 'show_gold_page', 'show_rebal_page', 'show_admin_page')):
+            st.session_state['menu_sel'] = None
+        elif 'menu_sel' not in st.session_state:
+            st.session_state['menu_sel'] = '대시보드'  # 최초 로드 시 총운용자산 하이라이트 유지
+        st.radio("Menu", menu_options, format_func=format_menu, label_visibility="collapsed", index=None, key="menu_sel", on_change=on_menu_change)
 
         c_btc = crypto_data.get('btc_pct', 0) if isinstance(crypto_data, dict) else 0
         c_eth = crypto_data.get('eth_pct', 0) if isinstance(crypto_data, dict) else 0
@@ -3212,10 +3221,14 @@ document.getElementById('zappa-qr-url').textContent = url;
             t = _dym - offset
             return f"{t//12:04d}-{t%12 + 1:02d}"
         _this_m, _prev_m = _dmk(0), _dmk(1)
-        _recent6 = [_dmk(i) for i in range(5, -1, -1)]
-        _recent3 = [_dmk(i) for i in range(2, -1, -1)]
+        # 💡 '최근 N개월'은 진행 중인 당월(반쪽짜리)을 제외하고 '완료된' 직전 N개월만 합산한다.
+        #    최근 3개월 = 전월·전전월·전전전월(_dmk 1~3), 최근 6개월 = 전월~6개월전(_dmk 1~6). (당월은 '당월(예상)'·'전월실적' 칸에서 별도 표시)
+        _recent6 = [_dmk(i) for i in range(6, 0, -1)]
+        _recent3 = [_dmk(i) for i in range(3, 0, -1)]
         _last12 = [_dmk(i) for i in range(11, -1, -1)]
         _dcy = _dnow.strftime('%Y')
+        # 💡 흰 요약박스 '올해 누적' = 완료된 '전월(_prev_m)'까지의 실제 세후 합(진행 중 당월·예상치 제외). div_month_net은 실제 입력분만 담김
+        _ytd_prev = sum(v for m, v in div_month_net.items() if m.startswith(_dcy) and m <= _prev_m)
 
         # series[acc_key][종목명][month] = [세전, 세후]  /  meta[acc_key][종목명] = {q, dps}
         _series, _meta = {}, {}
@@ -3293,99 +3306,303 @@ document.getElementById('zappa-qr-url').textContent = url;
         if not div_has:
             st.info("아직 입력된 배당 내역이 없습니다. 좌측 Admin → 1️⃣ 자산 유형 '📂배당금' 에서 월별 수령 배당(세전)을 입력하면 이 화면이 채워집니다.")
 
-        # ---------------- 헤드라인: 당월 예상 + 올해 누적
-        st.markdown(f"""
-<div class='card-main' style='width:100%; padding:22px 40px; background:#ffffff; border:1px solid #ddd; border-radius:15px; margin-bottom:25px; text-align:center;'>
-<div style='font-size:14px; color:#777; margin-bottom:8px;'>당월 예상 배당금 <span style='font-size:12px; color:#aaa;'>(실제 입력분 + 이달 지급예정 예측, 세후)</span></div>
-<div style='font-size:24px; font-weight:600; color:#333; line-height:1;'>{fmt_h(div_cur_pred)} <span style='font-size:13px; font-weight:normal; color:#888;'>KRW</span></div>
-<div style='font-size:13px; color:#999; margin-top:10px;'>최근 3개월 세후 평균 : <b style='color:#555;'>{fmt_h(div_est_month)}</b> KRW</div>
-<div style='font-size:13.5px; color:#888; margin-top:6px;'>올해({_dcy}) 누적 배당금 (세후) : <b style='color:#333;'>{fmt_h(div_ytd_net)}</b> KRW</div>
-</div>
-""", unsafe_allow_html=True)
+        # ---------------- [1] 배당금 요약 — 제목 아래에 (1) 배당 추이 노란 박스 → (2) 달력+기간 합계 순으로 배치. 절세/일반계좌의 [1] 제목처럼 상세페이지 최상단
+        st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>💰 [1] 배당금 요약 <span style='font-size:12px; font-weight:normal; color:#888;'>(세후 기준)</span></div>", unsafe_allow_html=True)
 
-        # ---------------- 최근 6개월 현금흐름 (세후) — 전 계좌 + 절세/일반 계좌군별 분리
-        st.markdown("<div class='sub-title' style='margin-bottom: 12px;'>💵 최근 6개월 배당 현금흐름 (세후)</div>", unsafe_allow_html=True)
-        def _grp_net_m(_keys, _m):   # 💡 계좌군(절세/일반) 해당 월 세후 합 (절세는 원천징수 0이라 세전=세후)
+        # ---------------- (1) 헤드라인: 가로 꽉 채운 노란 박스 1개 안에 '우상단 흰 요약박스'(오버레이) + '선 그래프'(빈 공간) 를 병합
+        st.markdown("""<style>
+/* 노란 박스 = 절세/일반 상세 첫 화면의 '총 자산' 노란 카드(.card-main)와 동일 배경·테두리 */
+.st-key-div_trend12 { position:relative; background:#ffffff; border:2px solid #e8dbad; border-radius:12px; padding:16px 20px 22px; box-shadow:none; margin-bottom:16px; }
+/* 우상단 래퍼: [범례 인덱스(좌)] [흰 요약박스(우)] 가로 배치 */
+.st-key-div_trend12 .div-sumwrap { position:absolute; top:6px; right:16px; z-index:5; display:flex; align-items:center; gap:10px; }
+/* 흰 요약박스 = 그 카드 안 '총 자산' 흰 박스(.card-inner)와 동일 모양·hover 효과 */
+.st-key-div_trend12 .div-sumbox { width:250px; background:#ffffff; border:1.5px solid #dcdcdc; border-radius:10px; padding:13px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.04); text-align:left; transition:all 0.3s ease; cursor:default; }
+.st-key-div_trend12 .div-sumbox:hover { background:#f8f9fa; border-color:#bbb; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.st-key-div_trend12 .div-legend { display:flex; flex-direction:column; gap:7px; font-size:12px; color:#555; background:rgba(255,255,255,0.85); border:1px solid #ececec; border-radius:8px; padding:8px 10px; }
+.st-key-div_trend12 .div-legend span { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.st-key-div_trend12 .div-legend i { width:12px; height:12px; border-radius:3px; display:inline-block; }
+/* 💡 '배당금 월별 상세 조회' 하위: 달력(회색)을 차트와 동일 폭으로(좌·우 모두 노란 박스 안쪽선에 flush) → 들여쓰기 0, 오른쪽 끝선이 차트와 정렬되어 튀어나오지 않음 */
+.st-key-div_cal { padding-left: 0; }
+/* 시작일/종료일 작은 회색 라벨 우측 정렬 */
+.st-key-div_period_from label, .st-key-div_period_to label { justify-content: flex-end; }
+.st-key-div_period_from label div[data-testid='stMarkdownContainer'], .st-key-div_period_to label div[data-testid='stMarkdownContainer'] { text-align: right; width: 100%; }
+</style>""", unsafe_allow_html=True)
+
+        def _dtrend_gnet(_keys, _m):   # 계좌군(절세/일반) 해당 월 세후 합
             return sum(_series.get(_ak, {}).get(_nm, {}).get(_m, [0.0, 0.0])[1]
                        for _ak in _keys for _nm in _series.get(_ak, {}))
-        _cf = "<table class='main-table'><tr><th style='text-align:center;'>구분</th>"
-        for _m in _recent6:
-            _mh = f"{_m} (예상)" if _m == _this_m else _m   # 💡 당월은 예측값이므로 '(예상)' 표기
-            _cf += f"<th style='text-align:center;'>{_mh}</th>"
-        _cf += "<th style='text-align:center;'>6개월 합</th></tr>"
-        # 전 계좌 세후 (당월은 예측값 div_cur_pred — 헤드라인·사이드바와 sync)
-        _tot6 = 0.0
-        _cf += "<tr><td style='text-align:center; font-weight:bold;'>[ 합계 ]</td>"
-        for _m in _recent6:
-            _v = div_cur_pred if _m == _this_m else div_month_net.get(_m, 0.0); _tot6 += _v
-            _bg = " background:#eef5ff;" if _m == _this_m else ""
-            _cf += f"<td style='text-align:right; padding-right:14px; font-weight:bold;{_bg}'>{fmt_h(_v)}</td>"
-        _cf += f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fffbe6;'>{fmt_h(_tot6)}</td></tr>"
-        # 절세계좌 / 일반계좌 세후 분리 (당월은 계좌군별 예측값)
-        for _glbl, _gkeys, _gpred in [("🛡️ 절세계좌", DIV_TAX_KEYS, div_cur_pred_tax), ("💰 일반계좌", DIV_GEN_KEYS, div_cur_pred_gen)]:
-            _gt = 0.0
-            _cf += f"<tr><td style='text-align:center; color:#666;'>{_glbl}</td>"
-            for _m in _recent6:
-                _gv = _gpred if _m == _this_m else _grp_net_m(_gkeys, _m); _gt += _gv
-                _bg = " background:#eef5ff;" if _m == _this_m else ""
-                _cf += f"<td style='text-align:right; padding-right:14px; color:#555;{_bg}'>{fmt_h(_gv)}</td>"
-            _cf += f"<td style='text-align:right; padding-right:14px; color:#555; background:#fcfcf2;'>{fmt_h(_gt)}</td></tr>"
-        _cf += "</table>"
-        st.markdown(_cf, unsafe_allow_html=True)
 
-        # ---------------- 계좌 선택 + 세전/세후 토글
-        _present_keys = [k for k in (DIV_TAX_KEYS + DIV_GEN_KEYS) if k in _series]
-        _scope_opts = ["전체"] + [DIV_ACC_LABEL[k] for k in _present_keys]
-        _lbl2key = {v: k for k, v in DIV_ACC_LABEL.items()}
-        cs1, cs2 = st.columns([2, 1])
-        with cs1: _scope = st.selectbox("계좌 선택", _scope_opts, key="div_scope")
-        with cs2: _basis = st.radio("표시 기준", ["세후", "세전"], horizontal=True, key="div_basis")
-        _bi = 1 if _basis == "세후" else 0
-        _scope_keys = _present_keys if _scope == "전체" else [_lbl2key.get(_scope)]
-        _scope_keys = [k for k in _scope_keys if k]
+        with st.container(key='div_trend12'):
+            # 우상단 흰 요약박스(내용 크기에 맞춤, hover 시 색 변경) + 좌상단 제목(💡 — 일반계좌 노란카드 '총 자산'과 동일한 18px bold 크기로 통일)
+            st.markdown(f"""
+<div class='div-sumwrap'>
+<div class='div-legend'><span><i style='background:#7B1FA2; width:14px; height:3px; border-radius:2px;'></i>합계</span><span><i style='background:#a9d18e;'></i>절세</span><span><i style='background:#f4b183;'></i>일반</span></div>
+<div class='div-sumbox'>
+<div style='font-size:14.5px; color:#666; margin-bottom:6px;'>당월 예상 배당금 <span style='font-size:11px; color:#aaa;'>(세후)</span></div>
+<div style='font-size:24px; font-weight:600; color:#333; line-height:1; text-align:right;'>{fmt_h(div_cur_pred)} <span style='font-size:12.5px; font-weight:normal; color:#888;'>KRW</span></div>
+<div style='border-bottom:1px solid #eee; margin:10px 0 8px;'></div>
+<div style='display:flex; justify-content:space-between; align-items:baseline; font-size:14.5px; color:#666; margin-bottom:4px;'><span>최근 3개월 평균</span><b style='font-size:16px; color:#111; font-weight:normal;'>{fmt_h(div_est_month)}</b></div>
+<div style='display:flex; justify-content:space-between; align-items:baseline; font-size:14.5px; color:#666;'><span>올해({int(_prev_m[5:7])}월) 누적</span><b class='red' style='font-size:16px;'>+{fmt_h(_ytd_prev)}</b></div>
+</div>
+</div>
+<div style='font-size:18px; font-weight:bold; color:#111; margin:0 0 2px;'>💡 배당금 추이 <span style='font-size:12px; font-weight:normal; color:#888;'>(당월은 예상)</span></div>
+""", unsafe_allow_html=True)
+            # 결합 그래프(총운용자산 추이 방식): 절세+일반 '누적 막대'(폭 좁게) 위를 '합계 곡선'(spline) 이 막대 꼭대기 가운데로 통과.
+            #   💡 막대는 보조축 x2(overlaying/matches=x)에 올려 rangeslider 썸네일에서 제외(plotly는 trace별 슬라이더 제외 미지원 → x2 트릭).
+            #      막대 hover는 끄고(hoverinfo='skip'), '합계 선' hover 하나에 절세/일반/합계를 모두 담아 x unified 효과 유지.
+            #   색상은 절세 상세 노란박스 팔레트: 절세=연금저축 연두(#a9d18e), 일반=망고(#f4b183), 합계선=총자산 관례 보라(#7B1FA2)
+            _xd = [f"{_m}-01" for _m in _last12]                    # 날짜축(달력/기간선택용)
+            _tax_v = [(div_cur_pred_tax if _m == _this_m else _dtrend_gnet(DIV_TAX_KEYS, _m)) for _m in _last12]
+            _gen_v = [(div_cur_pred_gen if _m == _this_m else _dtrend_gnet(DIV_GEN_KEYS, _m)) for _m in _last12]
+            _tot_v = [t + g for t, g in zip(_tax_v, _gen_v)]
+            _tax_y = [v / 10000 for v in _tax_v]; _gen_y = [v / 10000 for v in _gen_v]; _tot_y = [v / 10000 for v in _tot_v]
+            _tmax = max(_tot_y) if any(_tot_y) else 1.0
+            # 마커: 전부 동일 — 내부 흰색 + 보라 테두리(속 빈 원). 중심을 반지름(≈_MK_OFF 만원)만큼 올려 아랫면이 막대 상단에 닿게 하고, '보이는' 보라선도 이 마커 중심 높이(_mk_y)로 올려 선이 원의 가운데를 통과하게 함
+            _MKSZ = 12
+            _MK_OFF = 10   # 만원(세로 range 0~450·높이350 기준) — 마커 반지름 ≈ 원 아랫면이 막대 상단에 접촉
+            _mk_y = [v + _MK_OFF for v in _tot_y]   # 마커 중심 = 보이는 선의 y (원 가운데 통과)
+            # 선 hover용 customdata=[합계, 절세, 일반] — 세 값을 천단위 포맷 후 최대폭에 맞춰 앞을 nbsp 패딩(숫자 우측정렬 → '원' 세로 정렬)
+            def _wonpad(_vals):
+                _ss = [f"{_v:,.0f}" for _v in _vals]
+                _w = max(len(_s) for _s in _ss)
+                return [' ' * (_w - len(_s)) + _s for _s in _ss]
+            _lcust = [_wonpad([s, t, g]) for t, g, s in zip(_tax_v, _gen_v, _tot_v)]
+            _BARW = 0.55e9   # 막대 폭(ms, 약 6~7일) — 대폭 좁힘 (날짜축이라 ms 단위)
+            fig_tr = go.Figure()
+            # 막대(절세/일반) — 보조축 x2 (rangeslider 썸네일에서 제외)
+            # 💡 stack 순서: 먼저 추가=아래. 일반(아래) → 절세(위)
+            fig_tr.add_trace(go.Bar(x=_xd, y=_gen_y, name='일반', marker_color='#f4b183', width=_BARW, xaxis='x2', hoverinfo='skip'))
+            fig_tr.add_trace(go.Bar(x=_xd, y=_tax_y, name='절세', marker_color='#a9d18e', width=_BARW, xaxis='x2', hoverinfo='skip'))
+            # 투명 hover 앵커 — base x 전체 구간이 x unified hover 담당 (막대·선은 hover skip)
+            fig_tr.add_trace(go.Scatter(x=_xd, y=_tot_y, mode='lines', line=dict(color='rgba(0,0,0,0)', width=0),
+                customdata=_lcust, showlegend=False,
+                hovertemplate=("<span style='color:#7B1FA2;'>■</span> <b>합계 %{customdata[0]}원</b><br>"
+                               "<span style='color:#a9d18e;'>■</span> 절세 %{customdata[1]}원<br>"
+                               "<span style='color:#f4b183;'>■</span> 일반 %{customdata[2]}원<extra></extra>")))
+            # 💡 '보이는' 합계선 1개만 — base x, y는 마커 중심(_mk_y)이라 선이 원의 가운데를 통과(막대보다 높아 가려지지 않음). rangeslider 썸네일에도 그대로 미러
+            fig_tr.add_trace(go.Scatter(x=_xd[:-1], y=_mk_y[:-1], mode='lines',
+                line=dict(color='#7B1FA2', width=2.6, shape='spline', smoothing=0.6), hoverinfo='skip', showlegend=False))
+            fig_tr.add_trace(go.Scatter(x=_xd[-2:], y=_mk_y[-2:], mode='lines',
+                line=dict(color='#7B1FA2', width=2.6, dash='2px,2px'), hoverinfo='skip', showlegend=False))   # 💡 전월→당월(예상) 촘촘한 점선
+            # 마커(동그라미) — 보조축 x2(최상단). 중심=_mk_y(막대 상단+반지름)라 아랫면이 막대 상단에 닿고 보라선은 가운데를 통과. hover는 앵커가 담당 → skip
+            # 💡 내부 채움: 과거 월 = 연보라(#CBA8E6), 당월(11월) = 흰색 비움 — 테두리는 모두 진보라(#7B1FA2)
+            _mkfill = ['#ffffff' if _m == _this_m else '#CBA8E6' for _m in _last12]
+            # 💡 각 동그라미 위에 월 합계 값을 '만원 단위(천원자리 반올림)'로 표기 — 예) 2,281,247원 → 228만. 0원 월은 생략
+            _mktext = [f"{round(_v / 10000):,}만" if _v > 0 else "" for _v in _tot_v]
+            fig_tr.add_trace(go.Scatter(x=_xd, y=_mk_y, mode='markers+text', xaxis='x2', hoverinfo='skip', showlegend=False,
+                marker=dict(size=_MKSZ, color=_mkfill, line=dict(width=2, color='#7B1FA2')),
+                text=_mktext, textposition='top center', textfont=dict(size=13, color='#000000', family='Arial')))   # 💡 x축 날짜 눈금과 동일 크기(13)·검정
+            fig_tr.update_layout(
+                height=350, barmode='stack', margin=dict(t=46, l=48, r=16, b=16),
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,0.35)', hovermode='x unified', showlegend=False,
+                xaxis=dict(type='date', tickformat='%Y-%m', hoverformat='%Y-%m', dtick='M1', tickangle=0,
+                           tickfont=dict(size=13, family='Arial', color='#8a6d00'), showgrid=True, gridcolor='rgba(224,161,0,0.12)',
+                           linecolor='#e7cf8a', range=[f"{_last12[0]}-01", f"{_last12[-1]}-28"],
+                           rangeselector=dict(
+                               buttons=[dict(count=3, label='3M', step='month', stepmode='backward'),
+                                        dict(count=6, label='6M', step='month', stepmode='backward'),
+                                        dict(count=12, label='1Y', step='month', stepmode='backward'),
+                                        dict(step='all', label='전체')],
+                               x=0, xanchor='left', y=1.017, yanchor='bottom',   # 💡 '만원' 라벨과 같은 가로 행이 되도록 ~5px 상향(plot높이288 기준 5/288≈0.017)
+                               font=dict(size=13, color='#7a5c00'), bgcolor='#fff7db', activecolor='#ffe08a',
+                               bordercolor='#e7cf8a', borderwidth=1),
+                           rangeslider=dict(visible=True, thickness=0.08, bgcolor='rgba(255,248,220,0.5)', bordercolor='#e7cf8a', borderwidth=1)),
+                xaxis2=dict(overlaying='x', matches='x', type='date', showgrid=False, showticklabels=False, zeroline=False),   # 💡 막대 전용 보조축 → rangeslider 썸네일에서 막대 제외 (matches=x 로 기간선택·슬라이더에 동기화)
+                yaxis=dict(tickfont=dict(size=13, family='Arial', color='#8a6d00'), showgrid=True, gridcolor='rgba(224,161,0,0.12)',
+                           linecolor='#e7cf8a', tickformat=',.0f', range=[0, 450], fixedrange=True),   # 💡 세로 스케일 MAX=450(만원)
+                hoverlabel=dict(align='left', font=dict(size=13, family='Consolas, "Malgun Gothic", monospace')),   # 숫자 모노스페이스+nbsp패딩으로 '원' 세로 정렬 / 크기13=총운용자산 hover와 동일(모노스페이스는 '원' 정렬 위해 유지)
+                annotations=[dict(text='만원', xref='paper', yref='paper', x=0, y=1, xanchor='right', yanchor='bottom',
+                                  xshift=-9, yshift=3, showarrow=False, font=dict(size=13, color='#888'))])   # 💡 '만원'을 y축 눈금 숫자(예:500)의 우측 끝(일의 자리)에 맞춰 좌측 정렬, 글씨 크기=y축 숫자(13)
+            # 💡 기간선택(3M/6M/1Y/전체) 버튼을 라운드→각진 사각형으로. rangeselector는 배당 차트에만 쓰이므로 총운용자산(updatemenus)엔 영향 없음
+            st.markdown("<style>g.rangeselector .selector-rect{rx:0px !important;ry:0px !important;}</style>", unsafe_allow_html=True)
+            st.plotly_chart(fig_tr, use_container_width=True, config={'displayModeBar': False})
 
-        # 선택 계좌 최근 1년 세전/세후
-        _y1g = sum(_ssum(ak, nm, _last12, 0) for ak in _scope_keys for nm in _series.get(ak, {}))
-        _y1n = sum(_ssum(ak, nm, _last12, 1) for ak in _scope_keys for nm in _series.get(ak, {}))
-        st.markdown(f"<div style='margin:4px 0 18px; font-size:13.5px; color:#555;'>● 최근 1년 ({_scope}) · 세전 <b class='red'>{fmt_h(_y1g)}</b> / 세후 <b>{fmt_h(_y1n)}</b> KRW</div>", unsafe_allow_html=True)
+            # ---------------- (2) 같은 노란 박스 안: 달력(FROM~TO) → 전체/절세/일반 기간 합계 (세후). 차트 아래에 배치
+            st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)   # 차트와 '월별 상세 조회' 소제목 사이 간격
+            # 소제목: 위 '배당금 추이' 제목과 같은 열(💡 + 18px bold)로 맞춤
+            st.markdown("<div style='font-size:18px; font-weight:bold; color:#111; margin:0 0 6px;'>💡 배당금 월별 상세 조회</div>", unsafe_allow_html=True)
+            import datetime as _dtmod
+            def _grp_net_m(_keys, _m):   # 💡 계좌군(절세/일반) 해당 월 세후 합 (절세는 원천징수 0이라 세전=세후)
+                return sum(_series.get(_ak, {}).get(_nm, {}).get(_m, [0.0, 0.0])[1]
+                           for _ak in _keys for _nm in _series.get(_ak, {}))
+            # 데이터가 있는 월 전체(+당월) → 달력 min/max·포함 월 판정에 사용
+            _all_ms = sorted({_mm for _ak in _series for _nm in _series[_ak] for _mm in _series[_ak][_nm]} | {_this_m})
+            def _ym_first(_s): return _dtmod.date(int(_s[:4]), int(_s[5:7]), 1)
+            def _ym_last(_s):
+                _y, _mo = int(_s[:4]), int(_s[5:7])
+                return _dtmod.date(_y + (_mo == 12), (_mo % 12) + 1, 1) - _dtmod.timedelta(days=1)
+            _data_min = _ym_first(_all_ms[0]); _data_max = _ym_last(_all_ms[-1])
+            _def_from = min(max(_ym_first(f"{_dcy}-01"), _data_min), _data_max)   # 기본 시작 = 올해 1월 (데이터 범위로 클램프)
+            _def_to = min(max(_ym_last(_prev_m), _data_min), _data_max)           # 기본 종료 = 전월 말일(완료된 직전 월): 11월 조회→10월·10월 조회→9월
+            with st.container(key='div_cal'):   # 💡 padding-left(CSS)로 달력 시작점을 제목 '당' 위치에 맞춤
+                _dcol1, _dcol2 = st.columns(2)
+                with _dcol1: _pf = st.date_input("시작일 (FROM)", value=_def_from, min_value=_data_min, max_value=_data_max, key="div_period_from")
+                with _dcol2: _pt = st.date_input("종료일 (TO)", value=_def_to, min_value=_data_min, max_value=_data_max, key="div_period_to")
+            _fym, _tym = _pf.strftime('%Y-%m'), _pt.strftime('%Y-%m')
+            if _fym > _tym: _fym, _tym = _tym, _fym   # 거꾸로 선택해도 보정
+            _sel_ms = [_m for _m in _all_ms if _fym <= _m <= _tym]
+            def _period_sum(_kind):
+                _s = 0.0
+                for _m in _sel_ms:
+                    if _kind == 'tax':   _s += (div_cur_pred_tax if _m == _this_m else _grp_net_m(DIV_TAX_KEYS, _m))
+                    elif _kind == 'gen': _s += (div_cur_pred_gen if _m == _this_m else _grp_net_m(DIV_GEN_KEYS, _m))
+                    else:                _s += (div_cur_pred if _m == _this_m else div_month_net.get(_m, 0.0))
+                return _s
+            _p_tot, _p_tax, _p_gen = _period_sum('tot'), _period_sum('tax'), _period_sum('gen')
+            _per_note = f"기간 {_fym} ~ {_tym} · {len(_sel_ms)}개월" + (" · 당월은 예상 포함" if _this_m in _sel_ms else "")
+            st.markdown(f"""
+<div style='margin-left:0;'>
+<div style='display:flex; gap:12px; margin:2px 0 4px;'>
+<div style='flex:1; background:#faf6fe; border:1px solid #e6d6f5; border-radius:10px; padding:13px 16px;'>
+<div style='font-size:12.5px; color:#7B1FA2; font-weight:600; margin-bottom:6px;'>■ 전체 합계</div>
+<div style='font-size:20px; font-weight:700; color:#333; line-height:1;'>{fmt_h(_p_tot)} <span style='font-size:11px; color:#999; font-weight:normal;'>원</span></div>
+</div>
+<div style='flex:1; background:#f4f9ee; border:1px solid #d7e8c6; border-radius:10px; padding:13px 16px;'>
+<div style='font-size:12.5px; color:#5a8a3c; font-weight:600; margin-bottom:6px;'>■ 절세계좌</div>
+<div style='font-size:20px; font-weight:700; color:#333; line-height:1;'>{fmt_h(_p_tax)} <span style='font-size:11px; color:#999; font-weight:normal;'>원</span></div>
+</div>
+<div style='flex:1; background:#fdf5ec; border:1px solid #f0ddc4; border-radius:10px; padding:13px 16px;'>
+<div style='font-size:12.5px; color:#c67c33; font-weight:600; margin-bottom:6px;'>■ 일반계좌</div>
+<div style='font-size:20px; font-weight:700; color:#333; line-height:1;'>{fmt_h(_p_gen)} <span style='font-size:11px; color:#999; font-weight:normal;'>원</span></div>
+</div>
+</div>
+<div style='font-size:12px; color:#999; margin-top:2px;'>※ {_per_note} · 세후 기준(절세계좌는 원천징수 0이라 세전=세후)</div>
+</div>
+""", unsafe_allow_html=True)
+        # (노란 박스 자체 margin-bottom:16px 로 아래 간격 확보 → 별도 스페이서 제거, [2] 섹션을 위로 붙임)
+
+        # 💡 보유내역(상세)에서 종목별 (평가금액, 매입금액, 수량) — 배당률 분모용. 페이지 로딩 때 받은 최신 가격 사용.
+        #    해외 종목도 '총자산'(평가금액)·'평가손익'은 원화 환산값이라, 매입금액=총자산−평가손익 으로 원화로 통일된다(배당=원화 세전과 통화 일치).
+        _price_cache = {}
+        def _stock_price(ak, nm):
+            if ak not in _price_cache:
+                _src = g_data if ak in DIV_GEN_KEYS else data
+                _acc = _src.get(ak, {}) if isinstance(_src, dict) else {}
+                # 💡 미국계좌 총자산/평가손익은 USD 원본 → 대시보드와 동일 환율로 원화 환산 (배당금이 원화 세전이므로 분모도 원화여야 함)
+                _fx = safe_float(g_data.get('환율', 1443.1)) if (isinstance(g_data, dict) and 'USA' in ak) else 1.0
+                _pm = {}
+                for _it in (_acc.get('상세', []) or []):
+                    if not isinstance(_it, dict): continue
+                    _hn = str(_it.get('종목명', '')).replace(' ', '').strip()
+                    if not _hn: continue
+                    _ev = safe_float(_it.get('총자산', _it.get('총 자산', 0))) * _fx
+                    _pl = safe_float(_it.get('평가손익', 0)) * _fx
+                    _qty = safe_float(_it.get('수량', _it.get('주식수', 0)))
+                    _pm[_hn] = (_ev, _ev - _pl, _qty)   # (평가금액, 매입금액, 수량) — 평가금액·매입금액은 원화 환산
+                _price_cache[ak] = _pm
+            return _price_cache[ak].get(nm.replace(' ', '').strip(), (0.0, 0.0, 0.0))
 
         # ---------------- 종목별 상세 (절세 / 일반 그룹)
         def _grp_table(title, keys):
             _ks = [k for k in keys if k in _series and k in _scope_keys]
             if not _ks: return ""
-            _h = f"<h4 style='margin:22px 0 10px; font-weight:bold;'>{title} <span style='font-size:13px; color:#888; font-weight:normal;'>({_basis} 기준)</span></h4>"
-            _h += ("<table class='main-table'><tr><th style='text-align:center;'>계좌</th><th style='text-align:center;'>종목</th>"
-                   "<th style='text-align:center;'>당월(예상)</th><th style='text-align:center;'>전월</th>"
-                   "<th style='text-align:center;'>최근 3개월 합</th><th style='text-align:center;'>누적 6개월</th><th style='text-align:center;'>올해 누적</th></tr>")
-            _gt = [0.0] * 5
+            # 💡 '📋 [3] ' 와 동일 폭의 투명 prefix를 넣어, 절세/일반계좌 제목이 상위 '계좌별 종목별'의 '계' 글자 아래에서 시작하도록 들여쓰기
+            _h = f"<div class='sub-title' style='margin:22px 0 10px; padding-left:58px;'>{title} <span style='font-size:13px; color:#888; font-weight:normal;'>({_basis} 기준)</span></div>"   # 💡 58px: '⏳ 절세'의 '절'이 상단 제목 '계좌별'의 '좌' 아래에 오도록(아이콘 ⏳ 폭 감안, 화면 확인 후 px 미세조정 가능)
+            _h += "<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>"
+            _subcss = "font-size:11px; font-weight:normal; color:#999;"
+            _h += ("<table class='main-table'>"
+                   "<tr>"
+                   "<th rowspan='2' style='text-align:center; vertical-align:middle;'>계좌</th>"
+                   "<th rowspan='2' style='text-align:center; vertical-align:middle;'>종목</th>"
+                   "<th rowspan='2' style='text-align:center; vertical-align:middle;'>올해 누적</th>"
+                   "<th rowspan='2' style='text-align:center; vertical-align:middle;'>전월실적</th>"
+                   f"<th colspan='4' style='text-align:center;'>배당 지표 <span style='{_subcss}'>(전월실적 기준)</span></th>"
+                   "<th rowspan='2' style='text-align:center; vertical-align:middle;'>당월(예상)</th>"
+                   "</tr>"
+                   "<tr>"
+                   "<th style='text-align:center;'>주식수</th>"
+                   f"<th style='text-align:center;'>DPS<br><span style='{_subcss}'>(주당 배당금)</span></th>"
+                   f"<th style='text-align:center;'>시가배당률<br><span style='{_subcss}'>(현재가 기준)</span></th>"
+                   f"<th style='text-align:center;'>YoC<br><span style='{_subcss}'>(매입가 기준)</span></th>"
+                   "</tr>")
+            def _pctfmt(_x): return f"{_x:.2f}%" if _x is not None else "-"
+            # 1차 계산: 계좌별 소계 + 종목행. 배당률은 분모(평가/매입금액)·연간배당(전월×주기)을 계좌·그룹 단위로 합산해 '집계 배당률' 산출
+            _g_cur = _g_prev = _g_year = _g_ann = _g_ev = _g_cost = 0.0
+            _acc_blocks = []   # [(_ak, (소계값들), [종목행 html(계좌 td 없음), ...])]
             for _ak in _ks:
-                _at = [0.0] * 5
+                _a_cur = _a_prev = _a_year = _a_ann = _a_ev = _a_cost = 0.0
+                _srows = []
                 for _nm in sorted(_series.get(_ak, {}).keys()):
                     # 💡 당월은 예측값(div_cur_pred 와 sync) — 보유종목은 실제입력/이달 지급예정 예측, 매도종목은 실제값만
                     _cur = _divp_curval2(_ak, _nm)[_bi] if _is_held(_ak, _nm) else _ssum(_ak, _nm, [_this_m], _bi)
-                    _rv = [_cur, _ssum(_ak, _nm, [_prev_m], _bi),
-                           _ssum(_ak, _nm, _recent3, _bi), _ssum(_ak, _nm, _recent6, _bi), _syear(_ak, _nm, _bi)]
-                    for i in range(5): _at[i] += _rv[i]
-                    _h += (f"<tr><td style='text-align:center; color:#888;'>{DIV_ACC_LABEL[_ak]}</td>"
-                           f"<td style='text-align:left; padding-left:12px;'>{_nm}</td>"
-                           + "".join(f"<td style='text-align:right; padding-right:14px;'>{fmt_h(v)}</td>" for v in _rv) + "</tr>")
-                _h += (f"<tr style='background:#fafafa;'><td colspan='2' style='text-align:center; color:#888;'>{DIV_ACC_LABEL[_ak]} 소계</td>"
-                       + "".join(f"<td style='text-align:right; padding-right:14px; font-weight:bold;'>{fmt_h(v)}</td>" for v in _at) + "</tr>")
-                for i in range(5): _gt[i] += _at[i]
-            _h += (f"<tr class='sum-row'><td colspan='2' style='text-align:center;'>{title} 합계</td>"
-                   + "".join(f"<td style='text-align:right; padding-right:14px;'>{fmt_h(v)}</td>" for v in _gt) + "</tr></table>")
+                    _prev = _ssum(_ak, _nm, [_prev_m], _bi)
+                    _year = _syear(_ak, _nm, _bi)
+                    _fq = _div_freq(_ak, _nm)                    # 월배당=12, 분기=4 (지급 이력으로 판정)
+                    _ev, _cost, _qty = _stock_price(_ak, _nm)    # 평가금액·매입금액·수량(원화)
+                    _ann = _prev * _fq                            # 연간배당 = 전월실적 × 연지급횟수
+                    _dps = (_prev / _qty) if _qty > 0 else 0.0    # 전월 주당배당
+                    _cy = (_ann / _ev * 100) if (_prev > 0 and _ev > 0) else None       # 시가배당률(현재가)
+                    _yoc = (_ann / _cost * 100) if (_prev > 0 and _cost > 0) else None   # YoC(매입가)
+                    _a_cur += _cur; _a_prev += _prev; _a_year += _year
+                    _a_ann += _ann; _a_ev += _ev; _a_cost += _cost
+                    _srows.append("<tr>"
+                        f"<td style='text-align:left; padding-left:12px;'>{_nm}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_year)}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_prev)}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_qty) if _qty > 0 else '-'}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{fmt(_dps, decimal=2) if (_qty > 0 and _prev > 0) else '-'}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{_pctfmt(_cy)}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{_pctfmt(_yoc)}</td>"
+                        f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_cur)}</td></tr>")
+                _g_cur += _a_cur; _g_prev += _a_prev; _g_year += _a_year
+                _g_ann += _a_ann; _g_ev += _a_ev; _g_cost += _a_cost
+                _acc_blocks.append((_ak, (_a_cur, _a_prev, _a_year, _a_ann, _a_ev, _a_cost), _srows))
+            # 2차 렌더: [ 계좌군 합계 ] → 계좌별로 (계좌명 세로 병합셀 | 소계 → 종목) 순
+            _plain = title.split(' ', 1)[-1]   # 아이콘 제거한 계좌군명 (예: 절세계좌)
+            _g_cy = (_g_ann / _g_ev * 100) if _g_ev > 0 else None
+            _g_yoc = (_g_ann / _g_cost * 100) if _g_cost > 0 else None
+            _h += (f"<tr class='sum-row'><td colspan='2' style='text-align:center;'>[ {_plain} 합계 ]</td>"
+                   f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_g_year)}</td>"
+                   f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_g_prev)}</td>"
+                   f"<td style='text-align:center;'>-</td><td style='text-align:center;'>-</td>"
+                   f"<td style='text-align:right; padding-right:14px;'>{_pctfmt(_g_cy)}</td>"
+                   f"<td style='text-align:right; padding-right:14px;'>{_pctfmt(_g_yoc)}</td>"
+                   f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_g_cur)}</td></tr>")
+            for _ak, (_a_cur, _a_prev, _a_year, _a_ann, _a_ev, _a_cost), _srows in _acc_blocks:
+                _rs = 1 + len(_srows)   # 소계행 + 종목행 수 → 계좌명 셀 rowspan(한 번만 표기)
+                _a_cy = (_a_ann / _a_ev * 100) if _a_ev > 0 else None
+                _a_yoc = (_a_ann / _a_cost * 100) if _a_cost > 0 else None
+                _h += (f"<tr><td rowspan='{_rs}' style='text-align:center; color:#555; font-weight:bold; vertical-align:middle; background:#f6f6f6;'>{DIV_ACC_LABEL[_ak]}</td>"
+                       f"<td style='text-align:center; color:#888; background:#fafafa;'>소계</td>"
+                       f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fafafa;'>{fmt_h(_a_year)}</td>"
+                       f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fafafa;'>{fmt_h(_a_prev)}</td>"
+                       f"<td style='text-align:center; background:#fafafa;'>-</td><td style='text-align:center; background:#fafafa;'>-</td>"
+                       f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fafafa;'>{_pctfmt(_a_cy)}</td>"
+                       f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fafafa;'>{_pctfmt(_a_yoc)}</td>"
+                       f"<td style='text-align:right; padding-right:14px; font-weight:bold; background:#fafafa;'>{fmt_h(_a_cur)}</td></tr>")
+                _h += "".join(_srows)
+            _h += "</table>"
             _wh = sum(_syear(ak, nm, 0) - _syear(ak, nm, 1) for ak in _ks for nm in _series.get(ak, {}))
             _h += f"<div style='text-align:right; font-size:13px; color:#777; margin-top:6px;'>※ 올해 원천징수세액(추정): <b>{fmt_h(_wh)}</b> KRW</div>"
+            _h += ("<div style='font-size:12px; color:#999; margin-top:4px;'>※ DPS·배당률은 <b>전월실적</b> 기준 — DPS=전월배당÷주식수, 연간배당=전월배당×주기(월배당12·분기4). "
+                   "<b>시가배당률</b>=연간배당÷현재평가금액, <b>YoC</b>=연간배당÷매입금액(둘 다 보유내역의 최신 원화 가격, 해외는 환산액). "
+                   "전월에 배당이 없는 달(분기배당 비지급월 등)이나 보유내역 미매칭 종목은 '-' 로 표시됩니다.</div>")
             return _h
-        _t_tax = _grp_table("🛡️ 절세계좌", DIV_TAX_KEYS)
-        _t_gen = _grp_table("💰 일반계좌", DIV_GEN_KEYS)
+        # ---------------- 계좌별 종목별 상세 전용 메뉴 (계좌 선택 + 세전/세후) — 바로 아래 표를 계좌별로 구분해 보는 메뉴라 표 바로 위에 우측 끝으로 붙이고, 위 '배당 추이' 차트와는 간격 이격
+        # 💡 드롭다운 계좌명 = Admin(배당 입력)에서 고를 때와 동일한 정비된 풀네임([절세]/[일반] 접두어 + DIV_ACC_FULL)
+        _present_keys = [k for k in (DIV_TAX_KEYS + DIV_GEN_KEYS) if k in _series]
+        _full_opt = lambda k: f"[{'절세' if k in DIV_TAX_KEYS else '일반'}] {DIV_ACC_FULL[k]}"
+        _scope_opts = ["전체"] + [_full_opt(k) for k in _present_keys]
+        _lbl2key = {_full_opt(k): k for k in _present_keys}
+        # 💡 세후/세전 radio가 메뉴용 전역 CSS(margin-top:-55px)에 끌려 올라가 빈칸처럼 보이던 문제 → 컬럼 안 radiogroup은 margin 리셋(사이드바 메뉴 radio는 stHorizontalBlock 밖이라 영향 없음)
+        st.markdown("<style>div[data-testid='stHorizontalBlock'] div.element-container:has(div[role='radiogroup']) { margin-top: 0 !important; }</style>", unsafe_allow_html=True)
+        st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)   # 위 노란 박스(margin-bottom:16px)와 소폭 간격만 — [2] 섹션을 위로 붙임
+        _htit, _hbasis, _hscope = st.columns([4.0, 1.2, 1.9])   # 제목(좌) · 세후/세전(중) · 회색 계좌 드롭다운(맨 오른쪽 열=우측 끝)
+        with _htit: st.markdown("<div class='sub-title' style='margin-top:4px;'>📋 [2] 계좌별 종목별 상세</div>", unsafe_allow_html=True)
+        with _hbasis: _basis = st.radio("표시 기준", ["세후", "세전"], horizontal=True, key="div_basis", label_visibility="collapsed")
+        with _hscope: _scope = st.selectbox("계좌 선택", _scope_opts, key="div_scope", label_visibility="collapsed")
+        _bi = 1 if _basis == "세후" else 0
+        _scope_keys = _present_keys if _scope == "전체" else [_lbl2key.get(_scope)]
+        _scope_keys = [k for k in _scope_keys if k]
+        _t_tax = _grp_table("⏳ 절세계좌", DIV_TAX_KEYS)
+        _t_gen = _grp_table("🪴 일반계좌", DIV_GEN_KEYS)
         if _t_tax: st.markdown(_t_tax, unsafe_allow_html=True)
         if _t_gen: st.markdown(_t_gen, unsafe_allow_html=True)
         if not _t_tax and not _t_gen:
             st.caption("표시할 종목별 배당 내역이 없습니다.")
 
         # ---------------- 보유 배당주 연간 예상 (실적 연율화, 세전)
-        st.markdown("<h4 style='margin:30px 0 10px; font-weight:bold;'>📈 보유 배당주 연간 예상 <span style='font-size:13px; color:#888; font-weight:normal;'>(실적 연율화 · 세전)</span></h4>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title' style='margin:30px 0 10px;'>📈 [3] 보유 배당주 연간 예상 <span style='font-size:13px; color:#888; font-weight:normal;'>(실적 연율화 · 세전·세후)</span></div>", unsafe_allow_html=True)
         # 💡 '현재 보유' 판정 — Oracle 실시간 보유종목(상세) 종목명과 공백 제거 후 대조.
         #    DIVIDEND 종목명은 Admin '보유종목 불러오기'가 Oracle 이름을 그대로 넣으므로 일치함.
         #    과거 이력 표(위)는 매도 종목도 유지하고, '앞으로 받을' 연간 예상·종합과세 추정에서만 매도 종목을 제외한다.
@@ -3396,35 +3613,81 @@ document.getElementById('zappa-qr-url').textContent = url;
             _ms = sorted({int(m[5:7]) for m in _d if _d.get(m, [0.0, 0.0])[0] > 0})
             return (" (" + "/".join(str(x) for x in _ms) + "월)") if _ms else ""
 
+        def _actual_gross(ak, nm):   # 💡 실제 입력받은 세전 배당의 단순 합(추정 X) — 매도종목 표기용
+            _d = _series.get(ak, {}).get(nm, {})
+            _ly = sum(_d[m][0] for m in _last12 if _d.get(m, [0.0, 0.0])[0] > 0)
+            return _ly if _ly > 0 else sum(v[0] for v in _d.values() if v[0] > 0)
+
         _arows = []
         for _ak in _scope_keys:
             for _nm in _series.get(_ak, {}):
-                _est = _annual_est(_ak, _nm)
+                _hld = _is_held(_ak, _nm)
+                # 보유종목=연율화 추정, 매도종목=실제 입력받은 세전만 합산(추정 안 함)
+                _est = _annual_est(_ak, _nm) if _hld else _actual_gross(_ak, _nm)
                 if _est <= 0: continue
                 _mo = _meta.get(_ak, {}).get(_nm, {'q': 0.0, 'dps': 0.0})
                 _fqv = _div_freq(_ak, _nm)
-                _arows.append((DIV_ACC_LABEL[_ak], _nm, _mo['q'], _mo['dps'], _est, _fqv, _is_held(_ak, _nm), _pay_months_label(_ak, _nm, _fqv)))
-        _arows.sort(key=lambda r: (r[6] is False, -r[4]))   # 보유 종목 먼저, 그다음 금액순
+                _arows.append((DIV_ACC_LABEL[_ak], _nm, _mo['q'], _mo['dps'], _est, _fqv, _hld, _pay_months_label(_ak, _nm, _fqv), _ak))
+        # 계좌 표기 순서: 절세(퇴직연금DC·IRP·연금저축CMA·ISA) → 일반(국내Ⅰ/Ⅱ·해외Ⅰ/Ⅱ). 같은 계좌 내 보유 먼저·금액순
+        _ACC_ORDER = DIV_TAX_KEYS + DIV_GEN_KEYS
+        _arows.sort(key=lambda r: (_ACC_ORDER.index(r[8]) if r[8] in _ACC_ORDER else 99, r[6] is False, -r[4]))
         if _arows:
-            _at = ("<table class='main-table'><tr><th style='text-align:center;'>계좌</th><th style='text-align:center;'>종목</th>"
-                   "<th style='text-align:center;'>주기</th><th style='text-align:center;'>주식수</th><th style='text-align:center;'>주당 배당</th><th style='text-align:center;'>연간 예상(세전)</th></tr>")
-            _tote = 0.0
-            for _al, _nm, _q, _dp, _est, _fq, _hd, _pml in _arows:
-                if _hd:
-                    _tote += _est
-                    _nm_cell, _est_cell = _nm, fmt_h(_est)
-                else:   # 매도 추정 — 과거 이력은 위 표에 남고, 연간 예상 합계에서는 제외
-                    _nm_cell = f"{_nm} <span style='color:#bbb;'>(매도추정)</span>"
-                    _est_cell = f"<span style='color:#bbb;'>{fmt_h(_est)}</span>"
-                _at += (f"<tr><td style='text-align:center; color:#888;'>{_al}</td><td style='text-align:left; padding-left:12px;'>{_nm_cell}</td>"
-                        f"<td style='text-align:center; color:#555;'>{_freq_label(_fq)}{_pml}</td>"
-                        f"<td style='text-align:right; padding-right:14px;'>{'-' if _q <= 0 else fmt_h(_q)}</td>"
-                        f"<td style='text-align:right; padding-right:14px;'>{'-' if _dp <= 0 else fmt(_dp, decimal=2)}</td>"
-                        f"<td style='text-align:right; padding-right:14px;'>{_est_cell}</td></tr>")
+            _at = ("<div style='text-align: right; font-size: 13px; color: #555; font-weight: bold; margin-bottom: 5px;'>단위 : 원화(KRW)</div>"
+                   "<table class='main-table'><tr><th style='text-align:center;'>계좌</th><th style='text-align:center;'>종목</th>"
+                   "<th style='text-align:center;'>주기</th><th style='text-align:center;'>주식수</th><th style='text-align:center;'>주당 배당</th>"
+                   "<th style='text-align:center;'>연간 예상(세전)</th><th style='text-align:center;'>연간 예상(세후)</th></tr>")
+            # 세후 = 세전 × (1 − 원천징수율). 합계·소계는 보유 종목만 집계(매도 제외)
+            _held = [r for r in _arows if r[6]]
+            _tote = sum(r[4] for r in _held)
+            _tote_net = sum(r[4] * (1 - div_wh_rate(r[8])) for r in _held)
+            _tax_g = sum(r[4] for r in _held if r[8] in DIV_TAX_KEYS)
+            _tax_n = sum(r[4] * (1 - div_wh_rate(r[8])) for r in _held if r[8] in DIV_TAX_KEYS)
+            _gen_g = sum(r[4] for r in _held if r[8] in DIV_GEN_KEYS)
+            _gen_n = sum(r[4] * (1 - div_wh_rate(r[8])) for r in _held if r[8] in DIV_GEN_KEYS)
+            # 전체 합계(보유 종목)를 맨 위에 먼저 표시
             _at += (f"<tr class='sum-row'><td colspan='5' style='text-align:center;'>합계 (보유 종목)</td>"
-                    f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_tote)}</td></tr></table>")
+                    f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_tote)}</td>"
+                    f"<td style='text-align:right; padding-right:14px;'>{fmt_h(_tote_net)}</td></tr>")
+            # 계좌군(절세/일반) 소계 행 — 해당 계좌군 마지막 그룹 뒤에 삽입
+            def _subtot_row(_lbl, _g, _n):
+                _sty = "font-weight:bold; background:#eef3fb; color:#2f6ab0;"
+                return (f"<tr><td colspan='5' style='text-align:center; {_sty}'>{_lbl}</td>"
+                        f"<td style='text-align:right; padding-right:14px; {_sty}'>{fmt_h(_g)}</td>"
+                        f"<td style='text-align:right; padding-right:14px; {_sty}'>{fmt_h(_n)}</td></tr>")
+            # 계좌별로 묶어 계좌명 열을 rowspan 병합(계좌당 한 번만 표기)
+            _ygroups = []
+            for _r in _arows:
+                if _ygroups and _ygroups[-1][0] == _r[8]: _ygroups[-1][1].append(_r)
+                else: _ygroups.append((_r[8], [_r]))
+            # 순서: 전체 합계(위) → 계좌군 합계(절세/일반) → 그 계좌군의 종목들
+            _tax_done = _gen_done = False
+            for _gi, (_gak, _grows) in enumerate(_ygroups):
+                _cur_tax = _gak in DIV_TAX_KEYS
+                # 계좌군 소계를 '해당 종목들보다 먼저' 표시
+                if _cur_tax and not _tax_done:
+                    _at += _subtot_row("⏳ 절세계좌 합계", _tax_g, _tax_n); _tax_done = True
+                if (not _cur_tax) and not _gen_done:
+                    if _tax_done:   # 절세 → 일반 경계: 가로 2줄(double) 구분선
+                        _at += "<tr><td colspan='7' style='padding:0; height:4px; border:none; border-top:3px double #9aa0a6; background:#fff;'></td></tr>"
+                    _at += _subtot_row("🪴 일반계좌 합계", _gen_g, _gen_n); _gen_done = True
+                for _idx, (_al, _nm, _q, _dp, _est, _fq, _hd, _pml, _ak) in enumerate(_grows):
+                    _net = _est * (1 - div_wh_rate(_ak))
+                    if _hd:
+                        _nm_cell, _est_cell, _net_cell = _nm, fmt_h(_est), fmt_h(_net)
+                    else:   # 매도 종목 — 추정 없이 '실제 입력받은 세전/세후 합'만 표시, 합계에서는 제외
+                        _nm_cell = f"{_nm} <span style='color:#bbb;'>(매도·실수령)</span>"
+                        _est_cell = f"<span style='color:#bbb;'>{fmt_h(_est)}</span>"
+                        _net_cell = f"<span style='color:#bbb;'>{fmt_h(_net)}</span>"
+                    _acc_td = (f"<td rowspan='{len(_grows)}' style='text-align:center; color:#555; font-weight:bold; vertical-align:middle; background:#f6f6f6;'>{DIV_ACC_LABEL[_gak]}</td>" if _idx == 0 else "")
+                    _at += (f"<tr>{_acc_td}<td style='text-align:left; padding-left:12px;'>{_nm_cell}</td>"
+                            f"<td style='text-align:center; color:#555;'>{_freq_label(_fq)}{_pml}</td>"
+                            f"<td style='text-align:right; padding-right:14px;'>{'-' if _q <= 0 else fmt_h(_q)}</td>"
+                            f"<td style='text-align:right; padding-right:14px;'>{'-' if _dp <= 0 else fmt(_dp, decimal=2)}</td>"
+                            f"<td style='text-align:right; padding-right:14px;'>{_est_cell}</td>"
+                            f"<td style='text-align:right; padding-right:14px;'>{_net_cell}</td></tr>")
+            _at += "</table>"
             st.markdown(_at, unsafe_allow_html=True)
-            st.caption("연간 예상 = 1회 평균 지급액 × 배당 주기. 커버드콜·PLUS 고배당주·TIGER 미국배당다우존스는 월배당, 그 외는 '3개월 연속 지급 이력이 있으면 월·아니면 분기'로 추정합니다(확정 배당 아님). '(매도추정)'은 현재 보유종목에 없어 합계에서 제외되며, 과거 수령 이력은 위 종목별 표에 그대로 남습니다.")
+            st.caption("보유 종목의 연간 예상 = 1회 평균 지급액 × 배당 주기. 커버드콜·PLUS 고배당주·TIGER 미국배당다우존스는 월배당, 그 외는 '3개월 연속 지급 이력이 있으면 월·아니면 분기'로 추정합니다(확정 배당 아님). '(매도·실수령)'은 현재 보유종목에 없는 종목으로, 추정하지 않고 실제 입력받은 세전/세후 배당 합만 표시하며 합계·소계에서는 제외됩니다(과거 수령 이력은 위 종목별 표에 그대로 남습니다). 세후 = 세전 × (1 − 원천징수율: 절세계좌 0%, 국내 15.4%, 미국 15%).")
         else:
             st.caption("연간 예상을 계산할 배당 실적이 아직 없습니다.")
 
@@ -3436,13 +3699,14 @@ document.getElementById('zappa-qr-url').textContent = url;
         if _proj <= 0: _proj = div_gen_annualized
         _proj = max(_proj, _gen_ytd)
         _pct = min(_gen_ytd / _LIMIT * 100, 100) if _LIMIT else 0.0
-        _bar = '#FF6B6B' if _gen_ytd > _LIMIT else ('#FFE66D' if _pct >= 70 else '#4ECDC4')
+        # 💡 막대 색상 = 절세계좌 노란박스 진행바와 동일한 파란 그레이데이션(#9bc2e6→#4a90e2). 단, 2,000만원 초과 시에만 빨간 그레이데이션으로 경고
+        _barbg = ('linear-gradient(90deg, #f3a0a0, #e05353)' if _gen_ytd > _LIMIT else 'linear-gradient(90deg, #9bc2e6, #4a90e2)')
         _msg = ('→ 2,000만원 초과 예상, 다음 해 5월 종합소득세 신고 대상' if _proj > _LIMIT else '→ 현재 추세로는 2,000만원 이내')
         st.markdown(f"""
 <div class='card-inner' style='padding:18px 22px; margin-top:28px;'>
 <div style='font-weight:bold; font-size:15px; margin-bottom:10px;'>⚖️ 금융소득종합과세 체크 <span style='font-size:12.5px; color:#888; font-weight:normal;'>(일반계좌 세전 배당 기준)</span></div>
-<div style='display:flex; justify-content:space-between; font-size:13.5px; color:#555; margin-bottom:6px;'><span>올해 누적 <b>{fmt_h(_gen_ytd)}</b> 원</span><span>기준 20,000,000 원</span></div>
-<div style='background:#eee; border-radius:8px; height:16px; overflow:hidden;'><div style='width:{_pct:.1f}%; background:{_bar}; height:100%;'></div></div>
+<div style='display:flex; justify-content:space-between; font-size:13.5px; color:#555; margin-bottom:6px;'><span>올해 누적 <b>{fmt_h(_gen_ytd)}</b> 원 <span style='color:#4a90e2; font-weight:600;'>({_gen_ytd / _LIMIT * 100:.1f}%)</span></span><span>기준 20,000,000 원</span></div>
+<div style='background:#eee; border-radius:8px; height:16px; overflow:hidden;'><div style='width:{_pct:.1f}%; background:{_barbg}; height:100%;'></div></div>
 <div style='font-size:13px; color:#777; margin-top:10px;'>연말 예상 누적(연율화): <b>{fmt_h(_proj)}</b> 원 {_msg}</div>
 <div style='font-size:12px; color:#999; margin-top:4px;'>※ 절세계좌(DC·IRP·연금·ISA)는 제외됩니다. 이자소득은 미반영(배당만 집계)이며, 해외배당은 세전(원천징수 전) 총액 기준으로 봐야 합니다.</div>
 </div>
@@ -5216,7 +5480,7 @@ display: none !important;
 
             with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
                 st.markdown(PNL_BASIS_HELP)
-            _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
+            _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0; padding-left:16px;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
             h1_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>투자원금</th></tr><tr><th class='th-week'>7일전</th><th class='th-week'>15일전</th><th class='th-week'>30일전</th></tr>"
             h1 = [unit_html, h1_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)}</td><td class='{col(t_prof_pr_7ago)}'>{fmt(t_prof_pr_7ago, True)}</td><td class='{col(t_prof_pr_15ago)}'>{fmt(t_prof_pr_15ago, True)}</td><td class='{col(t_prof_pr_30ago)}'>{fmt(t_prof_pr_30ago, True)}</td><td class='{col(t_rate_principal)}'>{fmt_p(t_rate_principal)}</td><td>{fmt(t_principal)}</td></tr>"]
        
@@ -5240,7 +5504,7 @@ display: none !important;
 
             # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
         #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
-            _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_prof_buy)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_prof_buy, True)}</span><span class='{col(t_prof_buy)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
+            _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap; padding-left:16px;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_prof_buy)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_prof_buy)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_prof_buy, True)}</span><span class='{col(t_prof_buy)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
             h2_table = "<table class='main-table'><tr><th rowspan='2'>계좌 구분</th><th rowspan='2'>총 자산</th><th rowspan='2' class='th-eval'>총 손익</th><th colspan='3' class='th-blank'>&nbsp;</th><th rowspan='2'>수익률</th><th rowspan='2'>매입금액</th></tr><tr><th class='th-week'>전일비</th><th class='th-week'>전주비</th><th class='th-week'>전월비</th></tr>"
             h2 = [unit_html, h2_table, f"<tr class='sum-row'><td>[ 합  계 ]</td><td>{fmt_h(t_asset)}</td><td class='{col(t_prof_buy)}'>{fmt_h(t_prof_buy, True)}</td><td class='{col(t_diff_1)}'>{fmt(t_diff_1, True)}</td><td class='{col(t_diff_7)}'>{fmt(t_diff_7, True)}</td><td class='{col(t_diff_30)}'>{fmt(t_diff_30, True)}</td><td class='{col(t_rate_buy)}'>{fmt_p(t_rate_buy)}</td><td>{fmt(t_buy_total)}</td></tr>"]
        
@@ -5870,7 +6134,7 @@ display: none !important;
         # 💡 [신규 오더 패치] 투자원금 대비 자산 현황 (계산된 t_prof_principal 및 차이값 반영)
         with st.expander("ℹ️ 손익 계산 기준 설명", expanded=False):
             st.markdown(PNL_BASIS_HELP)
-        _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
+        _s1_sum = f"<div style='margin-bottom:10px;'><div class='summary-text' style='margin-bottom:0; padding-left:16px;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW / 총 손익 : <span class='summary-val {col(t_prof_principal)}'>{fmt_h(t_prof_principal, True)} ({fmt_p(t_rate_principal)})</span></div></div>"
 
         h1_table = """
 <table class='main-table'>
@@ -5930,7 +6194,7 @@ display: none !important;
 
         # 현금성 = 총 자산 − 매입금액 − 총 손익 (기존 맨 끝 '현금성자산 :' 과 같은 값). 표시는 [3] 계좌별 상세와 같은 '(현금성 N)' 패턴
         #   매입금액/총 손익 2줄은 3열 grid(라벨 | 금액 | 손익률): 금액 열 우측정렬 + tabular-nums 로 끝자리·콤마 세로 정렬 ([3] 계좌별 상세와 동일 로직)
-        _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_profit)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_profit)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_profit, True)}</span><span class='{col(t_profit)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
+        _s2_sum = (f"<div class='summary-text' style='display:flex; align-items:flex-start; flex-wrap:nowrap; padding-left:16px;'><span style='white-space:nowrap;'>● 총 자산 : <span class='summary-val'>{fmt_h(t_asset)}</span> KRW <span style='font-size:12.5px; color:#666; font-weight:normal;'>(현금성 <span style='font-weight:bold; font-size:16px;'>{fmt_h(t_asset - t_buy_total - t_profit)}</span>)</span>&nbsp;&nbsp;/&nbsp;&nbsp;</span><span style='display:inline-grid; grid-template-columns:auto auto auto; column-gap:6px; row-gap:2px; align-items:baseline;'><span style='text-align:right; white-space:nowrap;'>매입금액 :</span><span class='summary-val' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_buy_total)}</span><span></span><span style='text-align:right; white-space:nowrap;'>총 손익 :</span><span class='summary-val {col(t_profit)}' style='white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums;'>{fmt_h(t_profit, True)}</span><span class='{col(t_profit)}' style='white-space:nowrap; margin-left:-6px;'>&nbsp;({fmt_p(t_rate_buy)})</span></span></div>")
 
         h2_table = """
 <table class='main-table'>
